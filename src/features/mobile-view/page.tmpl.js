@@ -58,7 +58,7 @@ export function buildMobileViewInfoRowMarkup({
                 <span class="section-label" id="tl-range" ${displaySubtitle ? "" : "hidden"}>${escapeHtml(subtitle)}</span>
               </div>
               <div class="stats">
-                <div class="stat">
+                <div class="stat info-alert-stat">
                   <div class="sv" id="alert-count">${escapeHtml(resolveMobileViewAlertsCountText(alertsCount))}</div>
                   <div class="sl" data-fvc-i18n="runtime.alerts">Alerts</div>
                 </div>

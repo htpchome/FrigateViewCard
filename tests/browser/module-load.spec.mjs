@@ -2377,7 +2377,6 @@ test("Layout Settings language changes preserve controls and validation state", 
       stream_height: 80,
       stream_height_unit: "dvh",
       tight_margins: true,
-      display_logo: false,
     });
     const hass = { locale: { language: "en" }, states: {}, themes: {} };
     editor.hass = hass;
@@ -2385,7 +2384,6 @@ test("Layout Settings language changes preserve controls and validation state", 
     const slider = editor.querySelector("#stream_height");
     const heightUnit = editor.querySelector('[name="stream_height_unit"][value="dvh"]');
     const tightMargins = editor.querySelector("#tight_margins");
-    const logo = editor.querySelector("#display_logo");
     editor._setEditorFieldError(
       "#stream_height",
       editor._t("editor.layout.cardHeightRangeValidation", { min: 50, max: 100 }),
@@ -2396,16 +2394,12 @@ test("Layout Settings language changes preserve controls and validation state", 
     const english = editor._localization;
     const translated = {
       "editor.panels.layout": "Paramètres de disposition",
-      "editor.layout.activeTabs": "Onglets actifs",
-      "editor.layout.tabs.alerts": "Alertes",
       "editor.layout.cardHeightLimit": "Limite de hauteur",
       "editor.layout.cardHeightUnit": "Unité de hauteur",
       "editor.layout.autoHeightHelp": "Utilisez la hauteur automatique.",
       "editor.layout.cardHeightRangeValidation": "Nombre entier entre {min} et {max}.",
       "editor.layout.tightMargins": "Marges serrées",
       "editor.layout.tightMarginsHelp": "Réduit l'espacement autour de la carte.",
-      "editor.layout.showLogo": "Afficher le logo {cardName}",
-      "editor.layout.showLogoHelp": "Affiche {cardName} dans le pied de page.",
     };
     editor._localization = {
       updateHass: () => true,
@@ -2429,17 +2423,11 @@ test("Layout Settings language changes preserve controls and validation state", 
       unitAria: editor.querySelector("#stream_height_unit").getAttribute("aria-label"),
       tightPreserved: editor.querySelector("#tight_margins") === tightMargins,
       tightChecked: tightMargins.checked === true || tightMargins.hasAttribute("checked"),
-      logoPreserved: editor.querySelector("#display_logo") === logo,
-      logoChecked: logo.checked === true || logo.hasAttribute("checked"),
-      activeTabs: editor.querySelector('[data-fvc-i18n="editor.layout.activeTabs"]').textContent,
-      alertsTab: editor.querySelector('[data-active-tab="alerts"]').closest("ha-formfield").getAttribute("label"),
       heightLabel: editor.querySelector('[data-fvc-i18n="editor.layout.cardHeightLimit"]').textContent,
       heightHelp: editor.querySelector('[data-fvc-i18n="editor.layout.autoHeightHelp"]').textContent,
       heightError: editor.querySelector("#stream_height-helper").textContent,
       heightInvalid: slider.hasAttribute("data-invalid"),
       tightLabel: editor.querySelector('[data-fvc-i18n="editor.layout.tightMargins"]').textContent,
-      logoLabel: editor.querySelector('[data-fvc-i18n="editor.layout.showLogo"]').textContent,
-      logoHelp: editor.querySelector('[data-fvc-i18n="editor.layout.showLogoHelp"]').textContent,
       configChanged,
     };
   });
@@ -2454,17 +2442,102 @@ test("Layout Settings language changes preserve controls and validation state", 
     unitAria: "Unité de hauteur",
     tightPreserved: true,
     tightChecked: true,
-    logoPreserved: true,
-    logoChecked: false,
-    activeTabs: "Onglets actifs",
-    alertsTab: "Alertes",
     heightLabel: "Limite de hauteur",
     heightHelp: "Utilisez la hauteur automatique.",
     heightError: "Nombre entier entre 50 et 100.",
     heightInvalid: true,
     tightLabel: "Marges serrées",
-    logoLabel: "Afficher le logo FrigateView",
-    logoHelp: "Affiche FrigateView dans le pied de page.",
+    configChanged: 0,
+  });
+});
+
+test("Display Options localize in place and preserve disabled controls", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card-editor.js");
+    const editor = document.createElement("frigate-view-card-editor");
+    editor._activeSettingsPanelId = "displayOptions";
+    document.body.append(editor);
+    editor.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      mobile_view_page_enabled: true,
+      hidden_tabs: ["snapshot", "kept"],
+      display_filter_control: false,
+      display_calendar_control: false,
+      display_source_indicator: false,
+      display_back_button: false,
+      display_logo: false,
+      display_version: false,
+      display_footer: false,
+      display_alert_count: false,
+      display_alert_detection_chip: false,
+      display_alert_detection_outline: false,
+      display_object_chips: false,
+      display_location_area_zone: false,
+    });
+    const hass = { locale: { language: "en" }, states: {}, themes: {} };
+    editor.hass = hass;
+    const panel = editor.querySelector('[data-panel="displayOptions"]');
+    const filter = editor.querySelector("#display_filter_control");
+    const back = editor.querySelector("#display_back_button");
+    const warning = editor.querySelector("#display-back-button-warning");
+    const panels = [...editor.querySelectorAll("[data-panel]")];
+    let configChanged = 0;
+    editor.addEventListener("config-changed", () => { configChanged += 1; });
+
+    editor.hass = { ...hass, locale: { language: "fr" } };
+
+    const displaySwitchIds = [
+      "display_filter_control",
+      "display_calendar_control",
+      "display_source_indicator",
+      "display_back_button",
+      "display_logo",
+      "display_version",
+      "display_footer",
+      "display_alert_count",
+      "display_alert_detection_chip",
+      "display_alert_detection_outline",
+      "display_object_chips",
+      "display_location_area_zone",
+    ];
+    return {
+      directlyAfterLayout:
+        panels[panels.indexOf(panel) - 1]?.dataset.panel === "layout",
+      panelPreserved: editor.querySelector('[data-panel="displayOptions"]') === panel,
+      panelOpen: panel.classList.contains("active"),
+      filterPreserved: editor.querySelector("#display_filter_control") === filter,
+      backPreserved: editor.querySelector("#display_back_button") === back,
+      allDisabled: displaySwitchIds.every((id) => {
+        const control = editor.querySelector(`#${id}`);
+        return control.checked !== true && !control.hasAttribute("checked");
+      }),
+      favoritesEnabled:
+        editor.querySelector('[data-active-tab="kept"]').checked === true,
+      warningPreserved: editor.querySelector("#display-back-button-warning") === warning,
+      warningVisible: warning.hidden === false,
+      panelTitle: panel.querySelector("h3").textContent,
+      buttonsHeading: editor.querySelector('[data-fvc-i18n="editor.displayOptions.buttons"]').textContent,
+      filterLabel: editor.querySelector('[data-fvc-i18n="editor.displayOptions.filterButton"]').textContent,
+      warningText: warning.querySelector("span").textContent,
+      configChanged,
+    };
+  });
+
+  expect(state).toEqual({
+    directlyAfterLayout: true,
+    panelPreserved: true,
+    panelOpen: true,
+    filterPreserved: true,
+    backPreserved: true,
+    allDisabled: true,
+    favoritesEnabled: false,
+    warningPreserved: true,
+    warningVisible: true,
+    panelTitle: "Options d'affichage",
+    buttonsHeading: "Boutons",
+    filterLabel: "Afficher le bouton de filtre",
+    warningText: "Lorsque la Vue mobile est activée, masquer le bouton Retour peut empêcher l'utilisateur de quitter la page Vue mobile.",
     configChanged: 0,
   });
 });
@@ -3224,6 +3297,124 @@ test("Mobile overlay header follows route changes without replacing the card or 
       headerPosition: "absolute",
     },
     leftOverlay: false,
+  });
+});
+
+test("disabled Display Options hide controls and browse metadata without removing live media", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseUrl);
+
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    card._isLikelyMobileClient = () => true;
+    card._isLikelyPhoneClient = () => true;
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      mobile_view_page_enabled: true,
+      hidden_tabs: ["snapshot", "kept"],
+      display_filter_control: false,
+      display_calendar_control: false,
+      display_source_indicator: false,
+      display_back_button: false,
+      display_alert_detection_chip: false,
+      display_alert_detection_outline: false,
+      display_object_chips: false,
+      display_location_area_zone: false,
+      display_alert_count: false,
+      display_footer: false,
+    });
+    document.body.append(card);
+    card._pageId = "mobile-view";
+    card._buildTabsMarkup();
+    card._renderShell();
+    card._renderCamSwitcher();
+    card._applyCardStyle();
+
+    const root = card.shadowRoot;
+    const cardRoot = root.querySelector("#card");
+    const probe = document.createElement("div");
+    probe.className = "list-item";
+    probe.innerHTML = `
+      <div class="et alert"></div>
+      <span class="review-severity-chip">Alert</span>
+      <span class="review-object-tag">Person</span>
+      <span class="cam-badge">Front</span>
+      <span class="zone-meta">Porch</span>
+      <button data-fav>Favorite</button>`;
+    cardRoot.append(probe);
+
+    const display = (selector) => {
+      const element = root.querySelector(selector);
+      return element ? getComputedStyle(element).display : `missing:${selector}`;
+    };
+    const mobile = {
+      livePresent: Boolean(root.querySelector("#eng-wrap")),
+      filter: display("#filter-btn"),
+      calendar: display("#cal-btn"),
+      source: display(".mobile-cam-picker__stream"),
+      backPresent: Boolean(root.querySelector("[data-page-back]")),
+      footer: display('[data-fvc-region="footer"]'),
+      severityChip: display(".review-severity-chip"),
+      objectChip: display(".review-object-tag"),
+      camera: display(".cam-badge"),
+      zone: display(".zone-meta"),
+      favorite: display("[data-fav]"),
+      alertOutline: getComputedStyle(root.querySelector(".et.alert")).outlineStyle,
+    };
+
+    card._pageId = "single-view";
+    card._renderShell();
+    card._applyCardStyle();
+    const single = {
+      livePresent: Boolean(root.querySelector("#eng-wrap")),
+      source: display(".info-stream-stat"),
+      alertCount: display(".info-alert-stat"),
+      footer: display('[data-fvc-region="footer"]'),
+    };
+    return {
+      classes: [
+        "display-filter-control-off",
+        "display-calendar-control-off",
+        "display-source-indicator-off",
+        "display-back-button-off",
+        "display-alert-detection-chip-off",
+        "display-alert-detection-outline-off",
+        "display-object-chips-off",
+        "display-location-area-zone-off",
+        "display-alert-count-off",
+        "display-footer-off",
+        "favorites-tab-hidden",
+      ].every((name) => cardRoot.classList.contains(name)),
+      mobile,
+      single,
+    };
+  });
+
+  expect(state).toEqual({
+    classes: true,
+    mobile: {
+      livePresent: true,
+      filter: "none",
+      calendar: "none",
+      source: "none",
+      backPresent: false,
+      footer: "none",
+      severityChip: "none",
+      objectChip: "none",
+      camera: "none",
+      zone: "none",
+      favorite: "none",
+      alertOutline: "none",
+    },
+    single: {
+      livePresent: true,
+      source: "none",
+      alertCount: "none",
+      footer: "none",
+    },
   });
 });
 

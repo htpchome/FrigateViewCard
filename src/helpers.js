@@ -706,6 +706,23 @@ export const buildEditorConfigFromDom = ({
   nextConfig.display_version = displayVersion
     ? resolveSwitchChecked(displayVersion)
     : baseConfig?.display_version !== false;
+  for (const key of [
+    "display_filter_control",
+    "display_calendar_control",
+    "display_source_indicator",
+    "display_back_button",
+    "display_alert_detection_chip",
+    "display_alert_detection_outline",
+    "display_object_chips",
+    "display_location_area_zone",
+    "display_alert_count",
+    "display_footer",
+  ]) {
+    const toggle = root.querySelector(`#${key}`);
+    nextConfig[key] = toggle
+      ? resolveSwitchChecked(toggle)
+      : baseConfig?.[key] !== false;
+  }
 
   nextConfig.event_days = normalizePositiveInteger(
     root.querySelector("#event_days")?.dataset.value ||

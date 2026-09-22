@@ -31,6 +31,7 @@ export class BrowseCalendarPanelController {
   }
 
   toggleCalendar() {
+    if (this._host._config?.display_calendar_control === false) return;
     const panel = this._host._pageShellRegion("calendarPanel");
     if (!panel) return;
     const open = panel.style.display === "none";

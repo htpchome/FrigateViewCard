@@ -112,6 +112,19 @@ export const normalizeCardConfig = (config) => {
   src.display_subtitle = src.display_subtitle !== false;
   src.display_logo = src.display_logo !== false;
   src.display_version = src.display_version !== false;
+  src.display_filter_control = src.display_filter_control !== false;
+  src.display_calendar_control = src.display_calendar_control !== false;
+  src.display_source_indicator = src.display_source_indicator !== false;
+  src.display_back_button = src.display_back_button !== false;
+  src.display_alert_detection_chip =
+    src.display_alert_detection_chip !== false;
+  src.display_alert_detection_outline =
+    src.display_alert_detection_outline !== false;
+  src.display_object_chips = src.display_object_chips !== false;
+  src.display_location_area_zone =
+    src.display_location_area_zone !== false;
+  src.display_alert_count = src.display_alert_count !== false;
+  src.display_footer = src.display_footer !== false;
 
   src.theme = src.theme === "custom" ? "custom" : "default";
   src.theme_custom = normalizeThemeCustomConfig(src.theme_custom);

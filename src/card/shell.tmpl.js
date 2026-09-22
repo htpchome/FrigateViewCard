@@ -49,7 +49,7 @@ export function buildInfoRowMarkup({
                 </div>
               </div>
               <div class="stats">
-                <div class="stat">
+                <div class="stat info-stream-stat">
                   <div class="sv stream-type" id="stream-type">--</div>
                   <div class="sl" data-fvc-i18n="runtime.stream">Stream</div>
                 </div>

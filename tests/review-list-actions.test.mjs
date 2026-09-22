@@ -63,6 +63,28 @@ test("event row labels localize without translating Frigate event data", () => {
   assert.match(html, />front door<\/span>/);
 });
 
+test("event rows omit favorite actions when Favorites is unavailable", () => {
+  const model = buildEventListItemModel({
+    id: "event-1",
+    label: "person",
+    retain_indefinitely: true,
+  }, {
+    cap: (value) => String(value || ""),
+    labelColor: () => "#fff",
+    icons: ICONS,
+    media: () => "",
+    durationLabel: () => 1,
+    showFavoriteButton: false,
+  });
+  const html = buildEventListItemHtml(model, {
+    icons: ICONS,
+    expanded: false,
+    compact: false,
+  });
+
+  assert.doesNotMatch(html, /data-fav=/);
+});
+
 test("review severity and hidden-object guidance localize without changing object tags", () => {
   const t = (key, values = {}) => ({
     "runtime.browse.row.alert": "Alerte",

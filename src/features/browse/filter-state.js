@@ -345,6 +345,7 @@ export class BrowseFilterController {
   }
 
   toggleFilter() {
+    if (this._host._config?.display_filter_control === false) return;
     if (this._host._tab === "recordings") return;
     const filterPanel = this._host._pageShellRegion("filterPanel");
     if (!filterPanel) return;

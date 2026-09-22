@@ -218,6 +218,43 @@ export class CardStyleContextController {
       { configKey: "shadows", className: "shadows-off" },
       { configKey: "borders", className: "borders-off" },
       { configKey: "rounded_corners", className: "corners-off" },
+      {
+        configKey: "display_filter_control",
+        className: "display-filter-control-off",
+      },
+      {
+        configKey: "display_calendar_control",
+        className: "display-calendar-control-off",
+      },
+      {
+        configKey: "display_source_indicator",
+        className: "display-source-indicator-off",
+      },
+      {
+        configKey: "display_back_button",
+        className: "display-back-button-off",
+      },
+      {
+        configKey: "display_alert_detection_chip",
+        className: "display-alert-detection-chip-off",
+      },
+      {
+        configKey: "display_alert_detection_outline",
+        className: "display-alert-detection-outline-off",
+      },
+      {
+        configKey: "display_object_chips",
+        className: "display-object-chips-off",
+      },
+      {
+        configKey: "display_location_area_zone",
+        className: "display-location-area-zone-off",
+      },
+      {
+        configKey: "display_alert_count",
+        className: "display-alert-count-off",
+      },
+      { configKey: "display_footer", className: "display-footer-off" },
     ];
   }
 
@@ -229,6 +266,9 @@ export class CardStyleContextController {
     if (this._host._isLikelyMobileClient?.()) classes.push("mobile-client");
     if (this._host._isLikelyPhoneClient?.()) classes.push("phone-client");
     if (this._host._isFirefox?.() === true) classes.push("firefox-client");
+    if (this._host._config?.hidden_tabs?.includes?.("kept")) {
+      classes.push("favorites-tab-hidden");
+    }
     if (this.shouldHideMobileViewOuterBorder()) {
       classes.push("mobile-view-outer-border-off");
     }
@@ -303,6 +343,10 @@ export class CardStyleContextController {
       card.classList.toggle(
         "firefox-client",
         this._host._isFirefox?.() === true,
+      );
+      card.classList.toggle(
+        "favorites-tab-hidden",
+        this._host._config?.hidden_tabs?.includes?.("kept") === true,
       );
     }
     this.syncHostOuterStyles();

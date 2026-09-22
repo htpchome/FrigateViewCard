@@ -27,6 +27,7 @@ export function buildEventListItemModel(eventItem, deps) {
     browseTab = "",
     showCameraLabel,
     showDownloadButtons = true,
+    showFavoriteButton = true,
     showDurationBadge = true,
     fallbackThumbSrc = "",
     t,
@@ -90,9 +91,11 @@ export function buildEventListItemModel(eventItem, deps) {
   const camLabel = showCameraLabel
     ? `<span class="cam-badge list-bubble">${escapeHtml(String(eventItem?.camera || "").replace(/_/g, " "))}</span>`
     : "";
-  const favBtn = eventItem?.retain_indefinitely
-    ? `<button class="tool ico fav on" data-fav="${escapeHtmlAttribute(eventItem.id)}" ${rowActionLabel(t, "unfavorite", "Unfavorite")}>${icons.star}</button>`
-    : `<button class="tool ico fav" data-fav="${escapeHtmlAttribute(eventItem.id)}" ${rowActionLabel(t, "favorite", "Favorite")}>${icons.starO}</button>`;
+  const favBtn = showFavoriteButton
+    ? eventItem?.retain_indefinitely
+      ? `<button class="tool ico fav on" data-fav="${escapeHtmlAttribute(eventItem.id)}" ${rowActionLabel(t, "unfavorite", "Unfavorite")}>${icons.star}</button>`
+      : `<button class="tool ico fav" data-fav="${escapeHtmlAttribute(eventItem.id)}" ${rowActionLabel(t, "favorite", "Favorite")}>${icons.starO}</button>`
+    : "";
   return {
     id: eventItem?.id,
     labelColorValue: labelColor(eventItem?.label),

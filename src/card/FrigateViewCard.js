@@ -1826,6 +1826,19 @@ export class FrigateViewCard extends HTMLElement {
       display_subtitle: config.display_subtitle !== false,
       display_logo: config.display_logo !== false,
       display_version: config.display_version !== false,
+      display_filter_control: config.display_filter_control !== false,
+      display_calendar_control: config.display_calendar_control !== false,
+      display_source_indicator: config.display_source_indicator !== false,
+      display_back_button: config.display_back_button !== false,
+      display_alert_detection_chip:
+        config.display_alert_detection_chip !== false,
+      display_alert_detection_outline:
+        config.display_alert_detection_outline !== false,
+      display_object_chips: config.display_object_chips !== false,
+      display_location_area_zone:
+        config.display_location_area_zone !== false,
+      display_alert_count: config.display_alert_count !== false,
+      display_footer: config.display_footer !== false,
       event_days:
         normalizePositiveInteger(config.event_days ?? config.window_days, null) ||
         (Number.isFinite(legacyWindowHours) && legacyWindowHours > 0
@@ -2069,6 +2082,20 @@ export class FrigateViewCard extends HTMLElement {
         nextConfig.card_view_hide_camera_name;
     const displayFvcBrandLogoChanged =
       !!prevConfig && prevConfig.display_logo !== nextConfig.display_logo;
+    const displayOptionsChanged =
+      !!prevConfig &&
+      [
+        "display_filter_control",
+        "display_calendar_control",
+        "display_source_indicator",
+        "display_back_button",
+        "display_alert_detection_chip",
+        "display_alert_detection_outline",
+        "display_object_chips",
+        "display_location_area_zone",
+        "display_alert_count",
+        "display_footer",
+      ].some((key) => prevConfig[key] !== nextConfig[key]);
     const previewVisualChanged =
       !!prevConfig &&
       (prevConfig.preview_page_live_cameras !==
@@ -2199,7 +2226,8 @@ export class FrigateViewCard extends HTMLElement {
       wideViewTimelineEnabledChanged ||
       cardViewPageEnabledChanged ||
       cardViewStandaloneChanged ||
-      displayFvcBrandLogoChanged;
+      displayFvcBrandLogoChanged ||
+      displayOptionsChanged;
     const needsEngineRemount = camerasChanged;
     const snapshotUpdateChanged =
       prevConfig.snapshot_update_seconds !== nextConfig.snapshot_update_seconds;
@@ -3930,6 +3958,10 @@ export class FrigateViewCard extends HTMLElement {
     let filterOpen = false;
     if (filterBtn) {
       const filterPanel = this._pageShellRegion("filterPanel");
+      const filterVisible = this._config?.display_filter_control !== false;
+      filterBtn.hidden = !filterVisible;
+      filterBtn.style.display = filterVisible ? "" : "none";
+      if (!filterVisible && filterPanel) filterPanel.style.display = "none";
       filterOpen = !!filterPanel && filterPanel.style.display !== "none";
       filterBtn.disabled = buttonStates.filterDisabled;
       filterBtn.classList.toggle("active", filterOpen);
@@ -3940,6 +3972,11 @@ export class FrigateViewCard extends HTMLElement {
     let calOpen = false;
     if (calBtn) {
       const calPanel = this._pageShellRegion("calendarPanel");
+      const calendarVisible =
+        this._config?.display_calendar_control !== false;
+      calBtn.hidden = !calendarVisible;
+      calBtn.style.display = calendarVisible ? "" : "none";
+      if (!calendarVisible && calPanel) calPanel.style.display = "none";
       calOpen = !!calPanel && calPanel.style.display !== "none";
       calBtn.disabled = buttonStates.calendarDisabled;
       calBtn.classList.toggle("active", calOpen);
@@ -4844,6 +4881,7 @@ export class FrigateViewCard extends HTMLElement {
             this._config?.card_view_standalone === true
           ),
         icons: ICONS,
+        visible: this._config.display_back_button !== false,
       }),
       cameraSwitcherMarkup: camSwitcherMarkup,
       cameraSwitcher: buildCamSwitcherRegionMarkup({
@@ -8234,6 +8272,8 @@ export class FrigateViewCard extends HTMLElement {
       isKeptTab: this._tab === "kept",
       browseTab: this._tab,
       showDownloadButtons,
+      showFavoriteButton:
+        !this._config?.hidden_tabs?.includes?.("kept"),
       showDurationBadge: this._tab !== "snapshot",
       t: this._localization.t,
       fallbackThumbSrc: fallbackReview
@@ -8544,7 +8584,9 @@ export class FrigateViewCard extends HTMLElement {
         review?.camera,
       ),
       showDownloadButtons,
-      showFavoriteButton,
+      showFavoriteButton:
+        showFavoriteButton &&
+        !this._config?.hidden_tabs?.includes?.("kept"),
       t: this._localization.t,
     });
     return buildReviewListItemHtml(model, { cap, icons: ICONS });

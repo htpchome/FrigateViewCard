@@ -3011,6 +3011,16 @@ export class FrigateViewCardEditor extends HTMLElement {
       "#display_subtitle",
       "#display_logo",
       "#display_version",
+      "#display_filter_control",
+      "#display_calendar_control",
+      "#display_source_indicator",
+      "#display_back_button",
+      "#display_alert_detection_chip",
+      "#display_alert_detection_outline",
+      "#display_object_chips",
+      "#display_location_area_zone",
+      "#display_alert_count",
+      "#display_footer",
       "#event_days",
       "#alerts_reviews_days",
       "#realtime_poll_seconds",
@@ -3790,16 +3800,6 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const layoutPanelContent = `
       <div class="section">
-        <span class="field-label" data-fvc-i18n="editor.layout.activeTabs">Active Tabs</span>
-        <div class="chk-row">
-          ${tabToggle("alerts", "Alerts", "editor.layout.tabs.alerts")}
-          ${tabToggle("clips", "Clips", "editor.layout.tabs.clips")}
-          ${tabToggle("snapshot", "Snapshots", "editor.layout.tabs.snapshot")}
-          ${tabToggle("recordings", "Recordings", "editor.layout.tabs.recordings")}
-          ${tabToggle("kept", "Favorites", "editor.layout.tabs.kept")}
-        </div>
-      </div>
-      <div class="section">
         <span class="field-label" data-fvc-i18n="editor.layout.cardHeightLimit">Card Height Limit</span>
         <div class="card-height-control">
           <div class="card-height-slider-control">
@@ -3855,20 +3855,83 @@ export class FrigateViewCardEditor extends HTMLElement {
           <ha-switch id="rounded_corners" ${this._config?.rounded_corners !== false ? "checked" : ""}></ha-switch>
         </div>
         <div class="field-helper" data-fvc-i18n="editor.layout.roundedCornersHelp">Rounds the card and media corners.</div>
+      </div>`;
+
+    const displayPanelContent = `
+      <div class="display-options-info" role="note">
+        <ha-icon icon="mdi:information-outline" aria-hidden="true"></ha-icon>
+        <span data-fvc-i18n="editor.displayOptions.navigationNotice">Turning off some display options can remove navigation paths in certain layouts. You can always re-enable them in the card configuration.</span>
       </div>
-      <div class="section">
-        <div class="layout-row">
-          <span class="field-label" style="margin:0" data-fvc-i18n="editor.layout.showLogo" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ cardName: CARD_NAME }))}">Show ${CARD_NAME} Logo</span>
-          <ha-switch id="display_logo" ${this._config?.display_logo !== false ? "checked" : ""}></ha-switch>
+      <div class="section display-options-group">
+        <span class="display-options-group-title" data-fvc-i18n="editor.displayOptions.buttons">Buttons</span>
+        <div class="display-option-block">
+          <span class="field-label" data-fvc-i18n="editor.layout.activeTabs">Active Tabs</span>
+          <div class="chk-row">
+            ${tabToggle("alerts", "Alerts", "editor.layout.tabs.alerts")}
+            ${tabToggle("clips", "Clips", "editor.layout.tabs.clips")}
+            ${tabToggle("snapshot", "Snapshots", "editor.layout.tabs.snapshot")}
+            ${tabToggle("recordings", "Recordings", "editor.layout.tabs.recordings")}
+            ${tabToggle("kept", "Favorites", "editor.layout.tabs.kept")}
+          </div>
         </div>
-        <div class="field-helper" data-fvc-i18n="editor.layout.showLogoHelp" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ cardName: CARD_NAME }))}">Shows ${CARD_NAME} branding in page footers and the mobile Preview header when the HA navbar is at the bottom.</div>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.filterButton">Display Filter Button</span><ha-switch id="display_filter_control" ${this._config?.display_filter_control !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.displayOptions.filterButtonHelp">Shows the filter button and filter panel in all views.</div>
+        </div>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.calendarButton">Display Calendar Button</span><ha-switch id="display_calendar_control" ${this._config?.display_calendar_control !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.displayOptions.calendarButtonHelp">Shows the calendar button and calendar panel in all views.</div>
+        </div>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.backButton">Display Back Button</span><ha-switch id="display_back_button" ${this._config?.display_back_button !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.displayOptions.backButtonHelp">Shows header and overlay Back buttons in all views.</div>
+          <div class="display-options-warning" id="display-back-button-warning" ${this._config?.mobile_view_page_enabled !== false ? "" : "hidden"}>
+            <ha-icon icon="mdi:alert-outline" aria-hidden="true"></ha-icon>
+            <span data-fvc-i18n="editor.displayOptions.mobileBackWarning">With Mobile View enabled, hiding the Back button can leave a user stuck on the Mobile View page.</span>
+          </div>
+        </div>
       </div>
-      <div class="section">
-        <div class="layout-row">
-          <span class="field-label" style="margin:0" data-fvc-i18n="editor.layout.showVersionNumber">Show Version Number</span>
-          <ha-switch id="display_version" ${this._config?.display_version !== false ? "checked" : ""}></ha-switch>
+      <div class="section display-options-group">
+        <span class="display-options-group-title" data-fvc-i18n="editor.displayOptions.information">Information</span>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.streamSource">Display Stream Source</span><ha-switch id="display_source_indicator" ${this._config?.display_source_indicator !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.displayOptions.streamSourceHelp">Shows stream-source text and source overlay bubbles.</div>
         </div>
-        <div class="field-helper" data-fvc-i18n="editor.layout.showVersionNumberHelp">Shows the installed version in page footers. General Settings always shows it.</div>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.logo" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ cardName: CARD_NAME }))}">Display ${CARD_NAME} Logo</span><ha-switch id="display_logo" ${this._config?.display_logo !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.layout.showLogoHelp" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ cardName: CARD_NAME }))}">Shows ${CARD_NAME} branding in page footers and the mobile Preview header when the HA navbar is at the bottom.</div>
+        </div>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.version">Display Version Number</span><ha-switch id="display_version" ${this._config?.display_version !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.layout.showVersionNumberHelp">Shows the installed version in page footers. General Settings always shows it.</div>
+        </div>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.footer">Display Footer</span><ha-switch id="display_footer" ${this._config?.display_footer !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.displayOptions.footerHelp">Shows the footer in Single View and Mobile View. Turning it off also hides the logo and version in those footers.</div>
+        </div>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.alertCount">Display Alert Count</span><ha-switch id="display_alert_count" ${this._config?.display_alert_count !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.displayOptions.alertCountHelp">Shows alert-count information.</div>
+        </div>
+      </div>
+      <div class="section display-options-group">
+        <span class="display-options-group-title" data-fvc-i18n="editor.displayOptions.browseInformation">Alerts/Clips/Snapshot Information</span>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.alertDetectionChip">Display Alert/Detection Chip (Bubble)</span><ha-switch id="display_alert_detection_chip" ${this._config?.display_alert_detection_chip !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.displayOptions.alertDetectionChipHelp">Shows Alert and Detection chips in browse lists.</div>
+        </div>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.alertDetectionOutline">Display Alert/Detection Outline</span><ha-switch id="display_alert_detection_outline" ${this._config?.display_alert_detection_outline !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.displayOptions.alertDetectionOutlineHelp">Shows Alert and Detection outlines around browse thumbnails.</div>
+        </div>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.objectChips">Display Object Chips</span><ha-switch id="display_object_chips" ${this._config?.display_object_chips !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.displayOptions.objectChipsHelp">Shows detected-object tags in browse lists.</div>
+        </div>
+        <div class="display-option-block">
+          <div class="layout-row"><span class="field-label" data-fvc-i18n="editor.displayOptions.locationAreaZone">Display Location/Area/Zone</span><ha-switch id="display_location_area_zone" ${this._config?.display_location_area_zone !== false ? "checked" : ""}></ha-switch></div>
+          <div class="field-helper" data-fvc-i18n="editor.displayOptions.locationAreaZoneHelp">Shows camera, location, area, and zone information in browse lists.</div>
+        </div>
       </div>`;
     const slideshowPanelContent = `
       <div class="section">
@@ -4262,6 +4325,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         ${this._renderSettingsPanel({ id: "general", title: "General Settings", icon: "mdi:cog", content: generalPanelContent, active: activeSettingsPanel === "general" })}
         ${this._renderSettingsPanel({ id: "theme", title: "Theme Settings", icon: "mdi:palette", content: themePanelContent, active: activeSettingsPanel === "theme" })}
         ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent, active: activeSettingsPanel === "layout" })}
+        ${this._renderSettingsPanel({ id: "displayOptions", title: "Display Options", icon: "mdi:tune-variant", content: displayPanelContent, active: activeSettingsPanel === "displayOptions" })}
         ${this._renderSettingsPanel({ id: "slideshow", title: "Slideshow Settings", icon: "mdi:presentation-play", content: slideshowPanelContent, active: activeSettingsPanel === "slideshow" })}
         ${this._renderSettingsPanel({ id: "gridview", title: "Grid Mode Settings", icon: "mdi:view-grid-outline", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
         ${this._renderSettingsPanel({ id: "preview", title: "Preview Page", icon: "mdi:view-grid", content: previewPanelContent, active: activeSettingsPanel === "preview" })}
@@ -4334,6 +4398,13 @@ export class FrigateViewCardEditor extends HTMLElement {
             .config-save-reminder{position:sticky;top:8px;z-index:20;box-sizing:border-box;width:100%;min-height:30px;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 10px;border:1px solid color-mix(in srgb,var(--success-color,#2e7d32) 55%,transparent);border-radius:10px;background:color-mix(in srgb,var(--success-color,#2e7d32) 14%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:var(--success-color,#2e7d32);font-size:12px;font-weight:600;line-height:1.2;text-align:center;pointer-events:none;}
             .config-save-reminder[data-config-save-state="dirty"]{border-color:color-mix(in srgb,var(--warning-color, var(--c-accent, var(--editor-primary))) 55%,transparent);background:color-mix(in srgb,var(--warning-color, var(--c-accent, var(--editor-primary))) 16%,transparent);color:var(--warning-color, var(--c-accent, var(--editor-primary)));}
             .standalone-landing-note{box-sizing:border-box;width:100%;margin-top:8px;padding:7px 10px;border:1px solid color-mix(in srgb,var(--c-primary, var(--editor-primary)) 42%,transparent);border-radius:10px;background:color-mix(in srgb,var(--c-primary-l, var(--editor-primary-l)) 42%,var(--editor-card-bg));color:var(--c-primary-d, var(--editor-text));font-weight:650;line-height:1.3;}
+            .display-options-info{box-sizing:border-box;width:100%;display:flex;align-items:flex-start;gap:8px;margin:14px 0 2px;padding:9px 11px;border:1px solid color-mix(in srgb,var(--info-color,#03a9f4) 55%,transparent);border-radius:10px;background:color-mix(in srgb,var(--info-color,#03a9f4) 13%,transparent);color:color-mix(in srgb,var(--info-color,#0277bd) 75%,var(--primary-text-color,#111));font-size:11px;font-weight:600;line-height:1.35;}
+            .display-options-info ha-icon,.display-options-warning ha-icon{width:18px;height:18px;flex:0 0 18px;}
+            .display-options-group-title{display:block;margin-bottom:12px;color:var(--c-primary-d,var(--editor-primary-d));font-size:13px;font-weight:800;line-height:1.2;}
+            .display-option-block + .display-option-block{margin-top:13px;padding-top:13px;border-top:1px solid color-mix(in srgb,var(--c-border2,var(--editor-border)) 55%,transparent);}
+            .display-option-block .layout-row .field-label{margin:0;}
+            .display-options-warning{box-sizing:border-box;width:100%;display:flex;align-items:flex-start;gap:7px;margin-top:7px;padding:7px 9px;border:1px solid color-mix(in srgb,var(--warning-color,#f59e0b) 65%,transparent);border-radius:8px;background:color-mix(in srgb,var(--warning-color,#f59e0b) 13%,transparent);color:color-mix(in srgb,var(--warning-color,#b86b00) 78%,var(--primary-text-color,#111));font-size:11px;font-weight:650;line-height:1.35;}
+            .display-options-warning[hidden]{display:none;}
             .config-save-reminder-icon{display:inline-flex;width:17px;height:17px;flex:0 0 17px;}
             .config-save-reminder-icon svg{display:block;width:100%;height:100%;}
             .environment-version-summary{margin:12px 0;}
@@ -5436,6 +5507,16 @@ export class FrigateViewCardEditor extends HTMLElement {
         "display_subtitle",
         "display_logo",
         "display_version",
+        "display_filter_control",
+        "display_calendar_control",
+        "display_source_indicator",
+        "display_back_button",
+        "display_alert_detection_chip",
+        "display_alert_detection_outline",
+        "display_object_chips",
+        "display_location_area_zone",
+        "display_alert_count",
+        "display_footer",
         "single_view_alert_takeover",
         "wide_view_page_enabled",
         "wide_view_live_cameras",
@@ -5493,6 +5574,14 @@ export class FrigateViewCardEditor extends HTMLElement {
         const cardViewPageOptions = this.querySelector(
           "#card-view-page-options",
         );
+        const displayBackWarning = this.querySelector(
+          "#display-back-button-warning",
+        );
+        if (displayBackWarning) {
+          displayBackWarning.hidden = !resolveSwitchChecked(
+            this.querySelector("#mobile_view_page_enabled"),
+          );
+        }
         if (cardViewPageOptions) {
           cardViewPageOptions.style.display = resolveSwitchChecked(
             this.querySelector("#card_view_page_enabled"),

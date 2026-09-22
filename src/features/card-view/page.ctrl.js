@@ -851,6 +851,7 @@ export class CardViewPageController {
   }
 
   _toggleMediaDrawerCalendar() {
+    if (this._host._config?.display_calendar_control === false) return;
     this._mediaDrawerCalendarOpen = !this._mediaDrawerCalendarOpen;
     this._mediaDrawerFilterOpen = false;
     this.renderMediaDrawerCalendar();
@@ -865,6 +866,7 @@ export class CardViewPageController {
   }
 
   _toggleMediaDrawerFilter() {
+    if (this._host._config?.display_filter_control === false) return;
     if (
       this._mediaDrawerController.selectedType() ===
       CARD_VIEW_MEDIA_DRAWER_TYPES.recordings
@@ -1110,6 +1112,25 @@ export class CardViewPageController {
 
   renderToolbar(buttonStates = null) {
     if (!this.isActive()) return;
+    if (this._host._config?.display_calendar_control === false) {
+      this._calendarOpen = false;
+      this._mediaDrawerCalendarOpen = false;
+      const calendarPanel = this._host.shadowRoot?.querySelector?.(
+        "[data-card-view-calendar-panel]",
+      );
+      const drawerCalendarPanel = this._host.shadowRoot?.querySelector?.(
+        "[data-card-view-media-drawer-calendar-panel]",
+      );
+      if (calendarPanel) calendarPanel.hidden = true;
+      if (drawerCalendarPanel) drawerCalendarPanel.hidden = true;
+    }
+    if (this._host._config?.display_filter_control === false) {
+      this._mediaDrawerFilterOpen = false;
+      const drawerFilterPanel = this._host.shadowRoot?.querySelector?.(
+        "[data-card-view-media-drawer-filter-panel]",
+      );
+      if (drawerFilterPanel) drawerFilterPanel.hidden = true;
+    }
     const toolbar = this._host.shadowRoot?.querySelector(
       "[data-card-view-toolbar]",
     );
@@ -1182,6 +1203,7 @@ export class CardViewPageController {
     );
     if (!calendar) return;
     const calendarAvailable =
+      this._host._config?.display_calendar_control !== false &&
       this._drawerOpen &&
       (this._mode === "alerts" || this._mode === "recordings");
     const resolvedButtonStates =
@@ -1795,6 +1817,7 @@ export class CardViewPageController {
   }
 
   toggleCalendar() {
+    if (this._host._config?.display_calendar_control === false) return;
     if (this._mode !== "alerts" && this._mode !== "recordings") return;
     this._calendarOpen = !this._calendarOpen;
     this.renderToolbar();

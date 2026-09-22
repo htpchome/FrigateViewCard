@@ -194,8 +194,6 @@ The Card View can be configured in a few ways and is designed to insert into das
 | `subtitle` | string | `{Camera}` | Secondary title. `{camera}` or an empty value resolves to the active camera name, or `Grid` in Grid mode. |
 | `display_title` | boolean | `true` | Displays the title when enabled. |
 | `display_subtitle` | boolean | `true` | Displays the subtitle when enabled. |
-| `display_logo` | boolean | `true` | Displays the FrigateView logo in page footers. The footer keeps its normal height when disabled. |
-| `display_version` | boolean | `true` | Displays the FrigateView version number in page footers. The editor always shows the running version. |
 | `event_days` | number | `5` | Number of recent days containing event data to load for event-media browsing. The editor offers 1–15. |
 | `alerts_reviews_days` | number | `5` | Number of recent days containing qualifying Alerts/Reviews to load and count. The editor offers 1–15. |
 | `realtime_poll_seconds` | number | `5` | How often the card checks for new alerts and reviews when realtime notifications are delayed or missed. Valid values: `2`, `5`, `10`, `15`, `30`, `60`. |
@@ -204,6 +202,24 @@ The Card View can be configured in a few ways and is designed to insert into das
 | `event_pre_post_roll_enabled` | boolean | `false` | Adds 5 seconds before and after Alerts and Clips during popup playback and download when Frigate recording footage is available. |
 | `favorites_mixed_cameras` | boolean | `true` | Combines favorites from all configured cameras in Favorites. Set to `false` for the active camera only. |
 | `deep_link_enabled` | boolean | `true` | Allows this card instance to consume supported notification URL parameters. Disable on cards that should ignore shared dashboard deep links. |
+
+### Display options
+
+| Variable | Type | Default | Description |
+| --- | --- | --- | --- |
+| `hidden_tabs` | list | `[snapshot]` | Browse tabs to hide. Values: `alerts`, `clips`, `snapshot`, `recordings`, `kept` (Favorites). Hiding Favorites also hides favorite add/remove buttons in browse lists. |
+| `display_filter_control` | boolean | `true` | Displays the filter button and panel in all views. |
+| `display_calendar_control` | boolean | `true` | Displays the calendar button and panel in all views. |
+| `display_back_button` | boolean | `true` | Displays header and overlay Back buttons. Disabling this can remove the return path from Mobile View. |
+| `display_source_indicator` | boolean | `true` | Displays stream-source text and overlay indicators. |
+| `display_logo` | boolean | `true` | Displays the FrigateView logo in supported headers and footers. |
+| `display_version` | boolean | `true` | Displays the FrigateView version number in page footers. The editor always shows the running version. |
+| `display_footer` | boolean | `true` | Displays the footer in Single View and Mobile View. When disabled, the logo and version are also hidden in those footers. |
+| `display_alert_count` | boolean | `true` | Displays alert-count information. |
+| `display_alert_detection_chip` | boolean | `true` | Displays Alert and Detection chips in browse lists. |
+| `display_alert_detection_outline` | boolean | `true` | Displays Alert and Detection outlines around browse thumbnails. |
+| `display_object_chips` | boolean | `true` | Displays detected-object chips in browse lists. |
+| `display_location_area_zone` | boolean | `true` | Displays camera, location, area, and zone information in browse lists. |
 
 ### Page and mode options
 
@@ -275,7 +291,6 @@ grid_order:
 
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `hidden_tabs` | list | `[snapshot]` | Browse tabs to hide. Values: `alerts`, `clips`, `snapshot`, `recordings`, `kept` (Favorites). |
 | `stream_height` | number | `100` | Card Height Limit from `50` to `100`. Does not apply to Card View. New cards request Auto height in Sections and Sidebar views. When Auto height is disabled, Home Assistant's fixed row height constrains the card and its editor currently allows at most eight rows. Panel and Masonry views apply the limit normally. |
 | `stream_height_unit` | string | `%` | Height unit. Values: `%`, `dvh`. When Home Assistant is not imposing a fixed row height, the card can grow when needed to preserve its controls and approximately two browse items. |
 | `tight_margins` | boolean | `false` | Removes Home Assistant Sections-view padding where available so the card can fill its assigned space. |

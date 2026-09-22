@@ -801,6 +801,47 @@ test("title, subtitle, logo, and version defaults normalize and hidden states se
   });
 });
 
+test("display options default on and compact only disabled YAML values", () => {
+  const keys = [
+    "display_filter_control",
+    "display_calendar_control",
+    "display_source_indicator",
+    "display_back_button",
+    "display_alert_detection_chip",
+    "display_alert_detection_outline",
+    "display_object_chips",
+    "display_location_area_zone",
+    "display_alert_count",
+    "display_footer",
+  ];
+  const defaults = normalizeCardConfig({
+    cameras: [{ entity: "camera.front_door" }],
+  });
+  const disabled = Object.fromEntries(keys.map((key) => [key, false]));
+  const compact = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    ...disabled,
+  });
+
+  for (const key of keys) {
+    assert.equal(defaults[key], true);
+    assert.equal(compact[key], false);
+  }
+
+  const draft = createEditorPreviewDraft({
+    ...defaults,
+    ...disabled,
+  });
+  const preview = applyEditorPreviewDraftToCardConfig({
+    baseConfig: defaults,
+    previewConfig: draft,
+  });
+  for (const key of keys) {
+    assert.equal(draft[key], false);
+    assert.equal(preview[key], false);
+  }
+});
+
 test("camera configuration supports up to twelve cameras", () => {
   const cameras = Array.from({ length: MAX_CAMERAS + 2 }, (_, index) => ({
     entity: `camera.camera_${index + 1}`,
@@ -1561,13 +1602,26 @@ test("buildEditorConfigFromDom reads the mixed favorites switch", () => {
   assert.equal(result.favorites_mixed_cameras, false);
 });
 
-test("buildEditorConfigFromDom reads title, subtitle, logo, and version visibility controls", () => {
+test("buildEditorConfigFromDom reads text and display visibility controls", () => {
+  const disabledDisplayOptions = new Set([
+    "#display_filter_control",
+    "#display_calendar_control",
+    "#display_source_indicator",
+    "#display_back_button",
+    "#display_alert_detection_chip",
+    "#display_alert_detection_outline",
+    "#display_object_chips",
+    "#display_location_area_zone",
+    "#display_alert_count",
+    "#display_footer",
+  ]);
   const root = {
     querySelector: (selector) => {
       if (selector === "#display_title") return { checked: false };
       if (selector === "#display_subtitle") return { checked: true };
       if (selector === "#display_logo") return { checked: false };
       if (selector === "#display_version") return { checked: false };
+      if (disabledDisplayOptions.has(selector)) return { checked: false };
       return null;
     },
     querySelectorAll: () => [],
@@ -1584,6 +1638,9 @@ test("buildEditorConfigFromDom reads title, subtitle, logo, and version visibili
   assert.equal(result.display_subtitle, true);
   assert.equal(result.display_logo, false);
   assert.equal(result.display_version, false);
+  for (const selector of disabledDisplayOptions) {
+    assert.equal(result[selector.slice(1)], false);
+  }
 });
 
 test("buildEditorConfigFromDom reads standalone Card View presentation controls", () => {
@@ -2732,7 +2789,9 @@ test("editor presents general, layout, and Mobile View controls in their request
   const generalStart = editorSource.indexOf("const generalPanelContent");
   const generalEnd = editorSource.indexOf("const themePanelContent", generalStart);
   const layoutStart = editorSource.indexOf("const layoutPanelContent");
-  const layoutEnd = editorSource.indexOf("const slideshowPanelContent", layoutStart);
+  const layoutEnd = editorSource.indexOf("const displayPanelContent", layoutStart);
+  const displayStart = layoutEnd;
+  const displayEnd = editorSource.indexOf("const slideshowPanelContent", displayStart);
   const mobileStart = editorSource.indexOf("const mobileViewPanelContent");
   const mobileEnd = editorSource.indexOf(
     "const swipeNavigationPanelContent",
@@ -2740,6 +2799,7 @@ test("editor presents general, layout, and Mobile View controls in their request
   );
   const generalSource = editorSource.slice(generalStart, generalEnd);
   const layoutSource = editorSource.slice(layoutStart, layoutEnd);
+  const displaySource = editorSource.slice(displayStart, displayEnd);
   const mobileSource = editorSource.slice(mobileStart, mobileEnd);
 
   const daysIndex = generalSource.indexOf('id="alerts_reviews_days"');
@@ -2752,8 +2812,20 @@ test("editor presents general, layout, and Mobile View controls in their request
   assert.doesNotMatch(generalSource, /id="display_logo"/);
   assert.doesNotMatch(generalSource, /id="mobile_poll_battery_saver"/);
 
-  assert.match(layoutSource, /id="display_logo"/);
-  assert.match(layoutSource, /id="display_version"/);
+  assert.doesNotMatch(layoutSource, /id="display_logo"/);
+  assert.doesNotMatch(layoutSource, /id="display_version"/);
+  assert.match(displaySource, /id="display_logo"/);
+  assert.match(displaySource, /id="display_version"/);
+  assert.match(displaySource, /id="display_filter_control"/);
+  assert.match(displaySource, /id="display_calendar_control"/);
+  assert.match(displaySource, /id="display_source_indicator"/);
+  assert.match(displaySource, /id="display_back_button"/);
+  assert.match(displaySource, /id="display_alert_detection_chip"/);
+  assert.match(displaySource, /id="display_alert_detection_outline"/);
+  assert.match(displaySource, /id="display_object_chips"/);
+  assert.match(displaySource, /id="display_location_area_zone"/);
+  assert.match(displaySource, /id="display_alert_count"/);
+  assert.match(displaySource, /id="display_footer"/);
   assert.match(
     layoutSource,
     /class="card-height-slider-control">[\s\S]*?id="stream_height"[\s\S]*?id="stream_height-output"/,
@@ -2767,12 +2839,8 @@ test("editor presents general, layout, and Mobile View controls in their request
     /Home Assistant's fixed row height constrains the card/,
   );
   assert.ok(
-    layoutSource.indexOf('id="display_logo"') >
-      layoutSource.indexOf('id="rounded_corners"'),
-  );
-  assert.ok(
-    layoutSource.indexOf('id="display_version"') >
-      layoutSource.indexOf('id="display_logo"'),
+    displaySource.indexOf('id="display_version"') >
+      displaySource.indexOf('id="display_logo"'),
   );
   assert.match(generalSource, /id="card-version-status"/);
   assert.match(generalSource, /data-home-assistant-version-notice/);

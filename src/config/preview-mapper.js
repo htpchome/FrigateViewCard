@@ -55,6 +55,16 @@ export const createEditorPreviewDraft = (config) => ({
   display_subtitle: config.display_subtitle,
   display_logo: config.display_logo,
   display_version: config.display_version,
+  display_filter_control: config.display_filter_control,
+  display_calendar_control: config.display_calendar_control,
+  display_source_indicator: config.display_source_indicator,
+  display_back_button: config.display_back_button,
+  display_alert_detection_chip: config.display_alert_detection_chip,
+  display_alert_detection_outline: config.display_alert_detection_outline,
+  display_object_chips: config.display_object_chips,
+  display_location_area_zone: config.display_location_area_zone,
+  display_alert_count: config.display_alert_count,
+  display_footer: config.display_footer,
   cameras: Array.isArray(config.cameras)
     ? config.cameras.map((camera) => ({
         ...camera,
@@ -185,6 +195,21 @@ export const applyEditorPreviewDraftToCardConfig = ({
     display_subtitle: previewConfig.display_subtitle !== false,
     display_logo: previewConfig.display_logo !== false,
     display_version: previewConfig.display_version !== false,
+    display_filter_control: previewConfig.display_filter_control !== false,
+    display_calendar_control:
+      previewConfig.display_calendar_control !== false,
+    display_source_indicator:
+      previewConfig.display_source_indicator !== false,
+    display_back_button: previewConfig.display_back_button !== false,
+    display_alert_detection_chip:
+      previewConfig.display_alert_detection_chip !== false,
+    display_alert_detection_outline:
+      previewConfig.display_alert_detection_outline !== false,
+    display_object_chips: previewConfig.display_object_chips !== false,
+    display_location_area_zone:
+      previewConfig.display_location_area_zone !== false,
+    display_alert_count: previewConfig.display_alert_count !== false,
+    display_footer: previewConfig.display_footer !== false,
     cameras: Array.isArray(previewConfig.cameras)
       ? previewConfig.cameras
       : base.cameras,

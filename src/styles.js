@@ -81,6 +81,21 @@ export const STYLES = `
   .card[data-ha-theme="custom"][data-ha-dark-primary="derived"] {
     --dark-primary-color: color-mix(in srgb, var(--primary-color) 75%, black);
   }
+  .card.display-filter-control-off :is(#filter-btn,#filter-panel,[data-card-view-media-drawer-filter],[data-card-view-media-drawer-filter-panel]),
+  .card.display-calendar-control-off :is(#cal-btn,#cal-panel,[data-card-view-calendar],[data-card-view-calendar-panel],[data-card-view-media-drawer-calendar],[data-card-view-media-drawer-calendar-panel]),
+  .card.display-source-indicator-off :is(.info-stream-stat,.mobile-cam-picker__stream,.preview-meta-source,[data-single-view-source-indicator],[data-card-view-source-indicator]),
+  .card.display-back-button-off :is([data-page-back],[data-preview-back],[data-card-view-video-back]),
+  .card.display-alert-detection-chip-off .list-item .review-severity-chip,
+  .card.display-object-chips-off .list-item :is(.review-object-tag,.review-object-overflow,.list-item-tags > .tb,.list-item-tags > .subl),
+  .card.display-location-area-zone-off .list-item :is(.cam-badge,.zone-meta),
+  .card.display-alert-count-off :is(.info-alert-stat,.preview-meta-alerts),
+  .card.favorites-tab-hidden .list-item [data-fav],
+  .card.display-footer-off :is(.layout--single-view,.layout--mobile-view) > * [data-fvc-region="footer"] {
+    display:none !important;
+  }
+  .card.display-alert-detection-outline-off .list-item :is(.et.alert,.et.detection,.rev-sev.alert,.rev-sev.detection) {
+    outline:none !important;
+  }
   .card {
         --c-bg-main:   var(--card-background-color);
         --c-bg-primary:var(--primary-background-color); 
