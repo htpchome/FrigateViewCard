@@ -538,6 +538,8 @@
       "mobileBackWarning": "Wenn die mobile Ansicht aktiviert ist, kann das Ausblenden der Zurück-Schaltfläche dazu führen, dass Benutzer die Seite der mobilen Ansicht nicht mehr verlassen können.",
       "streamSource": "Streamquelle anzeigen",
       "streamSourceHelp": "Zeigt den Text der Streamquelle und die Quellenanzeigen im Overlay an.",
+      "onlineIndicator": "Online-Anzeige anzeigen",
+      "onlineIndicatorHelp": "Zeigt Online-/Offline- und LIVE-Statusanzeigen auf allen Seiten einschließlich Overlays an.",
       "logo": "{cardName}-Logo anzeigen",
       "version": "Versionsnummer anzeigen",
       "footer": "Fußzeile anzeigen",
@@ -708,6 +710,7 @@
       "desktopPagesHelp": "Nur aktivierte Seiten werden angezeigt. Die Startseite für PC/Tablet ist immer enthalten.",
       "phonePages": "Wisch-Seiten für Smartphones",
       "phonePagesHelp": "Die Breite Ansicht ist auf Smartphones nicht verfügbar. Die Smartphone-Startseite ist immer enthalten.",
+      "landingPageLocked": "Diese Seite ist immer enthalten, da sie die Startseite ist.",
       "edgeSwipesHelp": "Auf Touchgeräten bleiben Wischgesten vom Rand für die Home-Assistant-Navigation verfügbar.",
       "mouseNavigation": "Wisch-Navigation mit der Maus",
       "mouseNavigationHelp": "Ermöglicht dieselbe Navigation durch Ziehen mit gedrückter primärer Maustaste."

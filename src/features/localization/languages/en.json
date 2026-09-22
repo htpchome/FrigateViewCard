@@ -538,6 +538,8 @@
       "mobileBackWarning": "With Mobile View enabled, hiding the Back button can leave a user stuck on the Mobile View page.",
       "streamSource": "Display Stream Source",
       "streamSourceHelp": "Shows stream-source text and source overlay bubbles.",
+      "onlineIndicator": "Display Online Indicator",
+      "onlineIndicatorHelp": "Shows online/offline and LIVE status indicators on all pages, including overlays.",
       "logo": "Display {cardName} Logo",
       "version": "Display Version Number",
       "footer": "Display Footer",
@@ -708,6 +710,7 @@
       "desktopPagesHelp": "Only enabled pages are shown. The PC/tablet landing page is always included.",
       "phonePages": "Phone Swipe Pages",
       "phonePagesHelp": "Wide View is unavailable on phones. The phone landing page is always included.",
+      "landingPageLocked": "This page is always included because it is the landing page.",
       "edgeSwipesHelp": "On touch devices, edge swipes remain available for Home Assistant navigation.",
       "mouseNavigation": "Mouse Swipe Navigation",
       "mouseNavigationHelp": "Enables the same navigation with a primary-button mouse drag."

@@ -538,6 +538,8 @@
       "mobileBackWarning": "Amb la Vista mòbil activada, amagar el botó Enrere pot deixar l'usuari atrapat a la pàgina de Vista mòbil.",
       "streamSource": "Mostra l'origen de la transmissió",
       "streamSourceHelp": "Mostra el text de l'origen de la transmissió i els indicadors superposats.",
+      "onlineIndicator": "Mostra l’indicador en línia",
+      "onlineIndicatorHelp": "Mostra els indicadors d’estat en línia/fora de línia i EN DIRECTE a totes les pàgines, incloses les superposicions.",
       "logo": "Mostra el logotip de {cardName}",
       "version": "Mostra el número de versió",
       "footer": "Mostra el peu de pàgina",
@@ -708,6 +710,7 @@
       "desktopPagesHelp": "Només es mostren les pàgines activades. La pàgina inicial d'ordinador/tauleta sempre s'inclou.",
       "phonePages": "Pàgines lliscants del telèfon",
       "phonePagesHelp": "La vista ampla no està disponible als telèfons. La pàgina inicial del telèfon sempre s'inclou.",
+      "landingPageLocked": "Aquesta pàgina sempre s’inclou perquè és la pàgina inicial.",
       "edgeSwipesHelp": "Als dispositius tàctils, els gestos des de la vora continuen disponibles per navegar per Home Assistant.",
       "mouseNavigation": "Navegació arrossegant amb el ratolí",
       "mouseNavigationHelp": "Permet la mateixa navegació arrossegant amb el botó principal del ratolí."

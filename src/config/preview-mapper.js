@@ -58,6 +58,7 @@ export const createEditorPreviewDraft = (config) => ({
   display_filter_control: config.display_filter_control,
   display_calendar_control: config.display_calendar_control,
   display_source_indicator: config.display_source_indicator,
+  display_online_indicator: config.display_online_indicator,
   display_back_button: config.display_back_button,
   display_alert_detection_chip: config.display_alert_detection_chip,
   display_alert_detection_outline: config.display_alert_detection_outline,
@@ -200,6 +201,8 @@ export const applyEditorPreviewDraftToCardConfig = ({
       previewConfig.display_calendar_control !== false,
     display_source_indicator:
       previewConfig.display_source_indicator !== false,
+    display_online_indicator:
+      previewConfig.display_online_indicator !== false,
     display_back_button: previewConfig.display_back_button !== false,
     display_alert_detection_chip:
       previewConfig.display_alert_detection_chip !== false,

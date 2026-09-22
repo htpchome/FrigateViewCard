@@ -538,6 +538,8 @@
       "mobileBackWarning": "Gdy Widok mobilny jest włączony, ukrycie przycisku Wstecz może uniemożliwić użytkownikowi opuszczenie strony Widoku mobilnego.",
       "streamSource": "Wyświetl źródło strumienia",
       "streamSourceHelp": "Wyświetla tekst źródła strumienia i wskaźniki na nakładce.",
+      "onlineIndicator": "Wyświetl wskaźnik online",
+      "onlineIndicatorHelp": "Wyświetla wskaźniki stanu online/offline i NA ŻYWO na wszystkich stronach, także w nakładkach.",
       "logo": "Wyświetl logo {cardName}",
       "version": "Wyświetl numer wersji",
       "footer": "Wyświetl stopkę",
@@ -708,6 +710,7 @@
       "desktopPagesHelp": "Pokazywane są tylko włączone strony. Strona startowa komputera/tabletu jest zawsze uwzględniona.",
       "phonePages": "Strony do przesuwania na telefonie",
       "phonePagesHelp": "Widok szeroki jest niedostępny na telefonach. Strona startowa telefonu jest zawsze uwzględniona.",
+      "landingPageLocked": "Ta strona jest zawsze uwzględniona, ponieważ jest stroną startową.",
       "edgeSwipesHelp": "Na urządzeniach dotykowych gesty od krawędzi pozostają dostępne dla nawigacji Home Assistant.",
       "mouseNavigation": "Nawigacja przeciągnięciem myszy",
       "mouseNavigationHelp": "Włącza taką samą nawigację przez przeciąganie głównym przyciskiem myszy."

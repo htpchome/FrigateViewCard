@@ -84,6 +84,7 @@ export const STYLES = `
   .card.display-filter-control-off :is(#filter-btn,#filter-panel,[data-card-view-media-drawer-filter],[data-card-view-media-drawer-filter-panel]),
   .card.display-calendar-control-off :is(#cal-btn,#cal-panel,[data-card-view-calendar],[data-card-view-calendar-panel],[data-card-view-media-drawer-calendar],[data-card-view-media-drawer-calendar-panel]),
   .card.display-source-indicator-off :is(.info-stream-stat,.mobile-cam-picker__stream,.preview-meta-source,[data-single-view-source-indicator],[data-card-view-source-indicator]),
+  .card.display-online-indicator-off :is(.info-online-stat,.mobile-cam-picker__live-tile,.mobile-cam-picker__trigger-dot,.cam-dot,.preview-meta-status,[data-single-view-live-badge],[data-card-view-live-badge]),
   .card.display-back-button-off :is([data-page-back],[data-preview-back],[data-card-view-video-back]),
   .card.display-alert-detection-chip-off .list-item .review-severity-chip,
   .card.display-object-chips-off .list-item :is(.review-object-tag,.review-object-overflow,.list-item-tags > .tb,.list-item-tags > .subl),

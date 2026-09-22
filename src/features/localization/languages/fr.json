@@ -538,6 +538,8 @@
       "mobileBackWarning": "Lorsque la Vue mobile est activée, masquer le bouton Retour peut empêcher l'utilisateur de quitter la page Vue mobile.",
       "streamSource": "Afficher la source du flux",
       "streamSourceHelp": "Affiche le texte de la source du flux et les indicateurs superposés.",
+      "onlineIndicator": "Afficher l’indicateur en ligne",
+      "onlineIndicatorHelp": "Affiche les indicateurs d’état en ligne/hors ligne et EN DIRECT sur toutes les pages, y compris les superpositions.",
       "logo": "Afficher le logo {cardName}",
       "version": "Afficher le numéro de version",
       "footer": "Afficher le pied de page",
@@ -708,6 +710,7 @@
       "desktopPagesHelp": "Seules les pages activées sont affichées. La page d'accueil PC/tablette est toujours incluse.",
       "phonePages": "Pages accessibles par balayage sur téléphone",
       "phonePagesHelp": "La Vue large n'est pas disponible sur téléphone. La page d'accueil du téléphone est toujours incluse.",
+      "landingPageLocked": "Cette page est toujours incluse, car il s’agit de la page d’accueil.",
       "edgeSwipesHelp": "Sur les appareils tactiles, le balayage depuis le bord reste disponible pour la navigation Home Assistant.",
       "mouseNavigation": "Navigation par glissement à la souris",
       "mouseNavigationHelp": "Permet la même navigation en faisant glisser avec le bouton principal de la souris."

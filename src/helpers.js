@@ -710,6 +710,7 @@ export const buildEditorConfigFromDom = ({
     "display_filter_control",
     "display_calendar_control",
     "display_source_indicator",
+    "display_online_indicator",
     "display_back_button",
     "display_alert_detection_chip",
     "display_alert_detection_outline",

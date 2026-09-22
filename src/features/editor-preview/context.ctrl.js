@@ -276,6 +276,8 @@ export class EditorPreviewContextController {
     this._host._haNavbarController?.sync?.();
     this._host._haDashboardSwipeNavigationController?.sync?.();
     this._host._syncVisualStyleToggles?.();
+    this._host._syncFvcBrandLogo?.();
+    this._host._syncFooterVersion?.();
     if (previewKeysChanged(
       previousConfig,
       nextConfig,

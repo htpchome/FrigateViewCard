@@ -231,6 +231,10 @@ export class CardStyleContextController {
         className: "display-source-indicator-off",
       },
       {
+        configKey: "display_online_indicator",
+        className: "display-online-indicator-off",
+      },
+      {
         configKey: "display_back_button",
         className: "display-back-button-off",
       },

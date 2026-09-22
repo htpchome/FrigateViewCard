@@ -538,6 +538,8 @@
       "mobileBackWarning": "Con la Vista mobile attivata, nascondere il pulsante Indietro può lasciare l'utente bloccato nella pagina Vista mobile.",
       "streamSource": "Mostra origine del flusso",
       "streamSourceHelp": "Mostra il testo dell'origine del flusso e gli indicatori sovrapposti.",
+      "onlineIndicator": "Mostra indicatore online",
+      "onlineIndicatorHelp": "Mostra gli indicatori di stato online/offline e LIVE in tutte le pagine, incluse le sovrapposizioni.",
       "logo": "Mostra logo {cardName}",
       "version": "Mostra numero di versione",
       "footer": "Mostra piè di pagina",
@@ -708,6 +710,7 @@
       "desktopPagesHelp": "Sono mostrate solo le pagine attivate. La pagina iniziale di PC/tablet è sempre inclusa.",
       "phonePages": "Pagine scorribili sul telefono",
       "phonePagesHelp": "Vista ampia non è disponibile sui telefoni. La pagina iniziale del telefono è sempre inclusa.",
+      "landingPageLocked": "Questa pagina è sempre inclusa perché è la pagina iniziale.",
       "edgeSwipesHelp": "Sui dispositivi touch, lo scorrimento dal bordo resta disponibile per la navigazione in Home Assistant.",
       "mouseNavigation": "Navigazione trascinando con il mouse",
       "mouseNavigationHelp": "Abilita la stessa navigazione trascinando con il pulsante principale del mouse."

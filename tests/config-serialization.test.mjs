@@ -806,6 +806,7 @@ test("display options default on and compact only disabled YAML values", () => {
     "display_filter_control",
     "display_calendar_control",
     "display_source_indicator",
+    "display_online_indicator",
     "display_back_button",
     "display_alert_detection_chip",
     "display_alert_detection_outline",
@@ -1607,6 +1608,7 @@ test("buildEditorConfigFromDom reads text and display visibility controls", () =
     "#display_filter_control",
     "#display_calendar_control",
     "#display_source_indicator",
+    "#display_online_indicator",
     "#display_back_button",
     "#display_alert_detection_chip",
     "#display_alert_detection_outline",
@@ -2819,6 +2821,7 @@ test("editor presents general, layout, and Mobile View controls in their request
   assert.match(displaySource, /id="display_filter_control"/);
   assert.match(displaySource, /id="display_calendar_control"/);
   assert.match(displaySource, /id="display_source_indicator"/);
+  assert.match(displaySource, /id="display_online_indicator"/);
   assert.match(displaySource, /id="display_back_button"/);
   assert.match(displaySource, /id="display_alert_detection_chip"/);
   assert.match(displaySource, /id="display_alert_detection_outline"/);
@@ -2838,9 +2841,34 @@ test("editor presents general, layout, and Mobile View controls in their request
     layoutSource,
     /Home Assistant's fixed row height constrains the card/,
   );
+  const informationControlOrder = [
+    "display_source_indicator",
+    "display_online_indicator",
+    "display_alert_count",
+    "display_footer",
+    "display_logo",
+    "display_version",
+  ].map((id) => displaySource.indexOf(`id="${id}"`));
+  assert.ok(informationControlOrder.every((index) => index >= 0));
+  assert.deepEqual(
+    informationControlOrder,
+    [...informationControlOrder].sort((a, b) => a - b),
+  );
+  assert.match(
+    displaySource,
+    /class="editor-choice-chips editor-choice-chips--checkbox active-tabs-choice-row"/,
+  );
+  assert.match(
+    editorSource,
+    /const tabToggle = [\s\S]*?type="checkbox" data-active-tab="\$\{id\}"/,
+  );
   assert.ok(
-    displaySource.indexOf('id="display_version"') >
-      displaySource.indexOf('id="display_logo"'),
+    editorSource.indexOf('id: "layout"') <
+      editorSource.indexOf('id: "displayOptions"'),
+  );
+  assert.ok(
+    editorSource.indexOf('id: "displayOptions"') <
+      editorSource.indexOf('id: "theme"'),
   );
   assert.match(generalSource, /id="card-version-status"/);
   assert.match(generalSource, /data-home-assistant-version-notice/);

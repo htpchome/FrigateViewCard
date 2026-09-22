@@ -212,6 +212,7 @@ The Card View can be configured in a few ways and is designed to insert into das
 | `display_calendar_control` | boolean | `true` | Displays the calendar button and panel in all views. |
 | `display_back_button` | boolean | `true` | Displays header and overlay Back buttons. Disabling this can remove the return path from Mobile View. |
 | `display_source_indicator` | boolean | `true` | Displays stream-source text and overlay indicators. |
+| `display_online_indicator` | boolean | `true` | Displays online/offline and LIVE status indicators, including overlay badges. |
 | `display_logo` | boolean | `true` | Displays the FrigateView logo in supported headers and footers. |
 | `display_version` | boolean | `true` | Displays the FrigateView version number in page footers. The editor always shows the running version. |
 | `display_footer` | boolean | `true` | Displays the footer in Single View and Mobile View. When disabled, the logo and version are also hidden in those footers. |

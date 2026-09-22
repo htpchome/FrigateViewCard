@@ -2465,6 +2465,7 @@ test("Display Options localize in place and preserve disabled controls", async (
       display_filter_control: false,
       display_calendar_control: false,
       display_source_indicator: false,
+      display_online_indicator: false,
       display_back_button: false,
       display_logo: false,
       display_version: false,
@@ -2491,6 +2492,7 @@ test("Display Options localize in place and preserve disabled controls", async (
       "display_filter_control",
       "display_calendar_control",
       "display_source_indicator",
+      "display_online_indicator",
       "display_back_button",
       "display_logo",
       "display_version",
@@ -2504,6 +2506,8 @@ test("Display Options localize in place and preserve disabled controls", async (
     return {
       directlyAfterLayout:
         panels[panels.indexOf(panel) - 1]?.dataset.panel === "layout",
+      themeDirectlyAfterDisplay:
+        panels[panels.indexOf(panel) + 1]?.dataset.panel === "theme",
       panelPreserved: editor.querySelector('[data-panel="displayOptions"]') === panel,
       panelOpen: panel.classList.contains("active"),
       filterPreserved: editor.querySelector("#display_filter_control") === filter,
@@ -2514,6 +2518,12 @@ test("Display Options localize in place and preserve disabled controls", async (
       }),
       favoritesEnabled:
         editor.querySelector('[data-active-tab="kept"]').checked === true,
+      activeTabsAreCheckboxes: [...editor.querySelectorAll("[data-active-tab]")]
+        .every((input) => input.tagName === "INPUT" && input.type === "checkbox"),
+      activeTabsOneRow:
+        new Set([...editor.querySelectorAll("[data-active-tab]")]
+          .map((input) => Math.round(input.closest(".editor-choice-chip").getBoundingClientRect().top)))
+          .size === 1,
       warningPreserved: editor.querySelector("#display-back-button-warning") === warning,
       warningVisible: warning.hidden === false,
       panelTitle: panel.querySelector("h3").textContent,
@@ -2526,12 +2536,15 @@ test("Display Options localize in place and preserve disabled controls", async (
 
   expect(state).toEqual({
     directlyAfterLayout: true,
+    themeDirectlyAfterDisplay: true,
     panelPreserved: true,
     panelOpen: true,
     filterPreserved: true,
     backPreserved: true,
     allDisabled: true,
     favoritesEnabled: false,
+    activeTabsAreCheckboxes: true,
+    activeTabsOneRow: true,
     warningPreserved: true,
     warningVisible: true,
     panelTitle: "Options d'affichage",
@@ -3102,11 +3115,48 @@ test("Single and Mobile View footers become compact when the logo is disabled", 
       return state;
     };
 
+    const sampleReenabledLogo = (pageId) => {
+      const card = document.createElement("frigate-view-card");
+      card.style.cssText = "display:block;width:500px;height:700px";
+      document.body.append(card);
+      const config = {
+        cameras: [{ entity: "camera.front", name: "Front" }],
+        mobile_view_page_enabled: true,
+        display_logo: false,
+        display_version: true,
+      };
+      card.setConfig(config);
+      card._pageId = pageId;
+      card._renderShell();
+      const footer = card.shadowRoot.querySelector(
+        '[data-fvc-region="footer"]',
+      );
+      const previousConfig = card._config;
+      const nextConfig = { ...previousConfig, display_logo: true };
+      card._config = nextConfig;
+      card._editorPreviewController.applyConfigDraft({
+        previousConfig,
+        nextConfig,
+      });
+      const updatedFooter = card.shadowRoot.querySelector(
+        '[data-fvc-region="footer"]',
+      );
+      const state = {
+        footerPreserved: updatedFooter === footer,
+        compact: updatedFooter.classList.contains("footer--logo-hidden"),
+        hasLogo: Boolean(updatedFooter.querySelector(".fvc-brand-logo svg")),
+      };
+      card.remove();
+      return state;
+    };
+
     return {
       singleWithLogo: sample("single-view", true),
       singleWithoutLogo: sample("single-view", false),
       mobileWithLogo: sample("mobile-view", true),
       mobileWithoutLogo: sample("mobile-view", false),
+      singleReenabled: sampleReenabledLogo("single-view"),
+      mobileReenabled: sampleReenabledLogo("mobile-view"),
     };
   });
 
@@ -3120,6 +3170,13 @@ test("Single and Mobile View footers become compact when the logo is disabled", 
     expect(withoutLogo.hasLogo).toBe(false);
     expect(withoutLogo.versionVisible).toBe(true);
     expect(withoutLogo.height).toBeLessThan(withLogo.height);
+  }
+  for (const reenabled of [result.singleReenabled, result.mobileReenabled]) {
+    expect(reenabled).toEqual({
+      footerPreserved: true,
+      compact: false,
+      hasLogo: true,
+    });
   }
 });
 
@@ -3318,6 +3375,7 @@ test("disabled Display Options hide controls and browse metadata without removin
       display_filter_control: false,
       display_calendar_control: false,
       display_source_indicator: false,
+      display_online_indicator: false,
       display_back_button: false,
       display_alert_detection_chip: false,
       display_alert_detection_outline: false,
@@ -3355,6 +3413,9 @@ test("disabled Display Options hide controls and browse metadata without removin
       filter: display("#filter-btn"),
       calendar: display("#cal-btn"),
       source: display(".mobile-cam-picker__stream"),
+      online: display(".mobile-cam-picker__live-tile"),
+      pickerOnline: display(".mobile-cam-picker__trigger-dot"),
+      cameraOnline: display(".cam-dot"),
       backPresent: Boolean(root.querySelector("[data-page-back]")),
       footer: display('[data-fvc-region="footer"]'),
       severityChip: display(".review-severity-chip"),
@@ -3371,6 +3432,8 @@ test("disabled Display Options hide controls and browse metadata without removin
     const single = {
       livePresent: Boolean(root.querySelector("#eng-wrap")),
       source: display(".info-stream-stat"),
+      online: display(".info-online-stat"),
+      liveBadge: display("[data-single-view-live-badge]"),
       alertCount: display(".info-alert-stat"),
       footer: display('[data-fvc-region="footer"]'),
     };
@@ -3379,6 +3442,7 @@ test("disabled Display Options hide controls and browse metadata without removin
         "display-filter-control-off",
         "display-calendar-control-off",
         "display-source-indicator-off",
+        "display-online-indicator-off",
         "display-back-button-off",
         "display-alert-detection-chip-off",
         "display-alert-detection-outline-off",
@@ -3400,6 +3464,9 @@ test("disabled Display Options hide controls and browse metadata without removin
       filter: "none",
       calendar: "none",
       source: "none",
+      online: "none",
+      pickerOnline: "none",
+      cameraOnline: "none",
       backPresent: false,
       footer: "none",
       severityChip: "none",
@@ -3412,6 +3479,8 @@ test("disabled Display Options hide controls and browse metadata without removin
     single: {
       livePresent: true,
       source: "none",
+      online: "none",
+      liveBadge: "none",
       alertCount: "none",
       footer: "none",
     },
@@ -4835,6 +4904,9 @@ test("keeps desktop and phone swipe-page chips compact, equal, and responsive", 
         checked: chips
           .filter((chip) => chip.querySelector("input").checked)
           .map((chip) => chip.querySelector("input").value),
+        lockedTitles: chips
+          .filter((chip) => chip.querySelector("input").disabled)
+          .map((chip) => chip.title),
       };
     };
     const readRows = () => ({
@@ -4890,6 +4962,12 @@ test("keeps desktop and phone swipe-page chips compact, equal, and responsive", 
   expect(geometry.wide.mobile.values).not.toContain("wide-view");
   expect(geometry.wide.desktop.locked).toEqual(["single-view"]);
   expect(geometry.wide.mobile.locked).toEqual(["mobile-view"]);
+  expect(geometry.wide.desktop.lockedTitles).toEqual([
+    "This page is always included because it is the landing page.",
+  ]);
+  expect(geometry.wide.mobile.lockedTitles).toEqual([
+    "This page is always included because it is the landing page.",
+  ]);
   expect(geometry.wide.desktop.checked).toContain("single-view");
   expect(geometry.wide.mobile.checked).toContain("mobile-view");
   for (const group of [

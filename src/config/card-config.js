@@ -115,6 +115,7 @@ export const normalizeCardConfig = (config) => {
   src.display_filter_control = src.display_filter_control !== false;
   src.display_calendar_control = src.display_calendar_control !== false;
   src.display_source_indicator = src.display_source_indicator !== false;
+  src.display_online_indicator = src.display_online_indicator !== false;
   src.display_back_button = src.display_back_button !== false;
   src.display_alert_detection_chip =
     src.display_alert_detection_chip !== false;

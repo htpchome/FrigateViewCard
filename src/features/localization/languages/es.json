@@ -538,6 +538,8 @@
       "mobileBackWarning": "Con la Vista móvil activada, ocultar el botón Atrás puede impedir que el usuario salga de la página de Vista móvil.",
       "streamSource": "Mostrar origen de la transmisión",
       "streamSourceHelp": "Muestra el texto del origen de la transmisión y los indicadores superpuestos.",
+      "onlineIndicator": "Mostrar indicador en línea",
+      "onlineIndicatorHelp": "Muestra los indicadores de estado en línea/sin conexión y EN VIVO en todas las páginas, incluidas las superposiciones.",
       "logo": "Mostrar logotipo de {cardName}",
       "version": "Mostrar número de versión",
       "footer": "Mostrar pie de página",
@@ -708,6 +710,7 @@
       "desktopPagesHelp": "Solo se muestran las páginas activadas. La página de inicio de PC/tableta siempre está incluida.",
       "phonePages": "Páginas deslizables en teléfonos",
       "phonePagesHelp": "Vista amplia no está disponible en teléfonos. La página de inicio del teléfono siempre está incluida.",
+      "landingPageLocked": "Esta página siempre se incluye porque es la página de inicio.",
       "edgeSwipesHelp": "En dispositivos táctiles, los deslizamientos desde el borde siguen disponibles para navegar por Home Assistant.",
       "mouseNavigation": "Navegación por deslizamiento con el ratón",
       "mouseNavigationHelp": "Permite la misma navegación arrastrando con el botón principal del ratón."

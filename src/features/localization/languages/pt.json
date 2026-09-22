@@ -538,6 +538,8 @@
       "mobileBackWarning": "Com a Vista móvel ativada, ocultar o botão Voltar pode impedir o utilizador de sair da página da Vista móvel.",
       "streamSource": "Mostrar origem da transmissão",
       "streamSourceHelp": "Mostra o texto da origem da transmissão e os indicadores sobrepostos.",
+      "onlineIndicator": "Mostrar indicador online",
+      "onlineIndicatorHelp": "Mostra indicadores de estado online/offline e EM DIRETO em todas as páginas, incluindo sobreposições.",
       "logo": "Mostrar logótipo do {cardName}",
       "version": "Mostrar número da versão",
       "footer": "Mostrar rodapé",
@@ -708,6 +710,7 @@
       "desktopPagesHelp": "Só são mostradas as páginas ativadas. A página inicial do PC/tablet está sempre incluída.",
       "phonePages": "Páginas acessíveis por deslize no telemóvel",
       "phonePagesHelp": "A Vista ampla não está disponível em telemóveis. A página inicial do telemóvel está sempre incluída.",
+      "landingPageLocked": "Esta página está sempre incluída porque é a página inicial.",
       "edgeSwipesHelp": "Em dispositivos táteis, o deslize a partir da margem continua disponível para navegar no Home Assistant.",
       "mouseNavigation": "Navegação por arrasto com o rato",
       "mouseNavigationHelp": "Permite a mesma navegação ao arrastar com o botão principal do rato."

@@ -1829,6 +1829,7 @@ export class FrigateViewCard extends HTMLElement {
       display_filter_control: config.display_filter_control !== false,
       display_calendar_control: config.display_calendar_control !== false,
       display_source_indicator: config.display_source_indicator !== false,
+      display_online_indicator: config.display_online_indicator !== false,
       display_back_button: config.display_back_button !== false,
       display_alert_detection_chip:
         config.display_alert_detection_chip !== false,
@@ -2088,6 +2089,7 @@ export class FrigateViewCard extends HTMLElement {
         "display_filter_control",
         "display_calendar_control",
         "display_source_indicator",
+        "display_online_indicator",
         "display_back_button",
         "display_alert_detection_chip",
         "display_alert_detection_outline",
@@ -2152,6 +2154,7 @@ export class FrigateViewCard extends HTMLElement {
     ) {
       this._initLiveOverlayControls();
     }
+    this._syncFvcBrandLogo();
     this._syncFooterVersion();
     this._haPageBackgroundController?.sync?.();
     this._previewPageController?.syncBottomNavbarPreviewChrome?.();
@@ -4789,13 +4792,21 @@ export class FrigateViewCard extends HTMLElement {
 
   // =======================Render Shell===================================
   _syncFvcBrandLogo() {
-    const fvcBrandLogoMarkup =
-      this._config?.display_logo !== false ? ICONS.fvcBrandLogo : "";
+    const displayFvcBrandLogo = this._config?.display_logo !== false;
+    const fvcBrandLogoMarkup = displayFvcBrandLogo ? ICONS.fvcBrandLogo : "";
     this.shadowRoot
       ?.querySelectorAll?.("#card .fvc-brand-logo")
       ?.forEach((element) => {
         if (element.innerHTML === fvcBrandLogoMarkup) return;
         element.innerHTML = fvcBrandLogoMarkup;
+      });
+    this.shadowRoot
+      ?.querySelectorAll?.("#card .footer")
+      ?.forEach((element) => {
+        element.classList.toggle(
+          "footer--logo-hidden",
+          !displayFvcBrandLogo,
+        );
       });
   }
 

@@ -379,6 +379,7 @@ test("syncVisualStyleToggles updates card classes and host outer styles", () => 
     ["display-filter-control-off", false],
     ["display-calendar-control-off", false],
     ["display-source-indicator-off", false],
+    ["display-online-indicator-off", false],
     ["display-back-button-off", false],
     ["display-alert-detection-chip-off", false],
     ["display-alert-detection-outline-off", false],
