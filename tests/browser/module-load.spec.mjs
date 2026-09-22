@@ -2456,6 +2456,7 @@ test("Display Options localize in place and preserve disabled controls", async (
   const state = await page.evaluate(async () => {
     await import("/frigate-view-card-editor.js");
     const editor = document.createElement("frigate-view-card-editor");
+    editor.style.width = "480px";
     editor._activeSettingsPanelId = "displayOptions";
     document.body.append(editor);
     editor.setConfig({

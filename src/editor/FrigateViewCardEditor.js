@@ -4416,7 +4416,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             .display-options-info{box-sizing:border-box;width:100%;display:flex;align-items:flex-start;gap:8px;margin:14px 0 2px;padding:9px 11px;border:1px solid color-mix(in srgb,var(--info-color,#03a9f4) 55%,transparent);border-radius:10px;background:color-mix(in srgb,var(--info-color,#03a9f4) 13%,transparent);color:color-mix(in srgb,var(--info-color,#0277bd) 75%,var(--primary-text-color,#111));font-size:11px;font-weight:600;line-height:1.35;}
             .display-options-info ha-icon,.display-options-warning ha-icon{width:18px;height:18px;flex:0 0 18px;}
             .display-options-group-title{display:block;margin-bottom:12px;color:var(--c-primary-d,var(--editor-primary-d));font-size:13px;font-weight:800;line-height:1.2;}
-            .active-tabs-choice-row{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
+            .editor-choice-chips.active-tabs-choice-row{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
             .active-tabs-choice-row .editor-choice-chip-body{min-height:38px;padding:6px;gap:5px;font-size:11px;line-height:1.1;}
             .active-tabs-choice-row .editor-choice-chip-indicator{width:15px;height:15px;}
             .display-option-block + .display-option-block{margin-top:13px;padding-top:13px;border-top:1px solid color-mix(in srgb,var(--c-border2,var(--editor-border)) 55%,transparent);}
