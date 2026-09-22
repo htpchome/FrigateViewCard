@@ -4790,9 +4790,10 @@ test("phone Single View source badge follows live controls while LIVE remains vi
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(baseUrl);
 
-  const states = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     await import("/frigate-view-card.js");
     const card = document.createElement("frigate-view-card");
+    card.dataset.sourceBadgeTest = "true";
     card.style.display = "block";
     card.style.width = "390px";
     document.body.style.margin = "0";
@@ -4812,43 +4813,60 @@ test("phone Single View source badge follows live controls while LIVE remains vi
       "[data-single-view-live-badge]",
     );
     source.hidden = false;
+    stage.dataset.sourceBadgeTestStage = "true";
+    controls.dataset.sourceBadgeTestControls = "true";
+    source.dataset.sourceBadgeTestSource = "true";
+    live.dataset.sourceBadgeTestLive = "true";
+  });
 
-    const sample = () => ({
-      controlsOpacity: getComputedStyle(controls).opacity,
-      liveDisplay: getComputedStyle(live).display,
-      sourceOpacity: getComputedStyle(source).opacity,
-      sourceVisibility: getComputedStyle(source).visibility,
+  const sample = () =>
+    page.evaluate(() => {
+      const card = document.querySelector(
+        'frigate-view-card[data-source-badge-test="true"]',
+      );
+      const controls = card.shadowRoot.querySelector(
+        '[data-source-badge-test-controls="true"]',
+      );
+      const source = card.shadowRoot.querySelector(
+        '[data-source-badge-test-source="true"]',
+      );
+      const live = card.shadowRoot.querySelector(
+        '[data-source-badge-test-live="true"]',
+      );
+      return {
+        controlsOpacity: getComputedStyle(controls).opacity,
+        liveDisplay: getComputedStyle(live).display,
+        sourceOpacity: getComputedStyle(source).opacity,
+        sourceVisibility: getComputedStyle(source).visibility,
+      };
     });
-    const hidden = sample();
-    stage.classList.add("live-controls-visible");
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    const visible = sample();
-    stage.classList.remove("live-controls-visible");
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    const restored = sample();
-    return { hidden, visible, restored };
-  });
+  const setControlsVisible = (visible) =>
+    page.evaluate((nextVisible) => {
+      const card = document.querySelector(
+        'frigate-view-card[data-source-badge-test="true"]',
+      );
+      card.shadowRoot
+        .querySelector('[data-source-badge-test-stage="true"]')
+        .classList.toggle("live-controls-visible", nextVisible);
+    }, visible);
+  const hidden = {
+    controlsOpacity: "0",
+    liveDisplay: "flex",
+    sourceOpacity: "0",
+    sourceVisibility: "hidden",
+  };
+  const visible = {
+    controlsOpacity: "1",
+    liveDisplay: "flex",
+    sourceOpacity: "1",
+    sourceVisibility: "visible",
+  };
 
-  expect(states).toEqual({
-    hidden: {
-      controlsOpacity: "0",
-      liveDisplay: "flex",
-      sourceOpacity: "0",
-      sourceVisibility: "hidden",
-    },
-    visible: {
-      controlsOpacity: "1",
-      liveDisplay: "flex",
-      sourceOpacity: "1",
-      sourceVisibility: "visible",
-    },
-    restored: {
-      controlsOpacity: "0",
-      liveDisplay: "flex",
-      sourceOpacity: "0",
-      sourceVisibility: "hidden",
-    },
-  });
+  expect(await sample()).toEqual(hidden);
+  await setControlsVisible(true);
+  await expect.poll(sample).toEqual(visible);
+  await setControlsVisible(false);
+  await expect.poll(sample).toEqual(hidden);
 });
 
 test("keeps desktop and phone swipe-page chips compact, equal, and responsive", async ({
