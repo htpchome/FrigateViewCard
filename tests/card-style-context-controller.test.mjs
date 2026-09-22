@@ -567,7 +567,9 @@ test("Bubble popup padding follows mobile-device Mobile View owners and restores
     ["padding-top", "18px"],
     ["padding-inline", "12px", "important"],
     ["--bubble-pop-up-extra-bottom-space", "66px"],
+    ["overscroll-behavior-x", "contain", "important"],
     ["overscroll-behavior-y", "contain", "important"],
+    ["overflow-x", "auto"],
     ["overflow-y", "auto"],
   ]);
   const popup = {
@@ -601,6 +603,10 @@ test("Bubble popup padding follows mobile-device Mobile View owners and restores
   }
   assert.equal(popupStyle.getPropertyValue("overscroll-behavior-y"), "none");
   assert.equal(popupStyle.getPropertyPriority("overscroll-behavior-y"), "important");
+  assert.equal(popupStyle.getPropertyValue("overflow-x"), "hidden");
+  assert.equal(popupStyle.getPropertyPriority("overflow-x"), "important");
+  assert.equal(popupStyle.getPropertyValue("overscroll-behavior-x"), "none");
+  assert.equal(popupStyle.getPropertyPriority("overscroll-behavior-x"), "important");
   second.controller.syncBubblePopupVerticalScroll();
   assert.equal(popupStyle.getPropertyValue("overflow-y"), "hidden");
   popup.scrollHeight = 620;
@@ -618,6 +624,8 @@ test("Bubble popup padding follows mobile-device Mobile View owners and restores
   assert.equal(popupStyle.getPropertyValue("padding-right"), "0");
   assert.equal(popupStyle.getPropertyValue("padding-left"), "0");
   assert.equal(popupStyle.getPropertyValue("overscroll-behavior-y"), "contain");
+  assert.equal(popupStyle.getPropertyValue("overflow-x"), "hidden");
+  assert.equal(popupStyle.getPropertyValue("overscroll-behavior-x"), "none");
   assert.equal(popupStyle.getPropertyValue("overflow-y"), "auto");
   assert.equal(popupStyle.getPropertyValue("--bubble-pop-up-extra-bottom-space"), "0px");
 
@@ -630,6 +638,9 @@ test("Bubble popup padding follows mobile-device Mobile View owners and restores
   assert.equal(popupStyle.getPropertyValue("--bubble-pop-up-extra-bottom-space"), "66px");
   assert.equal(popupStyle.getPropertyValue("overscroll-behavior-y"), "contain");
   assert.equal(popupStyle.getPropertyPriority("overscroll-behavior-y"), "important");
+  assert.equal(popupStyle.getPropertyValue("overflow-x"), "auto");
+  assert.equal(popupStyle.getPropertyValue("overscroll-behavior-x"), "contain");
+  assert.equal(popupStyle.getPropertyPriority("overscroll-behavior-x"), "important");
   assert.equal(popupStyle.getPropertyValue("overflow-y"), "auto");
 });
 

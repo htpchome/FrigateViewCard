@@ -34,7 +34,9 @@ const MINIMUM_CARD_HEIGHT_BUFFER_PX = 8;
 const bubblePopupPaddingStates = new WeakMap();
 const bubbleFullscreenStyleStates = new WeakMap();
 const BUBBLE_POPUP_EXTRA_BOTTOM_SPACE = "--bubble-pop-up-extra-bottom-space";
+const BUBBLE_POPUP_OVERSCROLL_X = "overscroll-behavior-x";
 const BUBBLE_POPUP_OVERSCROLL_Y = "overscroll-behavior-y";
+const BUBBLE_POPUP_OVERFLOW_X = "overflow-x";
 const BUBBLE_POPUP_OVERFLOW_Y = "overflow-y";
 const BUBBLE_FULLSCREEN_STYLE_OVERRIDES = Object.freeze({
   transform: "none",
@@ -85,7 +87,9 @@ const inlineBubblePopupOverrideDeclarations = (style) =>
         name === "padding" ||
         name.startsWith("padding-") ||
         name === BUBBLE_POPUP_EXTRA_BOTTOM_SPACE ||
+        name === BUBBLE_POPUP_OVERSCROLL_X ||
         name === BUBBLE_POPUP_OVERSCROLL_Y ||
+        name === BUBBLE_POPUP_OVERFLOW_X ||
         name === BUBBLE_POPUP_OVERFLOW_Y,
     )
     .map((name) => ({
@@ -113,6 +117,8 @@ const applyBubblePopupTightSpacing = (
   style.setProperty("padding-bottom", "0", "important");
   style.setProperty("padding-left", sidePadding, "important");
   style.setProperty(BUBBLE_POPUP_EXTRA_BOTTOM_SPACE, "0px", "important");
+  style.setProperty(BUBBLE_POPUP_OVERFLOW_X, "hidden", "important");
+  style.setProperty(BUBBLE_POPUP_OVERSCROLL_X, "none", "important");
   if (mobileSidePadding) {
     style.setProperty(BUBBLE_POPUP_OVERSCROLL_Y, "none", "important");
   } else {

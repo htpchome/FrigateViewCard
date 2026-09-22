@@ -3500,6 +3500,7 @@ test("Tight Margins keeps Bubble top padding and gives mobile-device Mobile View
     popup.className = "bubble-pop-up-container";
     popup.style.cssText = "width:390px;box-sizing:border-box;overflow-x:auto";
     popup.style.setProperty("padding", "14px 18px 22px 26px", "important");
+    popup.style.setProperty("overscroll-behavior-x", "contain", "important");
     popup.style.setProperty("overscroll-behavior-y", "contain", "important");
     popup.style.setProperty(
       "--bubble-pop-up-extra-bottom-space",
@@ -3525,6 +3526,8 @@ test("Tight Margins keeps Bubble top padding and gives mobile-device Mobile View
       return {
         padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft],
         extraBottom: getComputedStyle(spacer).height,
+        overflowX: style.overflowX,
+        overscrollX: style.overscrollBehaviorX,
         overscrollY: style.overscrollBehaviorY,
       };
     };
@@ -3559,13 +3562,13 @@ test("Tight Margins keeps Bubble top padding and gives mobile-device Mobile View
   });
 
   expect(state).toEqual({
-    single: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px", overscrollY: "contain" },
-    mobile: { padding: ["14px", "4px", "0px", "4px"], extraBottom: "0px", overscrollY: "none" },
+    single: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px", overflowX: "hidden", overscrollX: "none", overscrollY: "contain" },
+    mobile: { padding: ["14px", "4px", "0px", "4px"], extraBottom: "0px", overflowX: "hidden", overscrollX: "none", overscrollY: "none" },
     mobileFitsPopup: true,
-    singleAgain: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px", overscrollY: "contain" },
-    mobileNonPhone: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px", overscrollY: "contain" },
-    disabled: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px", overscrollY: "contain" },
-    disconnected: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px", overscrollY: "contain" },
+    singleAgain: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px", overflowX: "hidden", overscrollX: "none", overscrollY: "contain" },
+    mobileNonPhone: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px", overflowX: "hidden", overscrollX: "none", overscrollY: "contain" },
+    disabled: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px", overflowX: "auto", overscrollX: "contain", overscrollY: "contain" },
+    disconnected: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px", overflowX: "auto", overscrollX: "contain", overscrollY: "contain" },
   });
 });
 
