@@ -199,6 +199,10 @@ const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupCompositionSource = fs.readFileSync(
+  new URL("../src/features/popup/composition.js", import.meta.url),
+  "utf8",
+);
 const popupMediaControlsControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media.ctrl.js", import.meta.url),
   "utf8",
@@ -1727,13 +1731,18 @@ test("recordings button-transition stages do not bind a browse swipe gesture", (
 test("popup media loading delegates through the popup media loader controller", () => {
   assert.equal(
     cardSource.includes(
-      'import { PopupMediaLoaderController } from "../features/popup/media-loader.ctrl.js";',
+      'import { createPopupControllers } from "../features/popup/composition.js";',
     ),
     true,
   );
   assert.equal(
-    /this\._popupMediaLoaderController\s*=\s*new PopupMediaLoaderController\(this\);/.test(
-      cardSource,
+    cardSource.includes("Object.assign(this, createPopupControllers(this));"),
+    true,
+  );
+  assert.equal(cardSource.includes("new PopupMediaLoaderController"), false);
+  assert.equal(
+    popupCompositionSource.includes(
+      "new PopupMediaLoaderController(card, options)",
     ),
     true,
   );
@@ -1762,6 +1771,10 @@ test("popup media loading delegates through the popup media loader controller", 
   assert.equal(cardSource.includes('from "./popup/media.ctrl.js"'), false);
   assert.equal(
     cardSource.includes('from "../features/popup/carousel.ctrl.js"'),
+    false,
+  );
+  assert.equal(
+    popupCompositionSource.includes('from "./carousel.ctrl.js"'),
     true,
   );
   assert.equal(
@@ -1774,6 +1787,10 @@ test("popup media loading delegates through the popup media loader controller", 
   );
   assert.equal(
     cardSource.includes('from "../features/popup/media.ctrl.js"'),
+    false,
+  );
+  assert.equal(
+    popupCompositionSource.includes('from "./media.ctrl.js"'),
     true,
   );
   assert.equal(
@@ -1825,10 +1842,18 @@ test("popup info rendering and actions are owned by the popup feature", () => {
     cardSource.includes(
       'import { PopupInfoController } from "../features/popup/info.ctrl.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     cardSource.includes("this._popupInfoController = new PopupInfoController"),
+    false,
+  );
+  assert.equal(
+    popupCompositionSource.includes('from "./info.ctrl.js"'),
+    true,
+  );
+  assert.equal(
+    popupCompositionSource.includes("new PopupInfoController(options)"),
     true,
   );
   assert.equal(cardSource.includes("_popupInfoModel("), false);
@@ -1863,12 +1888,16 @@ test("popup carousel rendering and lifecycle are owned by the popup feature", ()
     cardSource.includes(
       'import { PopupCarouselController } from "../features/popup/carousel.ctrl.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     cardSource.includes(
       "this._popupCarouselController = new PopupCarouselController",
     ),
+    false,
+  );
+  assert.equal(
+    popupCompositionSource.includes("new PopupCarouselController(options)"),
     true,
   );
   assert.equal(cardSource.includes("_renderPopupCarousel("), false);
@@ -1895,10 +1924,16 @@ test("popup media controls and visibility are owned by the popup feature", () =>
     cardSource.includes(
       'import { PopupMediaControlsSurfaceController } from "../features/popup/media.ctrl.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     cardSource.includes("new PopupMediaControlsSurfaceController"),
+    false,
+  );
+  assert.equal(
+    popupCompositionSource.includes(
+      "new PopupMediaControlsSurfaceController(options)",
+    ),
     true,
   );
   assert.equal(cardSource.includes("_showPopupControlsTemporarily("), false);
@@ -1948,10 +1983,14 @@ test("popup recording scrub coordination is owned by the popup feature", () => {
     cardSource.includes(
       'import { PopupRecordingScrubController } from "../features/popup/recording-scrub.ctrl.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     cardSource.includes("new PopupRecordingScrubController"),
+    false,
+  );
+  assert.equal(
+    popupCompositionSource.includes("new PopupRecordingScrubController(options)"),
     true,
   );
   assert.equal(cardSource.includes("_initRecordingScrub("), false);
@@ -1977,10 +2016,14 @@ test("popup lifecycle and recording transport cleanup are feature-owned", () => 
     cardSource.includes(
       'import { PopupLifecycleController } from "../features/popup/lifecycle.ctrl.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     cardSource.includes("new PopupLifecycleController"),
+    false,
+  );
+  assert.equal(
+    popupCompositionSource.includes("new PopupLifecycleController(options)"),
     true,
   );
   assert.equal(cardSource.includes("_openPopup()"), false);

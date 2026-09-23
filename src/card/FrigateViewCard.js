@@ -231,27 +231,18 @@ import { ListScrollController } from "../features/browse/scroll.ctrl.js";
 import {
   MediaOverlayControlsController as LiveOverlayControlsController,
 } from "../shared/media/overlay-controls.ctrl.js";
-import { PopupInfoController } from "../features/popup/info.ctrl.js";
-import { PopupMediaControlsSurfaceController } from "../features/popup/media.ctrl.js";
-import { PopupCarouselController } from "../features/popup/carousel.ctrl.js";
-import { PopupRecordingScrubController } from "../features/popup/recording-scrub.ctrl.js";
-import { PopupLifecycleController } from "../features/popup/lifecycle.ctrl.js";
+import { createPopupControllers } from "../features/popup/composition.js";
 import { BrowseCollectionController } from "../features/browse/collection.ctrl.js";
 import { BrowseCalendarActivityController } from "../features/browse/calendar-activity.ctrl.js";
 import { BrowseFilterController } from "../features/browse/filter-state.js";
 import { BrowseTabDataController } from "../features/browse/tab-data.ctrl.js";
 import { BrowseWindowLoaderController } from "../features/browse/window-loader.ctrl.js";
 import {
-  buildRecordingPlaybackPlan,
-  shouldPreferRecordingHls,
   buildRecordingsListMarkup,
   disposeRecordingsDayCache,
   RecordingsBrowseNavController,
   RecordingsDayCache,
   RecordingsSwipeController,
-  formatRecordingScrubTime,
-  RECORDING_SEGMENT_EXTENSION_SECONDS,
-  resolveRecordingSegmentTimelineRange,
   resetRecordingsDayCache,
   splitRecordingsHourly,
 } from "../features/recordings/index.js";
@@ -305,7 +296,6 @@ import {
   EDITOR_PREVIEW_ROUTE_INTENTS,
   EditorPreviewContextController,
 } from "../features/editor-preview/context.ctrl.js";
-import { PopupMediaLoaderController } from "../features/popup/media-loader.ctrl.js";
 import { ViewportContextController } from "../features/viewport/context.ctrl.js";
 import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
 import { MobileCamSwitcherController } from "../features/mobile-view/cam-switcher.ctrl.js";
@@ -608,205 +598,7 @@ export class FrigateViewCard extends HTMLElement {
       isEventPrePostRollEnabled: () =>
         this._config?.event_pre_post_roll_enabled === true,
     });
-    this._popupRecordingScrubController =
-      new PopupRecordingScrubController({
-        query: (selector) => this._$(selector),
-        t: this._localization.t,
-        fetchReviews: (clientId, cam, start, end) =>
-          this._browseWindowLoaderController.fetchWindowedReviews(
-            clientId,
-            cam,
-            start,
-            end,
-          ),
-        isPlaybackTokenCurrent: (token) => token === this._playSeq,
-        isFirefox: () => this._isFirefox(),
-        isEdge: () => this._isEdge(),
-        isIOS: () => DEVICE_PROFILE.isIOS,
-        onFallbackRecording: (start, end, context = {}) =>
-          this._popupMediaLoaderController?.showRecording(start, end, {
-            compact: this._popupLifecycleController?.isCompact?.() === true,
-            ...context,
-          }),
-        onDownloadSegment: (start, end, context) =>
-          this._frigateMediaDownloadController.downloadRecording(
-            start,
-            end,
-            context,
-          ),
-        resolveSegmentTimeline: async ({ clientId, cam, start, end }) => {
-          const nowSec = Math.floor(Date.now() / 1000);
-          const recordings = await this._recordingsBrowseNavController?.fetchRecordingsInBounds(
-            {
-              start: Math.max(
-                0,
-                Math.floor(start) - RECORDING_SEGMENT_EXTENSION_SECONDS,
-              ),
-              end: Math.max(
-                Math.floor(end),
-                Math.min(
-                  nowSec,
-                  Math.floor(end) + RECORDING_SEGMENT_EXTENSION_SECONDS,
-                ),
-              ),
-            },
-            clientId,
-            cam,
-          );
-          return resolveRecordingSegmentTimelineRange({
-            recordings: recordings || [],
-            start,
-            end,
-            nowSec,
-          });
-        },
-        resolvePreviewSources: async (start, end, context = {}) => {
-          const plan = buildRecordingPlaybackPlan({
-            clientId: context.clientId,
-            camera: context.cam,
-            start,
-            end,
-            preferHls: shouldPreferRecordingHls({
-              isIOS: DEVICE_PROFILE.isIOS,
-              isFirefox: this._isFirefox(),
-              isEdge: this._isEdge(),
-              isSafari: this._isSafari(),
-            }),
-            maxChunkSeconds: Math.max(1, Number(end) - Number(start)),
-          });
-          return await Promise.all(
-            plan.sourceCandidates.map((path) => this._signed(path)),
-          );
-        },
-        createPreviewVideo: () =>
-          createVideoElement(
-            buildVideoOptionsForView(
-              "recording",
-              {
-                autoplay: false,
-                controls: true,
-                muted: false,
-                playsInline: true,
-                preload: "metadata",
-                classNames: ["recording-segment-preview-video"],
-              },
-              { scopeKey: this },
-            ),
-          ),
-        playIcon: ICONS.play,
-        pauseIcon: ICONS.pause,
-        formatClock: (timestamp) => this._time(timestamp),
-      });
-    this._popupInfoController = new PopupInfoController({
-      query: (selector) => this._$(selector),
-      t: this._localization.t,
-      getActiveCamera: () => this._cc().cam,
-      formatTime: (timestamp) => this._time(timestamp),
-      formatWeekday: (timestamp) => this._weekday(timestamp),
-      formatMonthDay: (timestamp, options) =>
-        this._monthDay(timestamp, options),
-      formatFullDate: (timestamp) => this._fullDate(timestamp),
-      formatEventDuration: (event) => this._dur(event),
-      onResetRecordingScrub: () =>
-        this._popupRecordingScrubController.teardown(),
-      onMediaCameraChange: (camera) => {
-        this._popupLifecycleController.setMediaCamera(camera);
-      },
-      onNavigateEventMedia: (id, mediaType, navigationOptions = {}) => {
-        const presentation =
-          navigationOptions.presentation ||
-          this._popupLifecycleController?.presentation?.() ||
-          "";
-        return this._popupMediaLoaderController?.showCarouselEventById(
-          id,
-          mediaType,
-          {
-            compact: this._popupLifecycleController?.isCompact?.() === true,
-            ...(presentation ? { presentation } : {}),
-          },
-        );
-      },
-      onToggleFavorite: (id) =>
-        this._toggleFav(id, { toastPlacement: "popup" }),
-      onDownloadEvent: (id, file) =>
-        void this._frigateMediaDownloadController.downloadEvent(id, file),
-      onDownloadRecording: (start, end) => {
-        const camera = this._popupLifecycleController?.mediaCamera?.() || "";
-        const context =
-          this._frigateContextForCameraName(camera) || this._cc();
-        void this._frigateMediaDownloadController.downloadRecording(
-          start,
-          end,
-          context,
-        );
-      },
-    });
-    this._popupCarouselController = new PopupCarouselController({
-      query: (selector) => this._$(selector),
-      getKept: () => this._kept,
-      getReviews: () => this._reviews,
-      getDisplayEvents: () => this._allDisplayEvents(),
-      findEventById: (id) => this._findEventById(id),
-      mediaUrl: (id, file, camera = "") =>
-        this._mediaForCamera(id, file, camera),
-      formatDateTime: (timestamp) => this._dateTimeLabel(timestamp),
-      formatTime: (timestamp) => this._time(timestamp),
-      isTouchUi: () => this._isTouchPopupUi(),
-      isMobileDevice: () => this._isLikelyMobileClient(),
-      onSelectEvent: (id, mediaType) =>
-        this._popupMediaLoaderController?.showCarouselEventById(
-          id,
-          mediaType,
-        ),
-    });
-    this._popupMediaControlsController =
-      new PopupMediaControlsSurfaceController({
-        query: (selector) => this._$(selector),
-        formatTime: formatRecordingScrubTime,
-        t: this._localization.t,
-        shouldUseCustomControls: (mediaType) =>
-          this._usePopupCustomControls(mediaType),
-        isAutoHideActive: () =>
-          Boolean(this._popupLifecycleController?.presentation?.()) ||
-          this._rotateOverlayMode === "popup" ||
-          !this._isMobileTabletViewport(),
-        isMobileTabletViewport: () => this._isMobileTabletViewport(),
-        isVideoMediaType: (mediaType) =>
-          this._isPopupVideoMediaType(mediaType),
-        onClearPictureInPicture: (scope) =>
-          this._clearPictureInPictureButtonController(scope),
-        onSyncPlaybackTargetButtons: () =>
-          this._syncPlaybackTargetButtons(),
-        onSyncPictureInPictureButtons: () =>
-          this._syncPictureInPictureButtons(),
-        onSyncFullscreenButtons: () =>
-          this._syncFullscreenButtonsVisibility(),
-      });
-    this._popupLifecycleController = new PopupLifecycleController({
-      query: (selector) => this._$(selector),
-      isFirefox: () => this._isFirefox(),
-      onPauseSlideshow: () => this._pauseSlideshowForPopup(),
-      onResumeSlideshow: () => this._resumeSlideshowAfterPopup(),
-      onSetLiveCovered: (covered) => this._setLivePopupCover(covered),
-      onMuteLive: (muted, options) =>
-        this._applyLiveMuteChange(muted, options),
-      onSyncFullscreen: () => this._syncFullscreenButtonsVisibility(),
-      onSyncPictureInPicture: () => this._syncPictureInPictureButtons(),
-      onScheduleOverlay: () => this._scheduleRotateOverlayUpdate(),
-      onReleasePlaybackTarget: (scope) =>
-        this._playbackTargetController?.release(scope),
-      onClearPictureInPicture: (scope) =>
-        this._clearPictureInPictureButtonController(scope),
-      onClearVideoZoom: () => this._clearPopupVideoZoom?.(),
-      onDisposeCarousel: () => this._popupCarouselController.dispose(),
-      onClearCarousel: () => this._popupCarouselController.clear(),
-      onDisposeMediaControls: () =>
-        this._popupMediaControlsController.dispose(),
-      onHideInfo: () => this._popupInfoController.hide(),
-      onClearMediaTransport: () =>
-        this._popupMediaLoaderController?.cancelPendingLoad(),
-    });
-    this._popupMediaLoaderController = new PopupMediaLoaderController(this);
+    Object.assign(this, createPopupControllers(this));
     this._playbackTargetController = new BrowserPlaybackTargetController({
       getContext: (scope) => this._playbackTargetContext(scope),
       resolveSource: (context) =>

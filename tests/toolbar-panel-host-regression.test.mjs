@@ -30,6 +30,10 @@ const popupMediaControlsSource = fs.readFileSync(
   new URL("../src/features/popup/media.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupCompositionSource = fs.readFileSync(
+  new URL("../src/features/popup/composition.js", import.meta.url),
+  "utf8",
+);
 
 test("tools markup owns filter and calendar panel hosts", () => {
   assert.equal(
@@ -414,7 +418,9 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
     true,
   );
   assert.equal(
-    cardSource.includes("this._playbackTargetController?.release(scope)"),
+    popupCompositionSource.includes(
+      "card._playbackTargetController?.release(scope)",
+    ),
     true,
   );
   assert.equal(
