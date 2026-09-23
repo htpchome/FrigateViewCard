@@ -22,6 +22,13 @@ const mseGraceControllerSource = fs.readFileSync(
   new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
   "utf8",
 );
+const liveLifecycleCompositionSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/lifecycle-composition.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const pendingDestroyersSource = fs.readFileSync(
   new URL("../src/features/live/pending-destroyers.js", import.meta.url),
   "utf8",
@@ -37,14 +44,20 @@ const mountLifecycleSource = fs.readFileSync(
 
 test("camera switching preserves recent live engines for short switch-back reuse", () => {
   assert.equal(
-    cardSource.includes(
-      'import { createMseGraceController } from "../features/live/mse-grace-controller.js";',
+    liveLifecycleCompositionSource.includes(
+      'import { createMseGraceController } from "./mse-grace-controller.js";',
     ),
     true,
   );
   assert.equal(
     /this\._mseGraceController\s*=\s*createMseGraceController\(\{/.test(
-      cardSource,
+      liveLifecycleCompositionSource,
+    ),
+    false,
+  );
+  assert.equal(
+    liveLifecycleCompositionSource.includes(
+      "const mseGraceController = resolvedFactories.createMseGraceController({",
     ),
     true,
   );

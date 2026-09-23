@@ -33,6 +33,13 @@ const liveMountControllerSource = fs.readFileSync(
   new URL("../src/features/live/mount-controller.js", import.meta.url),
   "utf8",
 );
+const liveLifecycleCompositionSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/lifecycle-composition.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const stylesSource = fs.readFileSync(
   new URL("../src/styles.js", import.meta.url),
   "utf8",
@@ -131,6 +138,12 @@ test("grid mode toolbar and runtime hooks are present", () => {
   assert.equal(
     /this\._liveMountController\s*=\s*createLiveMountController\(\{/.test(
       cardSource,
+    ),
+    false,
+  );
+  assert.equal(
+    liveLifecycleCompositionSource.includes(
+      "const liveMountController = resolvedFactories.createLiveMountController({",
     ),
     true,
   );

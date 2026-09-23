@@ -124,6 +124,13 @@ const liveTransportCompositionSource = fs.readFileSync(
   ),
   "utf8",
 );
+const liveLifecycleCompositionSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/lifecycle-composition.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const mseGraceControllerSource = fs.readFileSync(
   new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
   "utf8",
@@ -354,23 +361,53 @@ test("live transport ownership is pulled out of the card shell", () => {
     cardSource.includes(
       'import { createMseGraceController } from "../features/live/mse-grace-controller.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     cardSource.includes(
       'import { createLiveMountController } from "../features/live/mount-controller.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     /this\._mseGraceController\s*=\s*createMseGraceController\(\{/.test(
       cardSource,
     ),
-    true,
+    false,
   );
   assert.equal(
     /this\._liveMountController\s*=\s*createLiveMountController\(\{/.test(
       cardSource,
+    ),
+    false,
+  );
+  assert.equal(
+    cardSource.includes(
+      'import { createLiveLifecycleControllers } from "../features/live/lifecycle-composition.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "Object.assign(this, createLiveLifecycleControllers(this));",
+    ),
+    true,
+  );
+  assert.equal(
+    liveLifecycleCompositionSource.includes(
+      "resolvedFactories.createMseGraceController",
+    ),
+    true,
+  );
+  assert.equal(
+    liveLifecycleCompositionSource.includes(
+      "resolvedFactories.createEditorLiveHandoffController",
+    ),
+    true,
+  );
+  assert.equal(
+    liveLifecycleCompositionSource.includes(
+      "resolvedFactories.createLiveMountController",
     ),
     true,
   );

@@ -21,7 +21,6 @@ import {
   PREVIEW_ALERT_HOLD_MS,
   PREVIEW_ALERT_END_GRACE_MS,
   MSE_SWITCH_GRACE_MS,
-  MSE_SWITCH_GRACE_MAX,
   DEFAULT_CAMERA_CONNECTION_TYPE,
   DEFAULT_EVENT_DAYS,
   DEFAULT_ALERTS_REVIEWS_DAYS,
@@ -176,10 +175,8 @@ import {
   setFallbackImageSourceIfChanged,
 } from "../features/live/fallbacks/fallback-image.js";
 import { runFallbackRefreshCycleForCard } from "../features/live/fallbacks/fallback-refresh.js";
-import { createLiveMountController } from "../features/live/mount-controller.js";
-import { createEditorLiveHandoffController } from "../features/live/mount-controller.js";
-import { createMseGraceController } from "../features/live/mse-grace-controller.js";
 import { createLiveTransportControllers } from "../features/live/transport-composition.js";
+import { createLiveLifecycleControllers } from "../features/live/lifecycle-composition.js";
 import {
   buildLiveEngineWrapMarkup,
   buildLiveFullscreenControlMarkup,
@@ -305,7 +302,6 @@ import { GridAlertController } from "../features/grid/alert.ctrl.js";
 import { GridPageController } from "../features/grid/page.ctrl.js";
 import { CardStyleContextController } from "../features/card-style/context.ctrl.js";
 import {
-  buildEditorLiveHandoffKey,
   EDITOR_PREVIEW_ROUTE_INTENTS,
   EditorPreviewContextController,
 } from "../features/editor-preview/context.ctrl.js";
@@ -832,164 +828,7 @@ export class FrigateViewCard extends HTMLElement {
     this._recordingsBrowseNavController = new RecordingsBrowseNavController(
       this,
     );
-    this._mseGraceController = createMseGraceController({
-      graceMs: MSE_SWITCH_GRACE_MS,
-      graceMax: MSE_SWITCH_GRACE_MAX,
-      getShadowRoot: () => this.shadowRoot,
-      getScopeKey: () => this,
-      getPendingMountDestroyers: () => this._pendingMountDestroyers || [],
-      setPendingMountDestroyers: (pendingDestroyers) => {
-        this._pendingMountDestroyers = pendingDestroyers;
-      },
-      getPendingWebRtcTakeoverTimer: () => this._pendingWebRTCTakeoverTimer,
-      setPendingWebRtcTakeoverTimer: (timer) => {
-        this._pendingWebRTCTakeoverTimer = timer;
-      },
-      clearRotateOverlayAudioSync: () => this._clearRotateOverlayAudioSync(),
-      clearRotateVideoFullscreenStyle: () =>
-        this._clearRotateVideoFullscreenStyle(),
-      getEngine: () => this._engine,
-      setEngine: (engine, options) => this._assignLiveEngine(engine, options),
-      getActiveStreamType: () => this._activeStreamType,
-      getStreamMuted: () => this._streamMuted,
-      setEngineMountedMuted: (muted) => {
-        this._engineMountedMuted = muted;
-      },
-      getRotateOverlayActive: () => this._rotateOverlayActive,
-      attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
-      setActiveStreamType: (type) => this._setActiveStreamType(type),
-      setStreamLoading: (loading) => this._setStreamLoading(loading),
-      setStreamFallbackVisible: (visible) =>
-        this._setStreamFallbackVisible(visible),
-      setLiveNativeControls: (enabled) => this._setLiveNativeControls(enabled),
-      releaseHaDirectEngine: (engine) =>
-        this._haDirectMounter?.release?.(engine),
-      adoptHaDirectWebRtcEngine: (engine) =>
-        this._haDirectMounter?.adoptRetainedWebRtcEngine?.(engine),
-      scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
-      resetMseDiagnostics: (connectedAt) => {
-        this._mseConnectAt = connectedAt;
-        this._mseLastChunkAt = 0;
-        this._mseChunkCount = 0;
-      },
-      markMseChunk: (chunkAt) => {
-        this._mseLastChunkAt = chunkAt;
-        this._mseChunkCount += 1;
-      },
-    });
-    this._editorLiveHandoffController =
-      createEditorLiveHandoffController({
-        getState: () => {
-          const entity =
-            this._activeGroupMemberOverride || this._activeCam?.entity || "";
-          return {
-            activeStreamType: this._currentLiveStreamHint(),
-            engine: this._engine,
-            entity,
-            hasSlot: Boolean(this._$("#engine")),
-            hostConnected: this.isConnected === true,
-            mountInProgress: this._mountInProgress,
-            previewPageActive: this._isPreviewPageActive(),
-            started: this._started,
-            twoWayTalkActive: Boolean(
-              this._twoWayTalkStarting || this._twoWayTalkSession,
-            ),
-            useGo2Rtc: this._shouldUseGo2RtcForEntity(entity),
-            viewMode: this._viewMode,
-          };
-        },
-        getContext: () =>
-          this._editorPreviewController.liveHandoffContext(),
-        getIdentityKey: (entity) =>
-          buildEditorLiveHandoffKey({
-            connectionType: this._cameraConnectionType(entity),
-            entity,
-            pathname: window.location?.pathname || "",
-          }),
-        isEditorLifecycleActive: () =>
-          this._editorPreviewController.isEditorLifecycleActive(),
-        requestHandoff: (request) =>
-          this._editorPreviewController.requestLiveHandoff(request),
-        isEngineReusable: (engine, streamType, connectionType) =>
-          connectionType === "ha_direct"
-            ? this._mseGraceController.isHaDirectEngineReusable(engine)
-            : streamType === "mse"
-            ? this._mseGraceController.isMseEngineReusable(engine)
-            : this._mseGraceController.isWebRtcEngineReusable(engine),
-        detachEngine: (engine, _streamType, connectionType) => {
-          if (
-            connectionType === "ha_direct" &&
-            this._haDirectMounter?.detachWebRtcForHandoff?.(engine) !== true
-          ) {
-            return false;
-          }
-          this._assignLiveEngine(null, { retainPrevious: true });
-          return true;
-        },
-        setStreamLoading: (loading) => this._setStreamLoading(loading),
-        setStreamFallbackVisible: (visible, refreshImage = false) =>
-          this._setStreamFallbackVisible(visible, refreshImage),
-        scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
-        adoptEngine: (engine, streamType, connectionType) => {
-          const slot = this._$("#engine");
-          if (!slot) return false;
-          const adopted =
-            connectionType === "ha_direct"
-              ? this._mseGraceController.adoptGraceHaDirectEngine(slot, engine)
-              : streamType === "mse"
-              ? this._mseGraceController.adoptGraceMseEngine(slot, engine)
-              : this._mseGraceController.adoptGraceWebRtcEngine(slot, engine);
-          if (adopted) this._dashboardLiveGraceActive = false;
-          return adopted;
-        },
-        syncLivePresentation: () =>
-          this._cameraGroupLiveController?.sync?.(),
-      });
-    this._liveMountController = createLiveMountController({
-      getSlot: () => this.shadowRoot.querySelector("#engine"),
-      isPreviewPageActive: () => this._isPreviewPageActive(),
-      getViewMode: () => this._viewMode,
-      isGridModeAvailable: () => this._isGridModeAvailable(),
-      getMountInProgress: () => this._mountInProgress,
-      getMountTargetEntity: () => this._mountTargetEntity,
-      getMountState: () => ({
-        mountSeq: this._mountSeq,
-        mountInProgress: this._mountInProgress,
-        mountStartedAt: this._mountStartedAt,
-        mountTargetEntity: this._mountTargetEntity,
-      }),
-      applyMountTrackingState: (nextState) =>
-        this._applyMountTrackingState(nextState),
-      mountGridEngine: () =>
-        this._gridMediaController.mountGridEngine(this._$("#grid-engine")),
-      cleanupEngine: () => this._cleanupEngine(),
-      getStreamMuted: () => this._streamMuted,
-      setEngineMountedMuted: (muted) => {
-        this._engineMountedMuted = muted;
-      },
-      mseGraceController: this._mseGraceController,
-      getMountSeq: () => this._mountSeq,
-      getPendingMountDestroyers: () => this._pendingMountDestroyers,
-      setPendingMountDestroyers: (pendingDestroyers) => {
-        this._pendingMountDestroyers = pendingDestroyers;
-      },
-      haDirectMounter: this._haDirectMounter,
-      haDirectTwoWayTalkMounter: this._haDirectTwoWayTalkMounter,
-      go2rtcRaceMounter: this._go2rtcRaceMounter,
-      preferredStreamType: () => this._preferredStreamType(),
-      setActiveStreamType: (type) => this._setActiveStreamType(type),
-      setStreamLoading: (loading) => this._setStreamLoading(loading),
-      setStreamFallbackVisible: (visible, refreshImage = false) =>
-        this._setStreamFallbackVisible(visible, refreshImage),
-      scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
-      resolveUseGo2Rtc: (entity) => this._shouldUseGo2RtcForEntity(entity),
-      takeEditorLiveHandoff: ({ entity, streamType, connectionType }) =>
-        this._editorLiveHandoffController.take(
-          entity,
-          streamType,
-          connectionType,
-        ),
-    });
+    Object.assign(this, createLiveLifecycleControllers(this));
     this._liveViewResizeController = new LiveViewResizeController({
       getLiveWrap: () => this._$("#eng-wrap"),
       isContextEligible: () => {
