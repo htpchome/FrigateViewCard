@@ -117,6 +117,13 @@ const go2rtcRaceMounterSource = fs.readFileSync(
   new URL("../src/features/live/go2rtc-race-mounter.js", import.meta.url),
   "utf8",
 );
+const liveTransportCompositionSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/transport-composition.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const mseGraceControllerSource = fs.readFileSync(
   new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
   "utf8",
@@ -254,7 +261,7 @@ test("live mount attempts pass the target entity through strategy start", () => 
   );
 });
 
-test("go2rtc ownership is pulled out of the card shell", () => {
+test("live transport ownership is pulled out of the card shell", () => {
   assert.equal(
     /_shouldUseGo2RtcForEntity\(entity\) \{[\s\S]*?_cameraConnectionType\(key\) !== "ha_direct";[\s\S]*?\}/.test(
       cardSource,
@@ -265,52 +272,82 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     cardSource.includes(
       'import { createGo2RtcResolver } from "../integrations/frigate/go2rtc-resolver.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     /this\._go2rtcResolver\s*=\s*createGo2RtcResolver\(/.test(cardSource),
-    true,
+    false,
   );
   assert.equal(
     cardSource.includes(
       'import { createGo2RtcMounter } from "../features/live/go2rtc-mounter.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     /this\._go2rtcMounter\s*=\s*createGo2RtcMounter\(/.test(cardSource),
-    true,
+    false,
   );
   assert.equal(
     cardSource.includes(
       'import { createHaDirectMounter } from "../features/live/ha-direct-mounter.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     /this\._haDirectMounter\s*=\s*createHaDirectMounter\(/.test(cardSource),
-    true,
+    false,
   );
   assert.equal(
     cardSource.includes(
       'import { createHaDirectTwoWayTalkMounter } from "../integrations/home-assistant/two-way-talk-mounter.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     /this\._haDirectTwoWayTalkMounter\s*=\s*createHaDirectTwoWayTalkMounter\(/.test(
       cardSource,
     ),
-    true,
+    false,
   );
   assert.equal(
     cardSource.includes(
       'import { createGo2RtcRaceMounter } from "../features/live/go2rtc-race-mounter.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     /this\._go2rtcRaceMounter\s*=\s*createGo2RtcRaceMounter\(/.test(cardSource),
+    false,
+  );
+  assert.equal(
+    cardSource.includes(
+      'import { createLiveTransportControllers } from "../features/live/transport-composition.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "Object.assign(this, createLiveTransportControllers(this));",
+    ),
+    true,
+  );
+  assert.equal(
+    liveTransportCompositionSource.includes(
+      "export const createLiveTransportControllers",
+    ),
+    true,
+  );
+  assert.equal(
+    liveTransportCompositionSource.includes(
+      "const go2rtcResolver = resolvedFactories.createGo2RtcResolver",
+    ),
+    true,
+  );
+  assert.equal(
+    liveTransportCompositionSource.includes(
+      "const haDirectMounter = resolvedFactories.createHaDirectMounter",
+    ),
     true,
   );
   assert.equal(
@@ -508,7 +545,7 @@ test("go2rtc ownership is pulled out of the card shell", () => {
   );
   assert.equal(
     /adoptMountedAttempt:\s*\(slot, winner, options = \{\}\)\s*=>\s*adoptMountedAttemptResult\(/.test(
-      cardSource,
+      liveTransportCompositionSource,
     ),
     true,
   );

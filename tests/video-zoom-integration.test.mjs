@@ -10,6 +10,13 @@ const cardEventBindingsSource = fs.readFileSync(
   new URL("../src/card/event-bindings.js", import.meta.url),
   "utf8",
 );
+const liveTransportCompositionSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/transport-composition.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const popupLoaderSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
@@ -35,8 +42,8 @@ test("media zoom is attached through committed main-live and popup lifecycles", 
     true,
   );
   assert.equal(
-    cardSource.includes(
-      "assignCommittedEngine: (engine) => this._assignLiveEngine(engine)",
+    liveTransportCompositionSource.includes(
+      "assignCommittedEngine: (engine) => card._assignLiveEngine(engine)",
     ),
     true,
   );
@@ -73,17 +80,19 @@ test("media zoom is attached through committed main-live and popup lifecycles", 
     true,
   );
   assert.equal(
-    cardSource.includes(
+    liveTransportCompositionSource.includes(
       "onCommittedMediaReady: (engine, video) =>",
     ),
     true,
   );
   assert.equal(
-    cardSource.includes("host: liveEngineHost"),
+    liveTransportCompositionSource.includes("host: liveEngineHost"),
     true,
   );
   assert.equal(
-    cardSource.includes("interactionTarget: liveEngineHost"),
+    liveTransportCompositionSource.includes(
+      "interactionTarget: liveEngineHost",
+    ),
     true,
   );
 

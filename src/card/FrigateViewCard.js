@@ -111,11 +111,7 @@ import {
   haReviewStatusSignature,
   reviewStatusEntityCandidates,
 } from "../integrations/frigate/review-status.js";
-import { createGo2RtcResolver } from "../integrations/frigate/go2rtc-resolver.js";
-import { createHaDirectTwoWayTalkMounter } from "../integrations/home-assistant/two-way-talk-mounter.js";
-import { createHaDirectTwoWayTalkBackchannel } from "../integrations/home-assistant/two-way-talk-backchannel.js";
 import { findActiveHaCameraStreamVideo } from "../integrations/home-assistant/playback.js";
-import { createGo2RtcMounter } from "../features/live/go2rtc-mounter.js";
 import {
   invalidateMountTrackingIfActive,
   isMseReturnRemountReason,
@@ -132,7 +128,6 @@ import {
 import {
   adoptMountedAttemptResult,
   cleanupStaleWinnerResult,
-  isMountTokenCurrent,
 } from "../features/live/mount-result.js";
 import {
   applyActiveStreamTypeForCard,
@@ -181,11 +176,10 @@ import {
   setFallbackImageSourceIfChanged,
 } from "../features/live/fallbacks/fallback-image.js";
 import { runFallbackRefreshCycleForCard } from "../features/live/fallbacks/fallback-refresh.js";
-import { createHaDirectMounter } from "../features/live/ha-direct-mounter.js";
 import { createLiveMountController } from "../features/live/mount-controller.js";
 import { createEditorLiveHandoffController } from "../features/live/mount-controller.js";
-import { createGo2RtcRaceMounter } from "../features/live/go2rtc-race-mounter.js";
 import { createMseGraceController } from "../features/live/mse-grace-controller.js";
+import { createLiveTransportControllers } from "../features/live/transport-composition.js";
 import {
   buildLiveEngineWrapMarkup,
   buildLiveFullscreenControlMarkup,
@@ -284,7 +278,6 @@ import {
   startGo2RtcTwoWayTalkSession,
   startHaDirectTwoWayTalkSession,
 } from "../features/two-way-talk/session.js";
-import { createGo2RtcTwoWayTalkBackchannel } from "../features/two-way-talk/go2rtc-backchannel.js";
 import {
   buildTwoWayTalkSoundwaveMarkup,
   TwoWayTalkSoundwaveController,
@@ -385,138 +378,7 @@ export class FrigateViewCard extends HTMLElement {
     );
     this._localization = createLocalizationController();
     this._dateFormatterCache = createDateFormatterCache();
-    this._go2rtcResolver = createGo2RtcResolver({
-      getHass: () => this._hass,
-      getConfig: () => this._config,
-      getActiveEntity: () => this._activeCam?.entity || "",
-      getCamCache: () => this._camCache,
-      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
-      normalizeCameraConnectionType,
-      createCameraState: mkCamState,
-      discoverEntity: async (entity) => {
-        await this._discoverOne(entity);
-      },
-      supportsNativeHlsPlayback: () => this._supportsNativeHlsPlayback(),
-    });
-    this._go2rtcTwoWayTalkBackchannel =
-      createGo2RtcTwoWayTalkBackchannel({
-        resolveWebSocketUrl: (entity) =>
-          this._go2rtcResolver.websocketUrlForEntity(entity),
-      });
-    this._go2rtcMounter = createGo2RtcMounter({
-      resolver: this._go2rtcResolver,
-      getStreamMuted: () => this._streamMuted,
-      waitForStreamStart: (streamEl, timeoutMs, opts) =>
-        this._waitForStreamStart(streamEl, timeoutMs, opts),
-      attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
-      assignCommittedEngine: (engine) => this._assignLiveEngine(engine),
-      onCommittedStream: (type) => {
-        this._setActiveStreamType(type);
-        this._setStreamLoading(false);
-        this._setStreamFallbackVisible(false);
-      },
-      scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
-      isFirefox: () => this._isFirefox(),
-      scopeKey: this,
-      resetMseDiagnostics: (connectedAt) => {
-        this._mseConnectAt = connectedAt;
-        this._mseLastChunkAt = 0;
-        this._mseChunkCount = 0;
-      },
-      markMseChunk: (chunkAt) => {
-        this._mseLastChunkAt = chunkAt;
-        this._mseChunkCount += 1;
-      },
-    });
-    this._haDirectMounter = createHaDirectMounter({
-      getHass: () => this._hass,
-      getPreferredStreamType: () => this._preferredStreamType(),
-      getStreamMuted: () => this._streamMuted,
-      getRotateOverlayActive: () => this._rotateOverlayActive,
-      isCurrentEngine: (streamEl) => this._engine === streamEl,
-      waitForStreamStart: (streamEl, timeoutMs, opts) =>
-        this._waitForStreamStart(streamEl, timeoutMs, opts),
-      assignCommittedEngine: (engine, options) =>
-        this._assignLiveEngine(engine, options),
-      onCommittedMediaReady: (engine, video) => {
-        const liveEngineHost = this._$("#engine");
-        this._attachMainLiveVideoZoom(engine, video, {
-          host: liveEngineHost,
-          interactionTarget: liveEngineHost,
-        });
-      },
-      onCommittedStream: (type) => {
-        this._setActiveStreamType(type);
-        this._setStreamLoading(false);
-        this._setStreamFallbackVisible(false);
-      },
-      applyResolvedStreamUiState: (streamState) =>
-        this._applyResolvedStreamUiState(streamState),
-      setLiveNativeControls: (enabled) => this._setLiveNativeControls(enabled),
-      scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
-      scopeKey: this,
-    });
-    this._haDirectTwoWayTalkMounter = createHaDirectTwoWayTalkMounter({
-      getHass: () => this._hass,
-      getStreamMuted: () => this._streamMuted,
-      waitForStreamStart: (streamEl, timeoutMs, opts) =>
-        this._waitForStreamStart(streamEl, timeoutMs, opts),
-      attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
-      assignCommittedEngine: (engine) => this._assignLiveEngine(engine),
-      onCommittedStream: (type) => {
-        this._setActiveStreamType(type);
-        this._setStreamLoading(false);
-        this._setStreamFallbackVisible(false);
-      },
-      scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
-      scopeKey: this,
-    });
-    this._haDirectTwoWayTalkBackchannel =
-      createHaDirectTwoWayTalkBackchannel({
-        getHass: () => this._hass,
-        mountIncomingAudio: (audio) => {
-          if (!audio || !this.shadowRoot) return null;
-          audio.dataset.fvcTwoWayTalkAudio = "";
-          this.shadowRoot.appendChild(audio);
-          return () => audio.remove?.();
-        },
-      });
-    this._go2rtcRaceMounter = createGo2RtcRaceMounter({
-      mounter: this._go2rtcMounter,
-      isMobile: DEVICE_PROFILE.isMobile,
-      resolveConnectionType: (entity) => this._cameraConnectionType(entity),
-      getPendingMountDestroyers: () => this._pendingMountDestroyers || [],
-      setPendingMountDestroyers: (pendingDestroyers) => {
-        this._pendingMountDestroyers = pendingDestroyers;
-      },
-      isMountTokenCurrent: (mountToken) =>
-        isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq }),
-      adoptMountedAttempt: (slot, winner, options = {}) =>
-        adoptMountedAttemptResult({
-          targetSlot: slot,
-          result: winner,
-          preservePendingSlots: options.preservePendingSlots === true,
-          streamMuted: this._streamMuted,
-          rotateOverlayActive: this._rotateOverlayActive,
-          assignEngine: (engine) => this._assignLiveEngine(engine),
-          setEngineMountedMuted: (muted) => {
-            this._engineMountedMuted = muted;
-          },
-          setActiveStreamType: (type) => this._setActiveStreamType(type),
-          setStreamLoading: (loading) => this._setStreamLoading(loading),
-          setStreamFallbackVisible: (visible) =>
-            this._setStreamFallbackVisible(visible),
-          setLiveNativeControls: (enabled) =>
-            this._setLiveNativeControls(enabled),
-        }),
-      waitForStreamStart: (streamEl, timeoutMs, opts) =>
-        this._waitForStreamStart(streamEl, timeoutMs, opts),
-      isCurrentWinnerEngine: (engine) => this._engine === engine,
-      getPendingWebRtcTakeoverTimer: () => this._pendingWebRTCTakeoverTimer,
-      setPendingWebRtcTakeoverTimer: (timer) => {
-        this._pendingWebRTCTakeoverTimer = timer;
-      },
-    });
+    Object.assign(this, createLiveTransportControllers(this));
     this._gridAlertController = new GridAlertController(this, {
       DAY,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
