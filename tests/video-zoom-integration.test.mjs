@@ -6,6 +6,10 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
+const cardEventBindingsSource = fs.readFileSync(
+  new URL("../src/card/event-bindings.js", import.meta.url),
+  "utf8",
+);
 const popupLoaderSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
@@ -49,8 +53,8 @@ test("media zoom is attached through committed main-live and popup lifecycles", 
     3,
   );
   assert.equal(
-    cardSource.includes(
-      "this._linkedLightController?.handleDocumentPointerDown?.(event)",
+    cardEventBindingsSource.includes(
+      "card._linkedLightController?.handleDocumentPointerDown?.(event)",
     ),
     true,
   );

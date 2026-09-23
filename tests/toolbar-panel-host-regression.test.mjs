@@ -10,6 +10,10 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
+const cardEventBindingsSource = fs.readFileSync(
+  new URL("../src/card/event-bindings.js", import.meta.url),
+  "utf8",
+);
 const toolbarTemplateSource = fs.readFileSync(
   new URL("../src/card/toolbar.tmpl.js", import.meta.url),
   "utf8",
@@ -414,8 +418,8 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
     true,
   );
   assert.equal(
-    cardSource.match(
-      /this\._playbackTargetController\?\.release\("popup"\)/g,
+    `${cardSource}\n${cardEventBindingsSource}`.match(
+      /(?:this|card)\._playbackTargetController\?\.release\("popup"\)/g,
     )?.length >= 3,
     true,
   );

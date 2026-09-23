@@ -9,6 +9,10 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
+const cardEventBindingsSource = fs.readFileSync(
+  new URL("../src/card/event-bindings.js", import.meta.url),
+  "utf8",
+);
 
 const createEventTarget = () => {
   const listeners = new Map();
@@ -299,7 +303,7 @@ test("card visibility and reconnect hooks resume Companion Camera media", () => 
     /connectedCallback\(\)[\s\S]*?_wideViewPageController\?\.startCompanionMode\?\.\(\)/,
   );
   assert.match(
-    cardSource,
+    cardEventBindingsSource,
     /visibilityState === "visible"[\s\S]*?_wideViewPageController\?\.resumeCompanionMedia\?\.\(\)/,
   );
   assert.match(

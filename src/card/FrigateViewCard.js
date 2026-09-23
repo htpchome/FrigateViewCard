@@ -92,6 +92,10 @@ import {
 } from "../config/card-config.js";
 import { createInitialCardRuntimeState } from "./initial-state.js";
 import {
+  bindCardGlobalEvents,
+  bindCardShadowEvents,
+} from "./event-bindings.js";
+import {
   buildFrigateNotificationMediaPath,
   buildFrigateReviewThumbnailPath,
 } from "../integrations/frigate/url.js";
@@ -372,78 +376,7 @@ export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._onShadowClick = (e) => this._click(e);
-    this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._onShadowError = (e) => {
-      const img = e.target;
-      if (!(img instanceof HTMLImageElement)) return;
-      const id = img.dataset.thumbId;
-      if (!id) return;
-      img.style.display = "none";
-      const placeholder = img.nextElementSibling;
-      if (placeholder) placeholder.style.display = "flex";
-    };
-
-    this.shadowRoot.addEventListener("error", this._onShadowError, true);
-    this._onCirclePadPress = (event) => {
-      void this._handleCirclePadPtzEvent(event, "press");
-    };
-    this._onCirclePadRelease = (event) => {
-      void this._handleCirclePadPtzEvent(event, "release");
-    };
-    this._onPtzControlPointerDown = (event) => {
-      const pointerType = String(event?.pointerType || "").toLowerCase();
-      if (pointerType) {
-        this._lastLiveOverlayPointerType =
-          pointerType === "mouse" ? "mouse" : "touch";
-      }
-      this._mobileCamSwitcherController?.handlePointerDown?.(
-        event,
-        event.target,
-      );
-      if (this._linkedLightController?.handlePointerDown?.(event)) return;
-      void this._handlePtzControlPointerDown(event);
-    };
-    this._onPtzControlPointerStop = (event) => {
-      if (event.type === "pointerup") {
-        if (
-          this._mobileCamSwitcherController?.handlePointerUp?.(
-            event,
-            event.target,
-          )
-        ) {
-          return;
-        }
-      } else {
-        this._mobileCamSwitcherController?.cancelPointer?.();
-      }
-      this._linkedLightController?.handlePointerStop?.(event);
-      void this._handlePtzControlPointerStop(event);
-    };
-    this.shadowRoot.addEventListener(
-      "circle-pad-press",
-      this._onCirclePadPress,
-    );
-    this.shadowRoot.addEventListener(
-      "circle-pad-release",
-      this._onCirclePadRelease,
-    );
-    this.shadowRoot.addEventListener(
-      "pointerdown",
-      this._onPtzControlPointerDown,
-    );
-    this.shadowRoot.addEventListener(
-      "pointerup",
-      this._onPtzControlPointerStop,
-    );
-    this.shadowRoot.addEventListener(
-      "pointercancel",
-      this._onPtzControlPointerStop,
-    );
-    this.shadowRoot.addEventListener(
-      "lostpointercapture",
-      this._onPtzControlPointerStop,
-    );
+    bindCardShadowEvents(this);
     Object.assign(
       this,
       createInitialCardRuntimeState({
@@ -1254,102 +1187,7 @@ export class FrigateViewCard extends HTMLElement {
         scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
         onFullscreenExit: () => this._scheduleRotateOverlayUpdate(),
       });
-    this._onDocVisibility = () => {
-      if (document.visibilityState === "visible") {
-        this._scheduleResumeLive("doc-visible");
-        this._wideViewPageController?.resumeCompanionMedia?.();
-        return;
-      }
-      this._playbackTargetController?.release("popup");
-      void this._stopPtzMotion("document-hidden");
-    };
-
-    document.addEventListener("visibilitychange", this._onDocVisibility);
-    this._onWindowBlur = () => {
-      void this._stopPtzMotion("window-blur");
-    };
-    this._onPageHide = () => {
-      void this._stopPtzMotion("page-hide");
-      this._playbackTargetController?.release("popup");
-    };
-    this._onWindowPtzPointerStop = (event) => {
-      void this._handlePtzControlPointerStop(event);
-    };
-    window.addEventListener("blur", this._onWindowBlur);
-    window.addEventListener("pagehide", this._onPageHide);
-    window.addEventListener("pointerup", this._onWindowPtzPointerStop, true);
-    window.addEventListener(
-      "pointercancel",
-      this._onWindowPtzPointerStop,
-      true,
-    );
-    this._onFullscreenChange = () => {
-      this._liveFullscreenLifecycleController?.handleDocumentFullscreenChange(
-        document.fullscreenElement || document.webkitFullscreenElement || null,
-      );
-      this._syncFullscreenButtonsVisibility();
-      this._liveViewResizeController?.sync();
-    }
-    document.addEventListener("fullscreenchange", this._onFullscreenChange);
-    document.addEventListener(
-      "webkitfullscreenchange",
-      this._onFullscreenChange,
-    );
-
-    this._onViewportChange = () => {
-      const vv = window.visualViewport;
-      const viewportWidth = Math.round(vv?.width || window.innerWidth || 0);
-      const viewportHeight = Math.round(vv?.height || window.innerHeight || 0);
-      const viewportSizeChanged =
-        viewportWidth !== this._lastViewportWidth ||
-        viewportHeight !== this._lastViewportHeight;
-
-      if (viewportSizeChanged) {
-        this._lastViewportWidth = viewportWidth;
-        this._lastViewportHeight = viewportHeight;
-        this._syncBrowseHeadModeClass();
-        this._applyCardStyle();
-      }
-
-      this._scheduleRotateOverlayUpdate();
-      this._liveViewResizeController?.sync();
-    };
-    window.addEventListener("resize", this._onViewportChange, {
-      passive: true,
-    });
-    this._onOrientationChange = () => {
-      this._onViewportChange();
-    };
-    window.addEventListener("orientationchange", this._onOrientationChange);
-    window.visualViewport?.addEventListener("resize", this._onViewportChange, {
-      passive: true,
-    });
-    window.visualViewport?.addEventListener("scroll", this._onViewportChange, {
-      passive: true,
-    });
-    this._onEditorPreviewDraft = (ev) => {
-      if (ev?.detail?.cardTag !== CARD_TAG) return;
-      this._applyEditorPreviewDraft(
-        ev.detail?.config || null,
-        ev.detail?.routeIntent || null,
-      );
-    };
-    window.addEventListener(
-      "frigate-view-card-preview-draft",
-      this._onEditorPreviewDraft,
-    );
-    this._onDocumentPointerDown = (event) => {
-      this._linkedLightController?.handleDocumentPointerDown?.(event);
-      if (!this._mobileCamSwitcherOpen) return;
-      const path =
-        typeof event?.composedPath === "function" ? event.composedPath() : [];
-      if (Array.isArray(path) && path.includes(this)) return;
-      this._mobileCamSwitcherController?.close();
-    };
-    document.addEventListener("pointerdown", this._onDocumentPointerDown, {
-      capture: true,
-      passive: true,
-    });
+    bindCardGlobalEvents(this);
   }
 
   _cloneCardConfig(config) {
