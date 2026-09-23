@@ -90,6 +90,7 @@ import {
   resolvePreferredDefaultCameraEntity,
   resolveRuntimeCardConfigChangePlan,
 } from "../config/card-config.js";
+import { createInitialCardRuntimeState } from "./initial-state.js";
 import {
   buildFrigateNotificationMediaPath,
   buildFrigateReviewThumbnailPath,
@@ -443,25 +444,14 @@ export class FrigateViewCard extends HTMLElement {
       "lostpointercapture",
       this._onPtzControlPointerStop,
     );
-    this._hass = null;
+    Object.assign(
+      this,
+      createInitialCardRuntimeState({
+        singleViewPageId: PAGE_IDS.singleView,
+      }),
+    );
     this._localization = createLocalizationController();
-    this._lastHassCameraStateSignature = "";
-    this._lastHassLinkedLightStateSignature = "";
-    this._lastHassThemeSignature = "";
-    this._lastHassReviewStatusSignature = "";
-    this._lastHaReviewStatusApplyAt = 0;
-    this._activeCameraAvailability = null;
-    this._config = null;
-    this._navigationFactory = null;
-    this._pageId = PAGE_IDS.singleView;
-    this._lastNonPreviewPageId = PAGE_IDS.singleView;
-    this._started = false;
-    this._activeCamIdx = 0;
-    this._activeGroupMemberOverride = "";
-    this._preservingLiveShell = false;
-    this._camCache = {};
     this._dateFormatterCache = createDateFormatterCache();
-    this._resolvedBrowserTimeZone = null;
     this._go2rtcResolver = createGo2RtcResolver({
       getHass: () => this._hass,
       getConfig: () => this._config,
@@ -594,66 +584,6 @@ export class FrigateViewCard extends HTMLElement {
         this._pendingWebRTCTakeoverTimer = timer;
       },
     });
-    this._viewMode = "single";
-    this._eventsMode = "camera";
-    this._events = [];
-    this._recordings = [];
-    this._reviews = [];
-    this._kept = [];
-    this._tab = "alerts";
-    this._lastNonControlsTab = "alerts";
-    this._mobileCamSwitcherOpen = false;
-    this._browseOpen = false;
-    this._winEnd = 0;
-    this._winStart = 0;
-    this._followNowWindow = true;
-    this._loading = false;
-    this._exhausted = false;
-    this._daysWithActivity = new Set();
-    this._calendarActivityByCam = new Map();
-    this._calendarActivityInFlight = new Map();
-    this._filterLabel = "all";
-    this._filterZone = "all";
-    this._favOnly = false;
-    this._calMonth = null;
-    this._calSelectedDay = null;
-    this._engine = null;
-    this._gridEngine = null;
-    this._unsub = null;
-    this._rotateTimer = null;
-    this._cardWidth = 0;
-    this._playSeq = 0;
-    this._streamMuted = true;
-    this._activeStreamType = "--";
-    this._lastLiveStreamHint = "";
-    this._activePtzButtonAction = "";
-    this._activePtzButtonPointerId = null;
-    this._slideshowActive = false;
-    this._slideshowPausedUntil = 0;
-    this._slideshowPendingAlertCam = "";
-    this._slideshowPendingAlertType = "";
-    this._slideshowLastAlertAt = 0;
-    this._slideshowLastAlertCam = "";
-    this._slideshowAttentionType = "";
-    this._slideshowHandledReviewIds = new Set();
-    this._slideshowStartedAtSec = 0;
-    this._slideshowReviewProbeT = null;
-    this._slideshowReviewWatchT = null;
-    this._slideshowReviewProbeInFlight = false;
-    this._slideshowSwitchT = null;
-    this._slideshowPauseT = null;
-    this._slideshowFadeT = null;
-    this._slideshowPopupPaused = false;
-    this._slideshowNextSwitchAtMs = 0;
-    this._slideshowCountdownT = null;
-    this._gridRotationStart = 0;
-    this._gridRotationT = null;
-    this._gridAlertReturnT = null;
-    this._gridRefreshT = null;
-    this._snapshotRefreshT = null;
-    this._gridResumePending = false;
-    this._gridPinnedRotationStart = 0;
-    this._gridLastRenderSignature = "";
     this._gridAlertController = new GridAlertController(this, {
       DAY,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
@@ -851,9 +781,6 @@ export class FrigateViewCard extends HTMLElement {
       SLIDESHOW_REVIEW_WATCH_MAX_MS,
     });
     this._slideshowPageController = new SlideshowPageController(this);
-    this._previewPageActive = false;
-    this._previewLastRenderSignature = "";
-    this._previewMediaState = null;
     this._previewAlertController = new PreviewAlertController(this, {
       DAY,
       PREVIEW_ALERT_HOLD_MS,
@@ -864,13 +791,6 @@ export class FrigateViewCard extends HTMLElement {
       PAGE_IDS,
       DEVICE_PROFILE,
     });
-    this._twoWayTalkSession = null;
-    this._twoWayTalkStarting = false;
-    this._twoWayTalkStartAbortController = null;
-    this._twoWayTalkStartSeq = 0;
-    this._twoWayTalkEntity = "";
-    this._twoWayTalkResultBubble = null;
-    this._twoWayTalkResultTimer = null;
     this._browseCalendarActivityController =
       new BrowseCalendarActivityController(this);
     this._browseCalendarPanelController = new BrowseCalendarPanelController(
@@ -1113,38 +1033,10 @@ export class FrigateViewCard extends HTMLElement {
           ) || null,
         isEnabled: () => this._shouldRenderTwoWayTalkSoundwave(),
       });
-    this._domCache = {};
-    this._fallbackImgUrlCache = new Map();
-    this._fallbackReqId = 0;
-    this._eventsLoadToken = 0;
-    this._reviewsLoadToken = 0;
-    this._windowLoadToken = 0;
-    this._warmCamsToken = 0;
-    this._warmReviewsToken = 0;
-    this._warmOtherCamsDelayT = null;
-    this._reloadPending = false;
-    this._reloadAfterLoad = false;
-    this._realtimeHeadPollT = null;
-    this._switchLoadT = null;
-    this._listScrollController = null;
-    this._livePictureInPictureButtonController = null;
-    this._popupPictureInPictureButtonController = null;
-    this._liveControlsHideTimer = null;
-    this._liveOverlayControlsController = null;
-    this._lastLiveOverlayPointerType = "mouse";
-    this._snapshotResultTimers = { live: null, popup: null };
     this._recordingsDayCache = new RecordingsDayCache();
-    this._recordingsDayRequestCache = new Map();
-    this._recordingsNavUpdateToken = 0;
-    this._recordingsDayNavAnimating = false;
     this._recordingsBrowseNavController = new RecordingsBrowseNavController(
       this,
     );
-    this._recordingsSwipeController = null;
-    this._mountSeq = 0;
-    this._lastRenderedListHtml = "";
-    this._pendingMountDestroyers = [];
-    this._pendingWebRTCTakeoverTimer = null;
     this._mseGraceController = createMseGraceController({
       graceMs: MSE_SWITCH_GRACE_MS,
       graceMax: MSE_SWITCH_GRACE_MAX,
@@ -1362,36 +1254,6 @@ export class FrigateViewCard extends HTMLElement {
         scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
         onFullscreenExit: () => this._scheduleRotateOverlayUpdate(),
       });
-    this._wasVisible = false;
-    this._resumeLiveT = null;
-    this._editorLayoutSyncRaf = 0;
-    this._disconnectTeardownT = null;
-    this._dashboardLiveGraceActive = false;
-    this._lastLiveKick = 0;
-    this._rotateOverlayActive = false;
-    this._rotateOverlayMode = "none";
-    this._rotateLiveOverlayDismissed = false;
-    this._rotateOverlayRaf = 0;
-    this._rotateOverlayExitT = null;
-    this._rotateOverlaySyncVideo = null;
-    this._onRotateOverlayVolumeChange = null;
-    this._rotateStyledVideo = null;
-    this._rotateStyledVideoCssText = "";
-    this._engineMountedMuted = true;
-    this._mountInProgress = false;
-    this._mountStartedAt = 0;
-    this._mountTargetEntity = "";
-    this._mseConnectAt = 0;
-    this._mseLastChunkAt = 0;
-    this._mseChunkCount = 0;
-    this._deepLinkEventId = "";
-    this._deepLinkReviewId = "";
-    this._deepLinkMediaHint = "";
-    this._deepLinkCameraHint = "";
-    this._deepLinkApplied = false;
-    this._deepLinkEventLookupTried = false;
-    this._deepLinkReviewLookupTried = false;
-    this._committedConfig = null;
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
         this._scheduleResumeLive("doc-visible");
