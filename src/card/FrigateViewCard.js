@@ -12,24 +12,17 @@ import {
   SNAPSHOT_UPDATE_SECONDS,
   SNAPSHOT_UPDATE_OPTIONS_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
-  GRID_ROTATION_OPTIONS_SECONDS,
   SLIDESHOW_ALERT_HOLD_MS,
-  SLIDESHOW_ALERT_HOLD_OPTIONS_SECONDS,
   SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
   SLIDESHOW_REVIEW_WATCH_MIN_MS,
   SLIDESHOW_REVIEW_WATCH_MAX_MS,
   GRID_ALERT_HOLD_MS,
-  GRID_ALERT_HOLD_OPTIONS_SECONDS,
   CARD_VIEW_OVERLAY_TIMING,
   PREVIEW_ALERT_HOLD_MS,
-  PREVIEW_ALERT_LIVE_DURATION_OPTIONS_SECONDS,
   PREVIEW_ALERT_END_GRACE_MS,
   MSE_SWITCH_GRACE_MS,
   MSE_SWITCH_GRACE_MAX,
-  MAX_CAMERAS,
   DEFAULT_CAMERA_CONNECTION_TYPE,
-  DEFAULT_HIDDEN_TABS,
-  ALLOWED_HIDDEN_TABS,
   DEFAULT_EVENT_DAYS,
   DEFAULT_ALERTS_REVIEWS_DAYS,
 } from "../constants.js";
@@ -49,15 +42,10 @@ import {
   DEVICE_PROFILE,
   cap,
   parseWs,
-  normalizePositiveInteger,
-  normalizeNumberChoice,
   normalizeCameraConnectionType,
-  normalizeThemeCustomConfig,
-  normalizeThemeCustomDefaultsConfig,
   labelColor,
   mkCamState,
   camDisplayName,
-  normalizeCameraConfig,
   configuredCameraEntities,
   hassThemeSignature,
   hassEntityStateSignature,
@@ -68,15 +56,10 @@ import {
   DEVICE_ROUTE_BUCKETS,
   getEnabledPageRoutes,
   isDashboardSwipeNavigationEnabled,
-  normalizeDashboardSwipeNavigationMode,
-  normalizeMobilePageMode,
   normalizePageRoute,
   PAGE_IDS,
   resolveAdjacentPageSwipeRoute,
-  resolveDashboardSwipeMobilePageSelection,
-  resolveDashboardSwipePageSelection,
   resolveDeviceRouteBucket,
-  resolveEnabledMobilePageMode,
   resolveMobilePreviewDestination,
   resolvePageSwipeOrder,
 } from "../features/navigation/router.js";
@@ -97,19 +80,15 @@ import {
   cameraMemberEntities,
   flattenCameraMembers,
   isCameraGroup,
-  limitCameraConfigsByPhysicalCount,
 } from "../features/camera-groups/model.js";
-import { normalizeGridOrderConfig } from "../features/grid/config.js";
-import {
-  normalizeCardViewStartMode,
-  normalizeCardViewViewMode,
-  resolveCardViewMasonrySizeHint,
-} from "../features/card-view/config.js";
-import { normalizePageStartMode } from "../features/navigation/start-mode.js";
+import { resolveCardViewMasonrySizeHint } from "../features/card-view/config.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
 import {
-  DEFAULT_CAMERA_ENTITY,
+  mergeVideoFactoryDefaults,
+  normalizeRuntimeCardConfig,
+  normalizeVideoFactoryDefaults,
   resolvePreferredDefaultCameraEntity,
+  resolveRuntimeCardConfigChangePlan,
 } from "../config/card-config.js";
 import {
   buildFrigateNotificationMediaPath,
@@ -327,14 +306,6 @@ import { DeepLinkController } from "../features/navigation/deep-link.ctrl.js";
 import { GridAlertController } from "../features/grid/alert.ctrl.js";
 import { GridPageController } from "../features/grid/page.ctrl.js";
 import { CardStyleContextController } from "../features/card-style/context.ctrl.js";
-import {
-  normalizeCardHeight,
-  normalizeCardHeightUnit,
-} from "../features/card-style/config.js";
-import {
-  normalizeWideLeftWidth,
-  normalizeWideTimelineScale,
-} from "../features/wide-view/config.js";
 import {
   buildEditorLiveHandoffKey,
   EDITOR_PREVIEW_ROUTE_INTENTS,
@@ -1527,69 +1498,24 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
 
-  _normalizeVideoFactoryDefaults(value) {
-    return value && typeof value === "object" ? value : {};
-  }
-
-  _mergeVideoFactoryDefaults(commonDefaults, viewDefaults) {
-    const common = this._normalizeVideoFactoryDefaults(commonDefaults);
-    const view = this._normalizeVideoFactoryDefaults(viewDefaults);
-    const merged = {
-      ...common,
-      ...view,
-    };
-
-    if (common.style || view.style) {
-      merged.style = {
-        ...this._normalizeVideoFactoryDefaults(common.style),
-        ...this._normalizeVideoFactoryDefaults(view.style),
-      };
-    }
-    if (common.dataset || view.dataset) {
-      merged.dataset = {
-        ...this._normalizeVideoFactoryDefaults(common.dataset),
-        ...this._normalizeVideoFactoryDefaults(view.dataset),
-      };
-    }
-    if (common.attributes || view.attributes) {
-      merged.attributes = {
-        ...this._normalizeVideoFactoryDefaults(common.attributes),
-        ...this._normalizeVideoFactoryDefaults(view.attributes),
-      };
-    }
-    if (common.classNames || view.classNames) {
-      const tokens = [
-        ...(Array.isArray(common.classNames) ? common.classNames : []),
-        ...(Array.isArray(view.classNames) ? view.classNames : []),
-      ]
-        .map((token) => String(token || "").trim())
-        .filter(Boolean);
-      merged.classNames = [...new Set(tokens)];
-    }
-
-    return merged;
-  }
-
   _applyScopedVideoFactoryDefaultsFromConfig(config = this._config) {
     const cfg = config || {};
-    const commonDefaults = this._normalizeVideoFactoryDefaults(
-      cfg.video_defaults,
-    );
+    const commonDefaults = normalizeVideoFactoryDefaults(cfg.video_defaults);
     const scopeContext = { scopeKey: this };
 
     setScopedVideoViewDefaultOptions(
       "live",
-      this._mergeVideoFactoryDefaults(commonDefaults, cfg.video_live_defaults),
+      mergeVideoFactoryDefaults(commonDefaults, cfg.video_live_defaults),
       scopeContext,
     );
     setScopedVideoViewDefaultOptions(
       "popup",
-      this._mergeVideoFactoryDefaults(commonDefaults, cfg.video_popup_defaults),
+      mergeVideoFactoryDefaults(commonDefaults, cfg.video_popup_defaults),
       scopeContext,
     );
     setScopedVideoViewDefaultOptions(
       "recording",
-      this._mergeVideoFactoryDefaults(
+      mergeVideoFactoryDefaults(
         commonDefaults,
         cfg.video_recording_defaults,
       ),
@@ -1767,361 +1693,34 @@ export class FrigateViewCard extends HTMLElement {
     this._sourceConfig = config;
     const wasStarted = this._started === true;
     const prevConfig = this._config;
-    let cameras;
-
-    if (Array.isArray(config.cameras) && config.cameras.length) {
-      cameras = config.cameras
-        .map((camera) => normalizeCameraConfig(camera))
-        .filter((c) => c.entity);
-    } else if (typeof config.cameras === "string" && config.cameras) {
-      cameras = [normalizeCameraConfig(config.cameras)].filter((c) => c.entity);
-    } else if (config.cameras && typeof config.cameras === "object") {
-      cameras = [normalizeCameraConfig(config.cameras)].filter((c) => c.entity);
-    } else if (config.camera_entity) {
-      cameras = [
-        normalizeCameraConfig(
-          { camera_entity: config.camera_entity },
-          { fallbackName: config.title || null },
-        ),
-      ];
-    } else if (config.camera) {
-      cameras = [normalizeCameraConfig(config.camera)].filter((c) => c.entity);
-    } else if (config.entity && /^camera\./.test(String(config.entity))) {
-      cameras = [
-        normalizeCameraConfig(String(config.entity), {
-          fallbackName: config.title || null,
-        }),
-      ];
-    } else if (Array.isArray(config.entities) && config.entities.length) {
-      cameras = config.entities
-        .map((e) => (typeof e === "string" ? e : e?.entity))
-        .filter((e) => typeof e === "string" && /^camera\./.test(e))
-        .map((e) => normalizeCameraConfig(e));
-    } else if (prevConfig?.cameras?.length) {
-      cameras = prevConfig.cameras
-        .map((camera) => normalizeCameraConfig(camera))
-        .filter((c) => c.entity);
-    } else {
-      cameras = [];
-    }
-
-    if (!cameras.length) {
-      // Final safety placeholder: keep card mountable instead of red error state.
-      cameras = [
-        {
-          entity: DEFAULT_CAMERA_ENTITY,
-          name: "Doorbell",
-          alerts_content: "alerts_only",
-        },
-      ];
-    }
-    cameras = limitCameraConfigsByPhysicalCount(cameras, MAX_CAMERAS);
-
-    const legacyWindowHours = parseInt(config.window_hours, 10);
-    const nextConfig = {
-      cameras,
-      title: String(config.title || "").trim() || DEFAULT_TITLE,
-      subtitle: String(config.subtitle || "").trim() || DEFAULT_SUBTITLE,
-      display_title: config.display_title !== false,
-      display_subtitle: config.display_subtitle !== false,
-      display_logo: config.display_logo !== false,
-      display_version: config.display_version !== false,
-      display_filter_control: config.display_filter_control !== false,
-      display_calendar_control: config.display_calendar_control !== false,
-      display_source_indicator: config.display_source_indicator !== false,
-      display_online_indicator: config.display_online_indicator !== false,
-      display_back_button: config.display_back_button !== false,
-      display_alert_detection_chip:
-        config.display_alert_detection_chip !== false,
-      display_alert_detection_outline:
-        config.display_alert_detection_outline !== false,
-      display_object_chips: config.display_object_chips !== false,
-      display_location_area_zone:
-        config.display_location_area_zone !== false,
-      display_alert_count: config.display_alert_count !== false,
-      display_footer: config.display_footer !== false,
-      event_days:
-        normalizePositiveInteger(config.event_days ?? config.window_days, null) ||
-        (Number.isFinite(legacyWindowHours) && legacyWindowHours > 0
-          ? Math.max(1, Math.ceil(legacyWindowHours / 24))
-          : DEFAULT_EVENT_DAYS),
-      alerts_reviews_days: normalizePositiveInteger(
-        config.alerts_reviews_days,
-        DEFAULT_ALERTS_REVIEWS_DAYS,
-      ),
-      refresh_seconds: Math.max(15, config.refresh_seconds || 45),
-      realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
-        Number(config.realtime_poll_seconds),
-      )
-        ? Number(config.realtime_poll_seconds)
-        : 5,
-      snapshot_update_seconds: normalizeNumberChoice(
-        config.snapshot_update_seconds,
-        SNAPSHOT_UPDATE_OPTIONS_SECONDS,
-        SNAPSHOT_UPDATE_SECONDS,
-      ),
-      mobile_poll_battery_saver: config.mobile_poll_battery_saver === true,
-      event_pre_post_roll_enabled:
-        config.event_pre_post_roll_enabled === true,
-      favorites_mixed_cameras: config.favorites_mixed_cameras !== false,
-      slideshow_rotation_enabled: config.slideshow_rotation_enabled === true,
-      slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
-        Number(config.slideshow_rotation_seconds),
-      )
-        ? Number(config.slideshow_rotation_seconds)
-        : 30,
-      slideshow_alert_hold_seconds: normalizeNumberChoice(
-        config.slideshow_alert_hold_seconds,
-        SLIDESHOW_ALERT_HOLD_OPTIONS_SECONDS,
-        Math.round(SLIDESHOW_ALERT_HOLD_MS / 1000),
-      ),
-      grid_mode_enabled: config.grid_mode_enabled === true,
-      grid_order: normalizeGridOrderConfig(config.grid_order, cameras),
-      grid_live_view_enabled: config.grid_live_view_enabled !== false,
-      grid_alert_hold_seconds: normalizeNumberChoice(
-        config.grid_alert_hold_seconds,
-        GRID_ALERT_HOLD_OPTIONS_SECONDS,
-        Math.round(GRID_ALERT_HOLD_MS / 1000),
-      ),
-      mobile_view_page_enabled: config.mobile_view_page_enabled !== false,
-      mobile_view_rotate_to_fullscreen:
-        config.mobile_view_rotate_to_fullscreen === true,
-      mobile_view_dashboard_background:
-        config.mobile_view_dashboard_background !== false,
-      mobile_view_header_overlay: config.mobile_view_header_overlay === true,
-      mobile_view_outer_border: config.mobile_view_outer_border === true,
-      mobile_view_ha_navbar_bottom:
-        config.mobile_view_ha_navbar_bottom === true,
-      mobile_view_ha_navbar_stack_tabs:
-        config.mobile_view_ha_navbar_stack_tabs === true,
-      mobile_view_ha_navbar_dashboard:
-        config.mobile_view_ha_navbar_dashboard === true,
-      ha_dashboard_swipe_navigation_owner:
-        config.ha_dashboard_swipe_navigation_owner === true,
-      ha_dashboard_swipe_navigation:
-        normalizeDashboardSwipeNavigationMode(
-          config.ha_dashboard_swipe_navigation,
-        ),
-      ha_dashboard_swipe_include_other_cards:
-        config.ha_dashboard_swipe_include_other_cards === true,
-      ha_dashboard_swipe_include_subviews:
-        config.ha_dashboard_swipe_include_subviews === true,
-      ha_dashboard_swipe_mouse_enabled:
-        config.ha_dashboard_swipe_mouse_enabled === true,
-      ha_dashboard_swipe_pages: Array.isArray(
-        config.ha_dashboard_swipe_pages,
-      )
-        ? [...config.ha_dashboard_swipe_pages]
-        : undefined,
-      ha_dashboard_swipe_mobile_pages: Array.isArray(
-        config.ha_dashboard_swipe_mobile_pages,
-      )
-        ? [...config.ha_dashboard_swipe_mobile_pages]
-        : undefined,
-      preview_page_enabled: config.preview_page_enabled === true,
-      preview_page_live_cameras: config.preview_page_live_cameras === true,
-      preview_page_live_cameras_mobile:
-        config.preview_page_live_cameras_mobile === true,
-      preview_page_show_title_bars:
-        config.preview_page_show_title_bars !== false,
-      preview_page_alert_live_duration_seconds:
-        normalizeNumberChoice(
-          config.preview_page_alert_live_duration_seconds,
-          PREVIEW_ALERT_LIVE_DURATION_OPTIONS_SECONDS,
-          Math.round(PREVIEW_ALERT_HOLD_MS / 1000),
-        ),
-      single_view_alert_takeover:
-        config.single_view_alert_takeover === true,
-      single_view_start_mode: normalizePageStartMode(
-        config.single_view_start_mode,
-      ),
-      wide_view_page_enabled:
-        config.wide_view_page_enabled === true || config.wide_view === true,
-      wide_view_live_cameras: config.wide_view_live_cameras === true,
-      wide_view_alert_takeover: config.wide_view_alert_takeover === true,
-      wide_view_start_mode: normalizePageStartMode(
-        config.wide_view_start_mode,
-      ),
-      wide_view_timeline_enabled:
-        config.wide_view_timeline_enabled === true,
-      wide_view_timeline_default_open:
-        config.wide_view_timeline_default_open === true,
-      wide_view_timeline_default_scale: normalizeWideTimelineScale(
-        config.wide_view_timeline_default_scale,
-      ),
-      card_view_page_enabled: config.card_view_page_enabled === true,
-      card_view_alert_takeover: config.card_view_alert_takeover === true,
-      card_view_standalone:
-        config.card_view_page_enabled === true &&
-        config.card_view_standalone === true,
-      card_view_media_drawer_enabled:
-        config.card_view_media_drawer_enabled !== false,
-      card_view_start_mode: normalizeCardViewStartMode(
-        config.card_view_start_mode,
-      ),
-      card_view_view_mode: normalizeCardViewViewMode(
-        config.card_view_view_mode,
-        {
-          legacyDrawerDefaultOpen:
-            config.card_view_drawer_default_open,
-          legacyVideoPanelOnly: config.card_view_video_panel_only,
-        },
-      ),
-      card_view_hide_camera_name:
-        config.card_view_hide_camera_name !== false,
-      landing_page: normalizePageRoute(config.landing_page),
-      mobile_page: normalizeMobilePageMode(config.mobile_page),
-      deep_link_enabled: config.deep_link_enabled !== false,
-      grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
-        Number(config.grid_rotation_seconds),
-      )
-        ? Number(config.grid_rotation_seconds)
-        : 30,
-      browse_expanded: config.browse_expanded === true,
-      hidden_tabs: Array.isArray(config.hidden_tabs)
-        ? config.hidden_tabs
-            .map((id) => (id === "reviews" ? "alerts" : id))
-            .filter((id) => ALLOWED_HIDDEN_TABS.includes(id))
-        : [...DEFAULT_HIDDEN_TABS],
-      theme: config.theme === "custom" ? "custom" : "default",
-      theme_custom: normalizeThemeCustomConfig(config.theme_custom),
-      theme_custom_defaults: normalizeThemeCustomDefaultsConfig(
-        config.theme_custom_defaults,
-      ),
-      stream_height: normalizeCardHeight(config.stream_height),
-      stream_height_unit: normalizeCardHeightUnit(config.stream_height_unit),
-      compact_preview: config.compact_preview === true,
-      tight_margins: config.tight_margins === true,
-      shadows: config.shadows !== false,
-      borders: config.borders === true,
-      rounded_corners: config.rounded_corners !== false,
-      outer_shadows: config.outer_shadows !== false,
-      col_left_width_pct: normalizeWideLeftWidth(config.col_left_width_pct),
-      video_defaults: this._normalizeVideoFactoryDefaults(
-        config.video_defaults,
-      ),
-      video_live_defaults: this._normalizeVideoFactoryDefaults(
-        config.video_live_defaults,
-      ),
-      video_popup_defaults: this._normalizeVideoFactoryDefaults(
-        config.video_popup_defaults,
-      ),
-      video_recording_defaults: this._normalizeVideoFactoryDefaults(
-        config.video_recording_defaults,
-      ),
-    };
-    const enabledDesktopPages = getEnabledPageRoutes(
-      nextConfig,
-      DEVICE_ROUTE_BUCKETS.desktop,
-    );
-    if (nextConfig.card_view_standalone) {
-      nextConfig.landing_page = PAGE_IDS.cardView;
-    }
-    if (!enabledDesktopPages.includes(nextConfig.landing_page)) {
-      nextConfig.landing_page = enabledDesktopPages[0] || PAGE_IDS.singleView;
-    }
-    nextConfig.mobile_page = resolveEnabledMobilePageMode(
-      nextConfig,
-      nextConfig.mobile_page,
-    );
-    nextConfig.ha_dashboard_swipe_pages =
-      resolveDashboardSwipePageSelection(
-        nextConfig,
-        DEVICE_ROUTE_BUCKETS.desktop,
-      );
-    nextConfig.ha_dashboard_swipe_mobile_pages =
-      resolveDashboardSwipeMobilePageSelection(nextConfig);
-    const previewEnabledChanged =
-      !!prevConfig &&
-      prevConfig.preview_page_enabled !== nextConfig.preview_page_enabled;
-    const mobileViewPageEnabledChanged =
-      !!prevConfig &&
-      prevConfig.mobile_view_page_enabled !==
-        nextConfig.mobile_view_page_enabled;
-    const wideViewPageEnabledChanged =
-      !!prevConfig &&
-      prevConfig.wide_view_page_enabled !== nextConfig.wide_view_page_enabled;
-    const wideViewTakeoverDefaultChanged =
-      !!prevConfig &&
-      prevConfig.wide_view_alert_takeover !==
-        nextConfig.wide_view_alert_takeover;
-    const wideViewTimelineEnabledChanged =
-      !!prevConfig &&
-      prevConfig.wide_view_timeline_enabled !==
-        nextConfig.wide_view_timeline_enabled;
-    const wideViewTimelineDefaultOpenChanged =
-      !!prevConfig &&
-      prevConfig.wide_view_timeline_default_open !==
-        nextConfig.wide_view_timeline_default_open;
-    const wideViewTimelineDefaultScaleChanged =
-      !!prevConfig &&
-      prevConfig.wide_view_timeline_default_scale !==
-        nextConfig.wide_view_timeline_default_scale;
-    const cardViewPageEnabledChanged =
-      !!prevConfig &&
-      prevConfig.card_view_page_enabled !== nextConfig.card_view_page_enabled;
-    const cardViewTakeoverDefaultChanged =
-      !!prevConfig &&
-      prevConfig.card_view_alert_takeover !==
-        nextConfig.card_view_alert_takeover;
-    const cardViewStandaloneChanged =
-      !!prevConfig &&
-      prevConfig.card_view_standalone !== nextConfig.card_view_standalone;
-    const cardViewMediaDrawerEnabledChanged =
-      !!prevConfig &&
-      prevConfig.card_view_media_drawer_enabled !==
-        nextConfig.card_view_media_drawer_enabled;
-    const cardViewStartModeChanged =
-      !!prevConfig &&
-      prevConfig.card_view_start_mode !== nextConfig.card_view_start_mode;
-    const cardViewViewModeChanged =
-      !!prevConfig &&
-      prevConfig.card_view_view_mode !== nextConfig.card_view_view_mode;
-    const cardViewHideCameraNameChanged =
-      !!prevConfig &&
-      prevConfig.card_view_hide_camera_name !==
-        nextConfig.card_view_hide_camera_name;
-    const displayFvcBrandLogoChanged =
-      !!prevConfig && prevConfig.display_logo !== nextConfig.display_logo;
-    const displayOptionsChanged =
-      !!prevConfig &&
-      [
-        "display_filter_control",
-        "display_calendar_control",
-        "display_source_indicator",
-        "display_online_indicator",
-        "display_back_button",
-        "display_alert_detection_chip",
-        "display_alert_detection_outline",
-        "display_object_chips",
-        "display_location_area_zone",
-        "display_alert_count",
-        "display_footer",
-      ].some((key) => prevConfig[key] !== nextConfig[key]);
-    const previewVisualChanged =
-      !!prevConfig &&
-      (prevConfig.preview_page_live_cameras !==
-        nextConfig.preview_page_live_cameras ||
-        prevConfig.preview_page_live_cameras_mobile !==
-          nextConfig.preview_page_live_cameras_mobile ||
-        prevConfig.preview_page_show_title_bars !==
-          nextConfig.preview_page_show_title_bars ||
-        prevConfig.preview_page_alert_live_duration_seconds !==
-          nextConfig.preview_page_alert_live_duration_seconds);
-    const previewModeConfigChanged =
-      previewEnabledChanged || previewVisualChanged;
-    const singleViewTakeoverDefaultChanged =
-      !!prevConfig &&
-      prevConfig.single_view_alert_takeover !==
-        nextConfig.single_view_alert_takeover;
-    const singleViewStartModeChanged =
-      !!prevConfig &&
-      prevConfig.single_view_start_mode !==
-        nextConfig.single_view_start_mode;
-    const wideViewStartModeChanged =
-      !!prevConfig &&
-      prevConfig.wide_view_start_mode !== nextConfig.wide_view_start_mode;
-
+    const nextConfig = normalizeRuntimeCardConfig(config, {
+      previousConfig: prevConfig,
+    });
+    const cameras = nextConfig.cameras;
+    const {
+      previewEnabledChanged,
+      mobileViewPageEnabledChanged,
+      wideViewPageEnabledChanged,
+      wideViewTakeoverDefaultChanged,
+      wideViewTimelineEnabledChanged,
+      wideViewTimelineDefaultOpenChanged,
+      wideViewTimelineDefaultScaleChanged,
+      cardViewPageEnabledChanged,
+      cardViewTakeoverDefaultChanged,
+      cardViewStandaloneChanged,
+      cardViewMediaDrawerEnabledChanged,
+      cardViewStartModeChanged,
+      cardViewViewModeChanged,
+      cardViewHideCameraNameChanged,
+      previewModeConfigChanged,
+      singleViewTakeoverDefaultChanged,
+      singleViewStartModeChanged,
+      wideViewStartModeChanged,
+      needsShellRerender,
+      needsEngineRemount,
+      snapshotUpdateChanged,
+      realtimePollChanged,
+    } = resolveRuntimeCardConfigChangePlan(prevConfig, nextConfig);
     this._committedConfig = this._cloneCardConfig(nextConfig);
     this._config = nextConfig;
     this._haNavbarController?.sync?.();
@@ -2200,51 +1799,13 @@ export class FrigateViewCard extends HTMLElement {
       return;
     }
 
-    const prevCams = prevConfig.cameras || [];
-    const nextCams = nextConfig.cameras || [];
-    const camerasChanged =
-      prevCams.length !== nextCams.length ||
-      prevCams.some(
-        (c, i) =>
-          c?.entity !== nextCams[i]?.entity ||
-          c?.group?.secondary_entity !==
-            nextCams[i]?.group?.secondary_entity ||
-          c?.group?.layout !== nextCams[i]?.group?.layout,
-      );
-    if (camerasChanged) {
-      resetRecordingsDayCache(this);
-      this._activeCameraAvailability = resolveCameraAvailabilitySnapshot({
-        entity: this._activeCam?.entity || "",
-        state: this._hass?.states?.[this._activeCam?.entity],
-      }).current;
-    }
-    const hiddenTabsChanged =
-      JSON.stringify(prevConfig.hidden_tabs || []) !==
-      JSON.stringify(nextConfig.hidden_tabs || []);
-    const needsShellRerender =
-      hiddenTabsChanged ||
-      previewEnabledChanged ||
-      mobileViewPageEnabledChanged ||
-      wideViewPageEnabledChanged ||
-      wideViewTimelineEnabledChanged ||
-      cardViewPageEnabledChanged ||
-      cardViewStandaloneChanged ||
-      displayFvcBrandLogoChanged ||
-      displayOptionsChanged;
-    const needsEngineRemount = camerasChanged;
-    const snapshotUpdateChanged =
-      prevConfig.snapshot_update_seconds !== nextConfig.snapshot_update_seconds;
-    const realtimePollChanged =
-      prevConfig.realtime_poll_seconds !== nextConfig.realtime_poll_seconds ||
-      prevConfig.mobile_poll_battery_saver !==
-        nextConfig.mobile_poll_battery_saver;
     const activePageInvalid =
       !this._pageNavigationController.isPageRouteAvailable(this._pageId);
 
     const routeFlowOutcome =
       this._singleViewPageController.applyConfigUpdateRouteFlow({
         needsEngineRemount,
-        nextCameraCount: nextCams.length,
+        nextCameraCount: cameras.length,
         needsShellRerender,
         activePageInvalid,
         previewPageActive: this._isPreviewPageActive(),

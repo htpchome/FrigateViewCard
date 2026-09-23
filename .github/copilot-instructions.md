@@ -25,7 +25,13 @@ For architectural rationale and refactor strategy, see `docs/refactor-guidelines
 
 ## Architecture Boundaries
 
-- Keep `src/card/FrigateViewCard.js` as the top-level runtime owner for shared shell orchestration, live engine lifecycle, playback, data loading, and other safety-critical behavior.
+- Treat `ARCHITECTURE.md` as the authoritative ownership contract.
+- Keep `src/card/FrigateViewCard.js` focused on card lifecycle, active state,
+  high-level composition, transport-mode selection, and event wiring.
+- Put live startup, mounting, playback orchestration, and fallback handling in
+  `src/features/live/`; put browse loading and windowing in
+  `src/features/browse/`; keep integration-specific behavior under
+  `src/integrations/`.
 - Move deterministic rendering and pure derivation logic into focused helper modules or page controllers.
 - If a file needs both layout behavior and server-backed application state, treat it as a controller or model and keep it under `src/features/`.
 - If a file is blind to app context and only manipulates data, events, or DOM mechanics, treat it as a shared utility and keep it under `src/shared/`.
@@ -38,9 +44,13 @@ For architectural rationale and refactor strategy, see `docs/refactor-guidelines
 - Read `docs/live-transport-baseline.md` before changing live transport or
   two-way-talk behavior.
 - Do not modify live view mount or playback internals unless the change is explicitly requested or directly fixes a proven defect.
-- Preserve startup ordering: initial event window load should complete before live mount.
+- Preserve startup ordering through explicit controller interfaces: initial
+  event window load should complete before live mount.
 - Keep Firefox/WebRTC/MSE ordering and fallback race behavior intact unless the task is specifically about that flow.
-- Preserve thin compatibility wrappers in `FrigateViewCard` when regressions or built-output checks depend on exact method names or literals.
+- Thin compatibility wrappers may remain in `FrigateViewCard` when regressions
+  or built-output checks depend on exact method names or literals, but they must
+  delegate to the module that owns the behavior and must not accumulate new
+  feature logic.
 
 ## Rendering And Interaction Rules
 

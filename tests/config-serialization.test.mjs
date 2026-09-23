@@ -18,8 +18,11 @@ import {
 import {
   DEFAULT_CAMERA_ENTITY,
   PREFERRED_DEFAULT_CAMERA_ENTITIES,
+  mergeVideoFactoryDefaults,
   normalizeCardConfig,
+  normalizeRuntimeCardConfig,
   resolvePreferredDefaultCameraEntity,
+  resolveRuntimeCardConfigChangePlan,
 } from "../src/config/card-config.js";
 import {
   normalizeCardHeight,
@@ -114,57 +117,134 @@ test("new card stub uses persisted defaults instead of demo labels", () => {
 });
 
 test("card runtime preserves editor-backed favorite and alert hold settings", () => {
+  const normalized = normalizeRuntimeCardConfig({
+    cameras: ["camera.front_door"],
+    favorites_mixed_cameras: false,
+    slideshow_alert_hold_seconds: 20,
+    grid_alert_hold_seconds: 20,
+    display_logo: false,
+    display_version: false,
+    mobile_view_ha_navbar_bottom: true,
+    mobile_view_ha_navbar_stack_tabs: true,
+    mobile_view_ha_navbar_dashboard: true,
+    ha_dashboard_swipe_navigation: "desktop",
+    ha_dashboard_swipe_navigation_owner: true,
+    ha_dashboard_swipe_include_other_cards: true,
+    ha_dashboard_swipe_include_subviews: true,
+  });
+
+  assert.equal(normalized.favorites_mixed_cameras, false);
+  assert.equal(normalized.slideshow_alert_hold_seconds, 20);
+  assert.equal(normalized.grid_alert_hold_seconds, 20);
+  assert.equal(normalized.display_logo, false);
+  assert.equal(normalized.display_version, false);
+  assert.equal(normalized.mobile_view_ha_navbar_bottom, true);
+  assert.equal(normalized.mobile_view_ha_navbar_stack_tabs, true);
+  assert.equal(normalized.mobile_view_ha_navbar_dashboard, true);
+  assert.equal(normalized.ha_dashboard_swipe_navigation, "dashboard-wide");
+  assert.equal(normalized.ha_dashboard_swipe_navigation_owner, true);
+  assert.equal(normalized.ha_dashboard_swipe_include_other_cards, true);
+  assert.equal(normalized.ha_dashboard_swipe_include_subviews, true);
+
   const setConfigStart = cardSource.indexOf("  setConfig(config) {");
   const setConfigEnd = cardSource.indexOf("  set hass(hass) {", setConfigStart);
   const setConfigSource = cardSource.slice(setConfigStart, setConfigEnd);
+  assert.match(setConfigSource, /normalizeRuntimeCardConfig\(config,/);
+  assert.match(setConfigSource, /resolveRuntimeCardConfigChangePlan\(/);
+  assert.doesNotMatch(setConfigSource, /normalizeCameraConfig\(/);
+});
 
-  assert.match(
-    setConfigSource,
-    /favorites_mixed_cameras:\s*config\.favorites_mixed_cameras !== false/,
+test("runtime config normalization preserves legacy camera inputs and fallback", () => {
+  const legacyInputs = [
+    { cameras: "camera.string" },
+    { cameras: { entity: "camera.object" } },
+    { camera_entity: "camera.legacy_entity" },
+    { camera: "camera.legacy_camera" },
+    { entity: "camera.entity" },
+    { entities: ["light.ignored", { entity: "camera.entities" }] },
+  ];
+  const expectedEntities = [
+    "camera.string",
+    "camera.object",
+    "camera.legacy_entity",
+    "camera.legacy_camera",
+    "camera.entity",
+    "camera.entities",
+  ];
+
+  legacyInputs.forEach((input, index) => {
+    assert.equal(
+      normalizeRuntimeCardConfig(input).cameras[0].entity,
+      expectedEntities[index],
+    );
+  });
+
+  const previousConfig = normalizeRuntimeCardConfig({
+    cameras: ["camera.previous"],
+  });
+  assert.equal(
+    normalizeRuntimeCardConfig({}, { previousConfig }).cameras[0].entity,
+    "camera.previous",
   );
-  assert.match(
-    setConfigSource,
-    /slideshow_alert_hold_seconds:\s*normalizeNumberChoice\(/,
+  assert.deepEqual(normalizeRuntimeCardConfig({}).cameras, [
+    {
+      entity: DEFAULT_CAMERA_ENTITY,
+      name: "Doorbell",
+      alerts_content: "alerts_only",
+    },
+  ]);
+});
+
+test("runtime config change planning remains deterministic and side-effect free", () => {
+  const previousConfig = normalizeRuntimeCardConfig({
+    cameras: ["camera.front"],
+  });
+  const nextConfig = normalizeRuntimeCardConfig({
+    cameras: ["camera.back"],
+    hidden_tabs: ["recordings"],
+    display_source_indicator: false,
+    snapshot_update_seconds: 30,
+    realtime_poll_seconds: 10,
+  });
+  const plan = resolveRuntimeCardConfigChangePlan(
+    previousConfig,
+    nextConfig,
   );
-  assert.match(
-    setConfigSource,
-    /grid_alert_hold_seconds:\s*normalizeNumberChoice\(/,
-  );
-  assert.match(
-    setConfigSource,
-    /display_logo:\s*config\.display_logo !== false/,
-  );
-  assert.match(
-    setConfigSource,
-    /display_version:\s*config\.display_version !== false/,
-  );
-  assert.match(
-    setConfigSource,
-    /mobile_view_ha_navbar_bottom:\s*config\.mobile_view_ha_navbar_bottom === true/,
-  );
-  assert.match(
-    setConfigSource,
-    /mobile_view_ha_navbar_stack_tabs:\s*config\.mobile_view_ha_navbar_stack_tabs === true/,
-  );
-  assert.match(
-    setConfigSource,
-    /mobile_view_ha_navbar_dashboard:\s*config\.mobile_view_ha_navbar_dashboard === true/,
-  );
-  assert.match(
-    setConfigSource,
-    /ha_dashboard_swipe_navigation:\s*normalizeDashboardSwipeNavigationMode\(/,
-  );
-  assert.match(
-    setConfigSource,
-    /ha_dashboard_swipe_navigation_owner:\s*config\.ha_dashboard_swipe_navigation_owner === true/,
-  );
-  assert.match(
-    setConfigSource,
-    /ha_dashboard_swipe_include_other_cards:\s*config\.ha_dashboard_swipe_include_other_cards === true/,
-  );
-  assert.match(
-    setConfigSource,
-    /ha_dashboard_swipe_include_subviews:\s*config\.ha_dashboard_swipe_include_subviews === true/,
+
+  assert.equal(plan.camerasChanged, true);
+  assert.equal(plan.needsEngineRemount, true);
+  assert.equal(plan.hiddenTabsChanged, true);
+  assert.equal(plan.displayOptionsChanged, true);
+  assert.equal(plan.needsShellRerender, true);
+  assert.equal(plan.snapshotUpdateChanged, true);
+  assert.equal(plan.realtimePollChanged, true);
+});
+
+test("runtime video defaults merge nested options without duplicate class names", () => {
+  assert.deepEqual(
+    mergeVideoFactoryDefaults(
+      {
+        muted: true,
+        style: { objectFit: "contain", background: "black" },
+        dataset: { scope: "common" },
+        attributes: { playsinline: "" },
+        classNames: ["media", "live"],
+      },
+      {
+        muted: false,
+        style: { objectFit: "cover" },
+        dataset: { view: "popup" },
+        attributes: { controls: "" },
+        classNames: ["live", "popup"],
+      },
+    ),
+    {
+      muted: false,
+      style: { objectFit: "cover", background: "black" },
+      dataset: { scope: "common", view: "popup" },
+      attributes: { playsinline: "", controls: "" },
+      classNames: ["media", "live", "popup"],
+    },
   );
 });
 

@@ -4,8 +4,14 @@ This document captures the architectural rationale behind the current refactor d
 
 ## Primary Boundaries
 
-- `src/card/FrigateViewCard.js` is the top-level runtime owner.
-- Keep shared shell orchestration, live engine lifecycle, playback, data loading, cache coordination, and safety-critical timing in the main card unless there is a proven safer abstraction.
+- `ARCHITECTURE.md` is the authoritative module-ownership contract.
+- `src/card/FrigateViewCard.js` owns card lifecycle, active camera/page/tab
+  state, high-level composition, transport-mode selection, and event wiring.
+- Feature modules own their workflows: live startup and playback belong in
+  `src/features/live/`, browse loading and windowing in `src/features/browse/`,
+  popup media in `src/features/popup/`, navigation in
+  `src/features/navigation/`, and integration-specific behavior in
+  `src/integrations/`.
 - Page controllers should own page-specific deterministic rendering and route-local orchestration.
 - Pure helpers should own deterministic markup builders, formatting, selection derivation, and other logic that can run without reading or mutating `this`.
 
@@ -25,12 +31,19 @@ This document captures the architectural rationale behind the current refactor d
 
 ## What Should Usually Stay In The Main Card
 
-- Live mount and playback internals.
-- Startup sequencing.
-- Cache invalidation and cross-surface coordination.
-- Window mutation that triggers fetch and render cascades.
-- Fallback race handling.
-- Compatibility wrappers whose exact source shape is protected by regression tests.
+- Custom-element lifecycle and Home Assistant property entry points.
+- Active camera, page, tab, and high-level mode selection.
+- High-level composition and event wiring between owning controllers.
+- Transport-mode selection; transport execution remains with the owning live
+  or integration module.
+- Thin compatibility wrappers whose exact source shape is protected by
+  regression tests. These wrappers should delegate immediately and must not
+  become alternate behavior owners.
+
+Live mount/playback internals, fallback races, browse window mutation, popup
+media loading, and integration-specific mapping do not belong in the main card.
+When existing compatibility-sensitive code still lives there, move it in small,
+tested slices to the owner named by `ARCHITECTURE.md`.
 
 ## Naming Rules For New Files
 
@@ -52,7 +65,9 @@ This document captures the architectural rationale behind the current refactor d
 - Extract the safest deterministic piece first.
 - Validate immediately after each meaningful edit.
 - If a first extraction succeeds, continue with the next cohesive branch or helper cluster.
-- If an extraction would force risky live, playback, or startup ownership changes, stop and choose a narrower boundary.
+- Preserve live, playback, and startup ordering while moving implementation to
+  the owning controller behind an explicit interface. If one slice cannot
+  preserve that ordering, stop and choose a narrower boundary.
 
 ## Validation Workflow
 

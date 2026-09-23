@@ -16,6 +16,7 @@ import {
   SLIDESHOW_ALERT_HOLD_MS,
   SLIDESHOW_ALERT_HOLD_OPTIONS_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
+  PREVIEW_ALERT_HOLD_MS,
   PREVIEW_ALERT_LIVE_DURATION_OPTIONS_SECONDS,
 } from "../constants.js";
 import {
@@ -295,4 +296,341 @@ export const normalizeCardConfig = (config) => {
   delete src.window_hours;
   delete src.wide_view;
   return { ...src, cameras };
+};
+
+const RUNTIME_CARD_CONFIG_KEYS = Object.freeze([
+  "cameras",
+  "title",
+  "subtitle",
+  "display_title",
+  "display_subtitle",
+  "display_logo",
+  "display_version",
+  "display_filter_control",
+  "display_calendar_control",
+  "display_source_indicator",
+  "display_online_indicator",
+  "display_back_button",
+  "display_alert_detection_chip",
+  "display_alert_detection_outline",
+  "display_object_chips",
+  "display_location_area_zone",
+  "display_alert_count",
+  "display_footer",
+  "event_days",
+  "alerts_reviews_days",
+  "refresh_seconds",
+  "realtime_poll_seconds",
+  "snapshot_update_seconds",
+  "mobile_poll_battery_saver",
+  "event_pre_post_roll_enabled",
+  "favorites_mixed_cameras",
+  "slideshow_rotation_enabled",
+  "slideshow_rotation_seconds",
+  "slideshow_alert_hold_seconds",
+  "grid_mode_enabled",
+  "grid_order",
+  "grid_live_view_enabled",
+  "grid_alert_hold_seconds",
+  "mobile_view_page_enabled",
+  "mobile_view_rotate_to_fullscreen",
+  "mobile_view_dashboard_background",
+  "mobile_view_header_overlay",
+  "mobile_view_outer_border",
+  "mobile_view_ha_navbar_bottom",
+  "mobile_view_ha_navbar_stack_tabs",
+  "mobile_view_ha_navbar_dashboard",
+  "ha_dashboard_swipe_navigation_owner",
+  "ha_dashboard_swipe_navigation",
+  "ha_dashboard_swipe_include_other_cards",
+  "ha_dashboard_swipe_include_subviews",
+  "ha_dashboard_swipe_mouse_enabled",
+  "ha_dashboard_swipe_pages",
+  "ha_dashboard_swipe_mobile_pages",
+  "preview_page_enabled",
+  "preview_page_live_cameras",
+  "preview_page_live_cameras_mobile",
+  "preview_page_show_title_bars",
+  "preview_page_alert_live_duration_seconds",
+  "single_view_alert_takeover",
+  "single_view_start_mode",
+  "wide_view_page_enabled",
+  "wide_view_live_cameras",
+  "wide_view_alert_takeover",
+  "wide_view_start_mode",
+  "wide_view_timeline_enabled",
+  "wide_view_timeline_default_open",
+  "wide_view_timeline_default_scale",
+  "card_view_page_enabled",
+  "card_view_alert_takeover",
+  "card_view_standalone",
+  "card_view_media_drawer_enabled",
+  "card_view_start_mode",
+  "card_view_view_mode",
+  "card_view_hide_camera_name",
+  "landing_page",
+  "mobile_page",
+  "deep_link_enabled",
+  "grid_rotation_seconds",
+  "browse_expanded",
+  "hidden_tabs",
+  "theme",
+  "theme_custom",
+  "theme_custom_defaults",
+  "stream_height",
+  "stream_height_unit",
+  "compact_preview",
+  "tight_margins",
+  "shadows",
+  "borders",
+  "rounded_corners",
+  "outer_shadows",
+  "col_left_width_pct",
+  "video_defaults",
+  "video_live_defaults",
+  "video_popup_defaults",
+  "video_recording_defaults",
+]);
+
+const DISPLAY_CHANGE_KEYS = Object.freeze([
+  "display_filter_control",
+  "display_calendar_control",
+  "display_source_indicator",
+  "display_online_indicator",
+  "display_back_button",
+  "display_alert_detection_chip",
+  "display_alert_detection_outline",
+  "display_object_chips",
+  "display_location_area_zone",
+  "display_alert_count",
+  "display_footer",
+]);
+
+export const normalizeVideoFactoryDefaults = (value) =>
+  value && typeof value === "object" ? value : {};
+
+export const mergeVideoFactoryDefaults = (commonDefaults, viewDefaults) => {
+  const common = normalizeVideoFactoryDefaults(commonDefaults);
+  const view = normalizeVideoFactoryDefaults(viewDefaults);
+  const merged = { ...common, ...view };
+
+  for (const key of ["style", "dataset", "attributes"]) {
+    if (!common[key] && !view[key]) continue;
+    merged[key] = {
+      ...normalizeVideoFactoryDefaults(common[key]),
+      ...normalizeVideoFactoryDefaults(view[key]),
+    };
+  }
+
+  if (common.classNames || view.classNames) {
+    const tokens = [
+      ...(Array.isArray(common.classNames) ? common.classNames : []),
+      ...(Array.isArray(view.classNames) ? view.classNames : []),
+    ]
+      .map((token) => String(token || "").trim())
+      .filter(Boolean);
+    merged.classNames = [...new Set(tokens)];
+  }
+
+  return merged;
+};
+
+const normalizeRuntimeCameras = (config, previousConfig) => {
+  let cameras;
+
+  if (Array.isArray(config.cameras) && config.cameras.length) {
+    cameras = config.cameras
+      .map((camera) => normalizeCameraConfig(camera))
+      .filter((camera) => camera.entity);
+  } else if (typeof config.cameras === "string" && config.cameras) {
+    cameras = [normalizeCameraConfig(config.cameras)].filter(
+      (camera) => camera.entity,
+    );
+  } else if (config.cameras && typeof config.cameras === "object") {
+    cameras = [normalizeCameraConfig(config.cameras)].filter(
+      (camera) => camera.entity,
+    );
+  } else if (config.camera_entity) {
+    cameras = [
+      normalizeCameraConfig(
+        { camera_entity: config.camera_entity },
+        { fallbackName: config.title || null },
+      ),
+    ];
+  } else if (config.camera) {
+    cameras = [normalizeCameraConfig(config.camera)].filter(
+      (camera) => camera.entity,
+    );
+  } else if (config.entity && /^camera\./.test(String(config.entity))) {
+    cameras = [
+      normalizeCameraConfig(String(config.entity), {
+        fallbackName: config.title || null,
+      }),
+    ];
+  } else if (Array.isArray(config.entities) && config.entities.length) {
+    cameras = config.entities
+      .map((entry) => (typeof entry === "string" ? entry : entry?.entity))
+      .filter(
+        (entity) =>
+          typeof entity === "string" && /^camera\./.test(entity),
+      )
+      .map((entity) => normalizeCameraConfig(entity));
+  } else if (previousConfig?.cameras?.length) {
+    cameras = previousConfig.cameras
+      .map((camera) => normalizeCameraConfig(camera))
+      .filter((camera) => camera.entity);
+  } else {
+    cameras = [];
+  }
+
+  if (!cameras.length) {
+    cameras = [
+      {
+        entity: DEFAULT_CAMERA_ENTITY,
+        name: "Doorbell",
+        alerts_content: "alerts_only",
+      },
+    ];
+  }
+
+  return limitCameraConfigsByPhysicalCount(cameras, MAX_CAMERAS);
+};
+
+export const normalizeRuntimeCardConfig = (
+  config,
+  { previousConfig = null } = {},
+) => {
+  const source = config && typeof config === "object" ? config : {};
+  const cameras = normalizeRuntimeCameras(source, previousConfig);
+  const normalized = normalizeCardConfig({ ...source, cameras });
+  const runtimeConfig = {
+    ...normalized,
+    cameras,
+    title: String(source.title || "").trim() || DEFAULT_TITLE,
+    subtitle: String(source.subtitle || "").trim() || DEFAULT_SUBTITLE,
+    refresh_seconds: Math.max(15, source.refresh_seconds || 45),
+    preview_page_alert_live_duration_seconds: normalizeNumberChoice(
+      source.preview_page_alert_live_duration_seconds,
+      PREVIEW_ALERT_LIVE_DURATION_OPTIONS_SECONDS,
+      Math.round(PREVIEW_ALERT_HOLD_MS / 1000),
+    ),
+    deep_link_enabled: source.deep_link_enabled !== false,
+    browse_expanded: source.browse_expanded === true,
+    compact_preview: source.compact_preview === true,
+    tight_margins: source.tight_margins === true,
+    video_defaults: normalizeVideoFactoryDefaults(source.video_defaults),
+    video_live_defaults: normalizeVideoFactoryDefaults(
+      source.video_live_defaults,
+    ),
+    video_popup_defaults: normalizeVideoFactoryDefaults(
+      source.video_popup_defaults,
+    ),
+    video_recording_defaults: normalizeVideoFactoryDefaults(
+      source.video_recording_defaults,
+    ),
+  };
+
+  return Object.fromEntries(
+    RUNTIME_CARD_CONFIG_KEYS.map((key) => [key, runtimeConfig[key]]),
+  );
+};
+
+const cameraTopologyChanged = (previousConfig, nextConfig) => {
+  const previousCameras = previousConfig?.cameras || [];
+  const nextCameras = nextConfig?.cameras || [];
+  return (
+    previousCameras.length !== nextCameras.length ||
+    previousCameras.some(
+      (camera, index) =>
+        camera?.entity !== nextCameras[index]?.entity ||
+        camera?.group?.secondary_entity !==
+          nextCameras[index]?.group?.secondary_entity ||
+        camera?.group?.layout !== nextCameras[index]?.group?.layout,
+    )
+  );
+};
+
+export const resolveRuntimeCardConfigChangePlan = (
+  previousConfig,
+  nextConfig,
+) => {
+  const changed = (key) =>
+    Boolean(previousConfig) && previousConfig[key] !== nextConfig[key];
+  const previewEnabledChanged = changed("preview_page_enabled");
+  const previewVisualChanged =
+    changed("preview_page_live_cameras") ||
+    changed("preview_page_live_cameras_mobile") ||
+    changed("preview_page_show_title_bars") ||
+    changed("preview_page_alert_live_duration_seconds");
+  const mobileViewPageEnabledChanged = changed(
+    "mobile_view_page_enabled",
+  );
+  const wideViewPageEnabledChanged = changed("wide_view_page_enabled");
+  const wideViewTimelineEnabledChanged = changed(
+    "wide_view_timeline_enabled",
+  );
+  const cardViewPageEnabledChanged = changed("card_view_page_enabled");
+  const cardViewStandaloneChanged = changed("card_view_standalone");
+  const displayFvcBrandLogoChanged = changed("display_logo");
+  const displayOptionsChanged =
+    Boolean(previousConfig) &&
+    DISPLAY_CHANGE_KEYS.some(
+      (key) => previousConfig[key] !== nextConfig[key],
+    );
+  const camerasChanged =
+    Boolean(previousConfig) &&
+    cameraTopologyChanged(previousConfig, nextConfig);
+  const hiddenTabsChanged =
+    Boolean(previousConfig) &&
+    JSON.stringify(previousConfig.hidden_tabs || []) !==
+      JSON.stringify(nextConfig.hidden_tabs || []);
+
+  return {
+    previewEnabledChanged,
+    mobileViewPageEnabledChanged,
+    wideViewPageEnabledChanged,
+    wideViewTakeoverDefaultChanged: changed("wide_view_alert_takeover"),
+    wideViewTimelineEnabledChanged,
+    wideViewTimelineDefaultOpenChanged: changed(
+      "wide_view_timeline_default_open",
+    ),
+    wideViewTimelineDefaultScaleChanged: changed(
+      "wide_view_timeline_default_scale",
+    ),
+    cardViewPageEnabledChanged,
+    cardViewTakeoverDefaultChanged: changed("card_view_alert_takeover"),
+    cardViewStandaloneChanged,
+    cardViewMediaDrawerEnabledChanged: changed(
+      "card_view_media_drawer_enabled",
+    ),
+    cardViewStartModeChanged: changed("card_view_start_mode"),
+    cardViewViewModeChanged: changed("card_view_view_mode"),
+    cardViewHideCameraNameChanged: changed("card_view_hide_camera_name"),
+    displayFvcBrandLogoChanged,
+    displayOptionsChanged,
+    previewVisualChanged,
+    previewModeConfigChanged: previewEnabledChanged || previewVisualChanged,
+    singleViewTakeoverDefaultChanged: changed(
+      "single_view_alert_takeover",
+    ),
+    singleViewStartModeChanged: changed("single_view_start_mode"),
+    wideViewStartModeChanged: changed("wide_view_start_mode"),
+    camerasChanged,
+    hiddenTabsChanged,
+    needsShellRerender:
+      hiddenTabsChanged ||
+      previewEnabledChanged ||
+      mobileViewPageEnabledChanged ||
+      wideViewPageEnabledChanged ||
+      wideViewTimelineEnabledChanged ||
+      cardViewPageEnabledChanged ||
+      cardViewStandaloneChanged ||
+      displayFvcBrandLogoChanged ||
+      displayOptionsChanged,
+    needsEngineRemount: camerasChanged,
+    snapshotUpdateChanged: changed("snapshot_update_seconds"),
+    realtimePollChanged:
+      changed("realtime_poll_seconds") ||
+      changed("mobile_poll_battery_saver"),
+  };
 };
