@@ -117,6 +117,13 @@ const haDirectTwoWayTalkMounterSource = fs.readFileSync(
   ),
   "utf8",
 );
+const haDashboardCompositionSource = fs.readFileSync(
+  new URL(
+    "../src/integrations/home-assistant/dashboard-composition.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const go2rtcRaceMounterSource = fs.readFileSync(
   new URL("../src/features/live/go2rtc-race-mounter.js", import.meta.url),
   "utf8",
@@ -1526,6 +1533,54 @@ test("page chrome is owned by route templates and controllers", () => {
   assert.equal(
     mobileViewPageControllerSource.includes(
       "new BrowseRenderController(host)",
+    ),
+    true,
+  );
+});
+
+test("Home Assistant dashboard controller composition is integration-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { createHomeAssistantDashboardControllers } from "../integrations/home-assistant/dashboard-composition.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "Object.assign(this, createHomeAssistantDashboardControllers(this));",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("new HomeAssistantNavbarController"), false);
+  assert.equal(
+    cardSource.includes("new HomeAssistantDashboardSwipeNavigationController"),
+    false,
+  );
+  assert.equal(
+    cardSource.includes("new HomeAssistantPageBackgroundController"),
+    false,
+  );
+  assert.equal(
+    haDashboardCompositionSource.includes(
+      "new HomeAssistantNavbarController(card, options)",
+    ),
+    true,
+  );
+  assert.equal(
+    haDashboardCompositionSource.includes(
+      "new HomeAssistantDashboardSwipeNavigationController(card, options)",
+    ),
+    true,
+  );
+  assert.equal(
+    haDashboardCompositionSource.includes(
+      "new HomeAssistantPageBackgroundController(card)",
+    ),
+    true,
+  );
+  assert.equal(
+    haDashboardCompositionSource.includes(
+      'source: "dashboard-swipe"',
     ),
     true,
   );

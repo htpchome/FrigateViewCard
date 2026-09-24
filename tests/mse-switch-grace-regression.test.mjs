@@ -29,6 +29,13 @@ const liveLifecycleCompositionSource = fs.readFileSync(
   ),
   "utf8",
 );
+const haDashboardCompositionSource = fs.readFileSync(
+  new URL(
+    "../src/integrations/home-assistant/dashboard-composition.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const pendingDestroyersSource = fs.readFileSync(
   new URL("../src/features/live/pending-destroyers.js", import.meta.url),
   "utf8",
@@ -165,8 +172,8 @@ test("switch-camera cleanup keeps shell grace coordination and live race takeove
 
 test("dashboard swipe return remounts retained go2rtc WebRTC through the grace path", () => {
   assert.match(
-    cardSource,
-    /onDashboardNavigationSettled:\s*\(\)\s*=>\s*this\._handleDashboardSwipeNavigationSettled\(\)/,
+    haDashboardCompositionSource,
+    /onDashboardNavigationSettled:\s*\(\)\s*=>\s*card\._handleDashboardSwipeNavigationSettled\(\)/,
   );
   assert.match(
     cardSource,
@@ -192,7 +199,7 @@ test("same-dashboard departure uses the complete camera-switch grace policy", ()
     /disconnectedCallback\(\)[\s\S]*?isCurrentDashboardScope\?\.\(\)[\s\S]*?_preserveLiveForDashboardNavigation\(\)[\s\S]*?preserveDashboardLive \? MSE_SWITCH_GRACE_MS : 2500/,
   );
   assert.match(
-    cardSource,
-    /onDashboardScopeExited:\s*\(\)\s*=>\s*this\._handleDashboardScopeExited\(\)/,
+    haDashboardCompositionSource,
+    /onDashboardScopeExited:\s*\(\)\s*=>\s*card\._handleDashboardScopeExited\(\)/,
   );
 });

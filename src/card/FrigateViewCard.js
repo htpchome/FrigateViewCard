@@ -62,9 +62,7 @@ import {
   resolveMobilePreviewDestination,
   resolvePageSwipeOrder,
 } from "../features/navigation/router.js";
-import { HomeAssistantNavbarController } from "../integrations/home-assistant/navbar.ctrl.js";
-import { HomeAssistantPageBackgroundController } from "../integrations/home-assistant/page-background.ctrl.js";
-import { HomeAssistantDashboardSwipeNavigationController } from "../integrations/home-assistant/dashboard-swipe-navigation.ctrl.js";
+import { createHomeAssistantDashboardControllers } from "../integrations/home-assistant/dashboard-composition.js";
 import {
   PAGE_SHELL_REGIONS,
   createPageShellRegistry,
@@ -436,50 +434,7 @@ export class FrigateViewCard extends HTMLElement {
           pageId,
       },
     );
-    this._haNavbarController =
-      new HomeAssistantNavbarController(this, {
-        isIOS: DEVICE_PROFILE.isIOS,
-      });
-    this._haDashboardSwipeNavigationController =
-      new HomeAssistantDashboardSwipeNavigationController(this, {
-        hasTouch: DEVICE_PROFILE.hasTouch,
-        resolveInternalPageTarget: (direction, swipePolicy) =>
-          this._pageNavigationController?.resolveSwipePageTarget?.(
-            direction,
-            swipePolicy?.mode,
-          ) ||
-          null,
-        resolveDashboardBoundaryPage: ({
-          direction,
-          transition,
-          swipePolicy,
-        }) =>
-          this._pageNavigationController?.resolveDashboardSwipeBoundaryPage?.({
-            direction,
-            transition,
-            swipeMode: swipePolicy?.mode,
-          }) || null,
-        allowDashboardNavigation: () =>
-          this._pageNavigationController?.allowsDashboardPageSwipe?.() !==
-          false,
-        isNavigationEnabled: () =>
-          this._pageNavigationController?.isSwipeNavigationEnabled?.() !==
-          false,
-        navigateInternalPage: (pageId) =>
-          this._pageNavigationController?.navigateToPageRoute?.(pageId, {
-            source: "dashboard-swipe",
-          }) === pageId,
-        onDashboardNavigationSettled: () =>
-          this._handleDashboardSwipeNavigationSettled(),
-        onDashboardScopeExited: () =>
-          this._handleDashboardScopeExited(),
-        cardTag: CARD_TAG,
-        enforceDashboardOwner: true,
-        isSwipeNavigationOwner: () =>
-          this._config?.ha_dashboard_swipe_navigation_owner === true,
-      });
-    this._haPageBackgroundController =
-      new HomeAssistantPageBackgroundController(this);
+    Object.assign(this, createHomeAssistantDashboardControllers(this));
     this._pageShellRegistry = createPageShellRegistry({
       defaultPageId: PAGE_IDS.singleView,
     });
