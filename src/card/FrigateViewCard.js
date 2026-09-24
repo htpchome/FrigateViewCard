@@ -79,11 +79,8 @@ import {
   bindCardGlobalEvents,
   bindCardShadowEvents,
 } from "./event-bindings.js";
-import {
-  buildFrigateNotificationMediaPath,
-  buildFrigateReviewThumbnailPath,
-} from "../integrations/frigate/url.js";
 import { FrigateMediaDownloadController } from "../integrations/frigate/media-download.ctrl.js";
+import { FrigateMediaResolverController } from "../integrations/frigate/media-resolver.ctrl.js";
 import {
   resolveCameraConnectionType,
   resolveGo2RtcEntity,
@@ -353,6 +350,8 @@ export class FrigateViewCard extends HTMLElement {
     Object.assign(this, createBrowseControllers(this));
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
+    this._frigateMediaResolverController =
+      new FrigateMediaResolverController(this);
     this._frigateMediaDownloadController = new FrigateMediaDownloadController({
       getContext: () => this._cc(),
       signPath: (path) => this._signed(path),
@@ -6058,12 +6057,11 @@ export class FrigateViewCard extends HTMLElement {
     );
   }
   _media(id, file, dl) {
-    return buildFrigateNotificationMediaPath({
-      clientId: this._cc().clientId,
-      eventId: id,
+    return this._frigateMediaResolverController.notificationMediaPath(
+      id,
       file,
-      download: dl,
-    });
+      dl,
+    );
   }
   async _signed(path) {
     try {
@@ -6286,37 +6284,23 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
   _frigateContextForCameraName(cameraName = "") {
-    const target = String(cameraName || "").trim();
-    if (!target) return null;
-    for (const camera of flattenCameraMembers(this._config?.cameras)) {
-      const context = this._camCache?.[camera.entity];
-      if (
-        String(context?.cam || "").trim() === target ||
-        String(camera.entity || "").trim() === target
-      ) {
-        return context || null;
-      }
-    }
-    return null;
+    return this._frigateMediaResolverController.contextForCameraName(
+      cameraName,
+    );
   }
   _mediaForCamera(id, file, cameraName = "", dl = false) {
-    const context = this._frigateContextForCameraName(cameraName) || this._cc();
-    return buildFrigateNotificationMediaPath({
-      clientId: context?.clientId || "",
-      eventId: id,
+    return this._frigateMediaResolverController.notificationMediaPathForCamera(
+      id,
       file,
-      download: dl,
-    });
+      cameraName,
+      dl,
+    );
   }
   _reviewThumbnailForCamera(review, cameraName = "") {
-    const targetCamera = String(cameraName || review?.camera || "").trim();
-    const context =
-      this._frigateContextForCameraName(targetCamera) || this._cc();
-    return buildFrigateReviewThumbnailPath({
-      clientId: context?.clientId || "",
-      reviewId: review?.id || "",
-      camera: targetCamera,
-    });
+    return this._frigateMediaResolverController.reviewThumbnailPath(
+      review,
+      cameraName,
+    );
   }
   // ── favorites (realtime) ──────────────────────────────────
   _toggleFav(id, options = {}) {

@@ -102,6 +102,13 @@ const frigateMediaDownloadControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const frigateMediaResolverControllerSource = fs.readFileSync(
+  new URL(
+    "../src/integrations/frigate/media-resolver.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const frigatePtzInfoSource = fs.readFileSync(
   new URL("../src/integrations/frigate/ptz-info.js", import.meta.url),
   "utf8",
@@ -2451,6 +2458,47 @@ test("Frigate download routing is owned by the Frigate integration", () => {
   );
   assert.equal(
     sharedMediaDownloadSource.includes("export const triggerBrowserDownload"),
+    true,
+  );
+});
+
+test("Frigate media context and URL resolution are integration-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { FrigateMediaResolverController } from "../integrations/frigate/media-resolver.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "new FrigateMediaResolverController(this)",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("buildFrigateNotificationMediaPath"), false);
+  assert.equal(cardSource.includes("buildFrigateReviewThumbnailPath"), false);
+  assert.equal(
+    /_frigateContextForCameraName\(cameraName = ""\) \{\s*return this\._frigateMediaResolverController\.contextForCameraName\(\s*cameraName,\s*\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    frigateMediaResolverControllerSource.includes(
+      "export class FrigateMediaResolverController",
+    ),
+    true,
+  );
+  assert.equal(
+    frigateMediaResolverControllerSource.includes(
+      "buildFrigateNotificationMediaPath",
+    ),
+    true,
+  );
+  assert.equal(
+    frigateMediaResolverControllerSource.includes(
+      "buildFrigateReviewThumbnailPath",
+    ),
     true,
   );
 });
