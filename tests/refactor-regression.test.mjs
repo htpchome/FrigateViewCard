@@ -257,6 +257,13 @@ const liveDashboardRetentionControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const liveStreamStatusControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/stream-status.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const gridCompositionSource = fs.readFileSync(
   new URL("../src/features/grid/composition.js", import.meta.url),
   "utf8",
@@ -1061,6 +1068,41 @@ test("dashboard live retention is owned by its live feature controller", () => {
   }
   assert.equal(cardSource.includes("restoreRetainedWebRtc"), false);
   assert.equal(cardSource.includes("teardownIfDetached"), false);
+});
+
+test("live stream status presentation is owned by its live feature controller", () => {
+  assert.equal(
+    cardSource.includes('from "../features/live/stream-status.ctrl.js";'),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("new LiveStreamStatusController(this)"),
+    true,
+  );
+  for (const delegation of [
+    "getLiveStreamStatusController(this).currentStreamHint()",
+    "getLiveStreamStatusController(this).setLoading(loading, text)",
+    "getLiveStreamStatusController(this).setActiveType(type)",
+    "getLiveStreamStatusController(this).setFallbackVisible(",
+    "getLiveStreamStatusController(this).applyResolvedState(streamState)",
+  ]) {
+    assert.equal(cardSource.includes(delegation), true);
+  }
+  for (const ownedMechanic of [
+    "applyStreamLoadingStateForCard({",
+    "applyActiveStreamTypeForCard({",
+    "applyStreamFallbackVisibilityForCard({",
+    "host._syncTwoWayTalkRuntimeState()",
+    "host._liveViewResizeController?.sync()",
+  ]) {
+    assert.equal(liveStreamStatusControllerSource.includes(ownedMechanic), true);
+  }
+  assert.equal(cardSource.includes("applyStreamLoadingStateForCard"), false);
+  assert.equal(cardSource.includes("applyActiveStreamTypeForCard"), false);
+  assert.equal(
+    cardSource.includes("applyStreamFallbackVisibilityForCard"),
+    false,
+  );
 });
 
 test("generic fullscreen behavior is owned by shared media primitives", () => {

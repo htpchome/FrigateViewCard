@@ -97,9 +97,6 @@ import {
   cleanupStaleWinnerResult,
 } from "../features/live/mount-result.js";
 import {
-  applyActiveStreamTypeForCard,
-  applyStreamFallbackVisibilityForCard,
-  applyStreamLoadingStateForCard,
   resolveCameraAvailabilitySnapshot,
 } from "../features/live/stream.state.js";
 import {
@@ -180,6 +177,10 @@ import {
   getLiveDashboardRetentionController,
   LiveDashboardRetentionController,
 } from "../features/live/dashboard-retention.ctrl.js";
+import {
+  getLiveStreamStatusController,
+  LiveStreamStatusController,
+} from "../features/live/stream-status.ctrl.js";
 import { LiveViewResizeController } from "../features/live/live-view-resize.ctrl.js";
 import { LiveAlertTakeoverController } from "../features/live/alert-takeover.ctrl.js";
 import { LiveFullscreenLifecycleController } from "../features/live/fullscreen-lifecycle.ctrl.js";
@@ -311,6 +312,7 @@ export class FrigateViewCard extends HTMLElement {
     this._liveRecoveryController = new LiveRecoveryController(this);
     this._liveDashboardRetentionController =
       new LiveDashboardRetentionController(this);
+    this._liveStreamStatusController = new LiveStreamStatusController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -1303,19 +1305,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _currentLiveStreamHint() {
-    const active = String(this._activeStreamType || "")
-      .trim()
-      .toLowerCase();
-    if (active === "webrtc" || active === "mse" || active === "hls") {
-      return active;
-    }
-    const lastHint = String(this._lastLiveStreamHint || "")
-      .trim()
-      .toLowerCase();
-    if (lastHint === "webrtc" || lastHint === "mse" || lastHint === "hls") {
-      return lastHint;
-    }
-    return this._preferredStreamType();
+    return getLiveStreamStatusController(this).currentStreamHint();
   }
 
   _assignLiveEngine(engine, options = {}) {
@@ -1415,40 +1405,18 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _setStreamLoading(loading, text = "Loading…") {
-    const label = this._$("#stream-loading .label");
-    const defaultLabel = text === "Loading…";
-    if (defaultLabel) {
-      setLocalizedText(label, "runtime.live.loading", this._localization.t);
-    } else {
-      label?.removeAttribute("data-fvc-i18n");
-    }
-    applyStreamLoadingStateForCard({
-      card: this,
-      loading,
-      text: defaultLabel ? this._localization.t("runtime.live.loading") : text,
-    });
+    return getLiveStreamStatusController(this).setLoading(loading, text);
   }
 
   _setActiveStreamType(type) {
-    if (this._gridPageController?.captureBackgroundLiveStreamType?.(type)) {
-      return;
-    }
-    applyActiveStreamTypeForCard({
-      card: this,
-      type,
-    });
-    this._syncTwoWayTalkRuntimeState();
-    this._syncTwoWayTalkButton();
-    this._liveViewResizeController?.sync();
+    return getLiveStreamStatusController(this).setActiveType(type);
   }
 
   _setStreamFallbackVisible(visible, refreshImage = false) {
-    applyStreamFallbackVisibilityForCard({
-      card: this,
+    return getLiveStreamStatusController(this).setFallbackVisible(
       visible,
       refreshImage,
-    });
-    this._liveViewResizeController?.sync();
+    );
   }
 
   _fallbackOriginForAdapters() {
@@ -1488,15 +1456,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _applyResolvedStreamUiState(streamState) {
-    if (!streamState) return;
-    this._setStreamLoading(streamState.loading);
-    this._setStreamFallbackVisible(
-      streamState.fallbackVisible,
-      streamState.refreshFallbackImage,
-    );
-    if (streamState.enableNativeControls) {
-      this._setLiveNativeControls(true);
-    }
+    return getLiveStreamStatusController(this).applyResolvedState(streamState);
   }
 
   _applyRotateOverlayUiPlan(card, uiPlan) {
