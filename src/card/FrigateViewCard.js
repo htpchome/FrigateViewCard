@@ -98,6 +98,7 @@ import {
   reviewStatusEntityCandidates,
 } from "../integrations/frigate/review-status.js";
 import { findActiveHaCameraStreamVideo } from "../integrations/home-assistant/playback.js";
+import { executeHomeAssistantPtzPlan } from "../integrations/home-assistant/ptz-service.js";
 import {
   invalidateMountTrackingIfActive,
   isMseReturnRemountReason,
@@ -7025,32 +7026,7 @@ export class FrigateViewCard extends HTMLElement {
       argument,
     });
     if (!plan) return;
-
-    const executeRequest = async (request) => {
-      if (request?.type !== "home_assistant_service") {
-        throw new Error(
-          `Unsupported PTZ request type: ${request?.type || "unknown"}`,
-        );
-      }
-      if (typeof this._hass?.callService !== "function") {
-        throw new Error("Home Assistant PTZ service is unavailable");
-      }
-
-      return this._hass.callService(
-        request.domain,
-        request.service,
-        request.serviceData,
-        request.target,
-      );
-    };
-
-    if (plan.executionMode === "parallel") {
-      await Promise.all(plan.requests.map((request) => executeRequest(request)));
-    } else {
-      for (let index = 0; index < plan.requests.length; index += 1) {
-        await executeRequest(plan.requests[index]);
-      }
-    }
+    await executeHomeAssistantPtzPlan({ hass: this._hass, plan });
   }
 
   _stopPtzMotion(reason = "release") {

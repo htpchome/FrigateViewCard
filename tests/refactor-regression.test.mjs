@@ -144,6 +144,13 @@ const haDashboardCompositionSource = fs.readFileSync(
   ),
   "utf8",
 );
+const homeAssistantPtzServiceSource = fs.readFileSync(
+  new URL(
+    "../src/integrations/home-assistant/ptz-service.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const go2rtcRaceMounterSource = fs.readFileSync(
   new URL("../src/features/live/go2rtc-race-mounter.js", import.meta.url),
   "utf8",
@@ -2324,6 +2331,30 @@ test("Frigate PTZ information requests are integration-owned", () => {
   assert.equal(frigatePtzInfoSource.includes('type: "frigate/ptz/info"'), true);
   assert.equal(
     frigatePtzInfoSource.includes("normalizeFrigatePtzInfoResponse"),
+    true,
+  );
+});
+
+test("Home Assistant PTZ service execution is integration-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { executeHomeAssistantPtzPlan } from "../integrations/home-assistant/ptz-service.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "await executeHomeAssistantPtzPlan({ hass: this._hass, plan });",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("this._hass.callService"), false);
+  assert.equal(
+    homeAssistantPtzServiceSource.includes("hass.callService"),
+    true,
+  );
+  assert.equal(
+    homeAssistantPtzServiceSource.includes('executionMode === "parallel"'),
     true,
   );
 });
