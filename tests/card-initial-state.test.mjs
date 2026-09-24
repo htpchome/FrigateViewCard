@@ -20,10 +20,6 @@ test("card runtime state starts with the established navigation and media defaul
   assert.equal(state._engineMountedMuted, true);
   assert.equal(state._mountInProgress, false);
   assert.equal(state._deepLinkApplied, false);
-  assert.deepEqual(state._snapshotResultTimers, {
-    live: null,
-    popup: null,
-  });
 });
 
 test("each card receives independent mutable runtime collections", () => {
@@ -45,7 +41,6 @@ test("each card receives independent mutable runtime collections", () => {
     "_slideshowHandledReviewIds",
     "_domCache",
     "_fallbackImgUrlCache",
-    "_snapshotResultTimers",
     "_recordingsDayRequestCache",
     "_pendingMountDestroyers",
   ];

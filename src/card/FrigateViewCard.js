@@ -247,10 +247,7 @@ import {
 } from "../features/two-way-talk/soundwave.ctrl.js";
 import { resolveActiveListScroller } from "../shared/list-render.js";
 import {
-  buildDisplayedFrameFilename,
-  captureDisplayedFrame,
-  downloadDisplayedFrame,
-  SAFARI_FRAME_DOWNLOAD_REVOKE_DELAY_MS,
+  DisplayedFrameCaptureController,
 } from "../shared/media/frame-capture.js";
 import { initializePreviewControllers } from "../features/preview/composition.js";
 import { DeepLinkController } from "../features/navigation/deep-link.ctrl.js";
@@ -294,6 +291,66 @@ export class FrigateViewCard extends HTMLElement {
     );
     this._localization = createLocalizationController();
     this._localizedDateController = new LocalizedDateController(this);
+    this._displayedFrameCaptureController =
+      new DisplayedFrameCaptureController({
+        resolveButton: (scope) =>
+          this._$(
+            scope === "popup"
+              ? "#popup-take-snapshot-btn"
+              : "#live-take-snapshot-btn",
+          ),
+        resolveSurface: (scope) =>
+          this._$(scope === "popup" ? "#viewer" : "#live-stage"),
+        resolveMedia: (scope) => {
+          if (scope === "popup") {
+            const viewer = this._$("#viewer");
+            return (
+              viewer?.querySelector?.("video") ||
+              viewer?.querySelector?.("img.snap") ||
+              null
+            );
+          }
+          const fallback = this._$("#stream-fallback");
+          if (fallback && !fallback.hidden) {
+            const fallbackImage = fallback.querySelector?.(
+              "#stream-fallback-img, img",
+            );
+            if (fallbackImage) return fallbackImage;
+          }
+          return this._livePictureInPictureVideo();
+        },
+        resolveZoomController: (scope) =>
+          scope === "popup"
+            ? this._popupVideoZoomController
+            : this._liveVideoZoomController,
+        captureGroupedFrame: (scope) =>
+          scope === "live"
+            ? this._cameraGroupLiveController?.captureDisplayedFrame?.()
+            : null,
+        resolveCamera: (scope) =>
+          scope === "popup"
+            ? this._popupLifecycleController.mediaCamera() || this._cc().cam
+            : this._cc().cam,
+        isSafari: () => this._isSafari(),
+        resolveResultLabel: (success) => {
+          const localizationKey = success
+            ? "runtime.live.snapshotTaken"
+            : "runtime.live.snapshotFailed";
+          return {
+            localizationKey,
+            text: this._localization.t(localizationKey),
+          };
+        },
+        warn: (error) =>
+          console.warn("[Frigate] Displayed frame snapshot failed", error),
+        onShowControls: (scope) => {
+          if (scope === "popup") {
+            this._popupMediaControlsController.showTemporarily();
+          } else {
+            this._showLiveControlsTemporarily();
+          }
+        },
+      });
     this._twoWayTalkSessionController =
       new TwoWayTalkSessionController(this);
     this._twoWayTalkControlsController =
@@ -1007,10 +1064,7 @@ export class FrigateViewCard extends HTMLElement {
     getLiveOverlayPresentationController(this).dispose();
     if (this._toastT) clearTimeout(this._toastT);
     this._toastT = null;
-    Object.values(this._snapshotResultTimers || {}).forEach((timer) => {
-      if (timer) clearTimeout(timer);
-    });
-    this._snapshotResultTimers = { live: null, popup: null };
+    this._displayedFrameCaptureController?.dispose();
     this._liveViewResizeController?.dispose();
     this._cameraGroupLiveController?.teardown?.();
     this._liveFullscreenLifecycleController?.dispose();
@@ -4313,113 +4367,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _displayedSnapshotMedia(scope = "live") {
-    if (scope === "popup") {
-      const viewer = this._$("#viewer");
-      return (
-        viewer?.querySelector?.("video") ||
-        viewer?.querySelector?.("img.snap") ||
-        null
-      );
-    }
-
-    const fallback = this._$("#stream-fallback");
-    if (fallback && !fallback.hidden) {
-      const fallbackImage = fallback.querySelector?.(
-        "#stream-fallback-img, img",
-      );
-      if (fallbackImage) return fallbackImage;
-    }
-    return this._livePictureInPictureVideo();
+    return this._displayedFrameCaptureController.media(scope);
   }
 
   _displayedSnapshotCaptureOptions(scope, media) {
-    const zoomController =
-      scope === "popup"
-        ? this._popupVideoZoomController
-        : this._liveVideoZoomController;
-    const activeZoomController =
-      zoomController?.video === media ? zoomController : null;
-    const computedStyle = globalThis.getComputedStyle?.(media) || null;
-    return {
-      viewport: activeZoomController?.viewport || null,
-      zoomState: activeZoomController?.state || null,
-      objectFit:
-        computedStyle?.objectFit || media?.style?.objectFit || "contain",
-    };
+    return this._displayedFrameCaptureController.captureOptions(scope, media);
   }
 
   _showSnapshotResultBubble(scope, success) {
-    const surface =
-      scope === "popup" ? this._$("#viewer") : this._$("#live-stage");
-    if (!surface) return;
-    const existing = surface.querySelector?.(".snapshot-result-bubble");
-    existing?.remove?.();
-    const bubble = document.createElement("div");
-    bubble.className = `snapshot-result-bubble ${success ? "success" : "failure"}`;
-    setLocalizedText(
-      bubble,
-      success ? "runtime.live.snapshotTaken" : "runtime.live.snapshotFailed",
-      this._localization.t,
-    );
-    surface.appendChild(bubble);
-
-    const previousTimer = this._snapshotResultTimers?.[scope];
-    if (previousTimer) clearTimeout(previousTimer);
-    this._snapshotResultTimers[scope] = setTimeout(() => {
-      bubble.remove?.();
-      this._snapshotResultTimers[scope] = null;
-    }, 1800);
+    this._displayedFrameCaptureController.showResult(scope, success);
   }
 
   async _takeDisplayedSnapshot(scope = "live") {
-    const button = this._$(
-      scope === "popup"
-        ? "#popup-take-snapshot-btn"
-        : "#live-take-snapshot-btn",
-    );
-    if (button?.disabled) return false;
-    if (button) button.disabled = true;
-    try {
-      const groupedBlob =
-        scope === "live"
-          ? await this._cameraGroupLiveController?.captureDisplayedFrame?.()
-          : null;
-      const media = groupedBlob ? null : this._displayedSnapshotMedia(scope);
-      if (!groupedBlob && !media) {
-        throw new Error("Displayed media frame is not ready.");
-      }
-      const blob =
-        groupedBlob ||
-        (await captureDisplayedFrame(
-          media,
-          this._displayedSnapshotCaptureOptions(scope, media),
-        ));
-      const camera =
-        scope === "popup"
-          ? this._popupLifecycleController.mediaCamera() || this._cc().cam
-          : this._cc().cam;
-      downloadDisplayedFrame(
-        blob,
-        buildDisplayedFrameFilename({ camera }),
-        {
-          revokeDelayMs: this._isSafari()
-            ? SAFARI_FRAME_DOWNLOAD_REVOKE_DELAY_MS
-            : 0,
-        },
-      );
-      this._showSnapshotResultBubble(scope, true);
-      return true;
-    } catch (error) {
-      console.warn("[Frigate] Displayed frame snapshot failed", error);
-      this._showSnapshotResultBubble(scope, false);
-      return false;
-    } finally {
-      if (button) button.disabled = false;
-      if (scope === "popup") {
-        this._popupMediaControlsController.showTemporarily();
-      }
-      else this._showLiveControlsTemporarily();
-    }
+    return this._displayedFrameCaptureController.capture(scope);
   }
 
   _clearPictureInPictureButtonController(scope) {

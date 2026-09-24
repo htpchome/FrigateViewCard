@@ -48,6 +48,10 @@ const ptzInteractionSource = fs.readFileSync(
   new URL("../src/features/ptz/interaction.ctrl.js", import.meta.url),
   "utf8",
 );
+const frameCaptureSource = fs.readFileSync(
+  new URL("../src/shared/media/frame-capture.js", import.meta.url),
+  "utf8",
+);
 
 test("media zoom is attached through committed main-live and popup lifecycles", () => {
   assert.equal(
@@ -153,16 +157,16 @@ test("PTZ zoom actions are routed to the existing main-live zoom controller", ()
 test("displayed-frame snapshots consume the matching live and popup zoom state", () => {
   assert.equal(
     cardSource.includes(
-      'from "../shared/media/frame-capture.js";',
+      "new DisplayedFrameCaptureController({",
     ),
     true,
   );
   assert.equal(
-    cardSource.includes("activeZoomController?.viewport || null"),
+    frameCaptureSource.includes("activeZoomController?.viewport || null"),
     true,
   );
   assert.equal(
-    cardSource.includes("activeZoomController?.state || null"),
+    frameCaptureSource.includes("activeZoomController?.state || null"),
     true,
   );
   assert.equal(cardSource.includes('this._takeDisplayedSnapshot("live")'), true);

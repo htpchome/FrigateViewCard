@@ -108,7 +108,6 @@ export const createInitialCardRuntimeState = ({ singleViewPageId }) => ({
   _liveControlsHideTimer: null,
   _liveOverlayControlsController: null,
   _lastLiveOverlayPointerType: "mouse",
-  _snapshotResultTimers: { live: null, popup: null },
   _recordingsDayRequestCache: new Map(),
   _recordingsNavUpdateToken: 0,
   _recordingsDayNavAnimating: false,

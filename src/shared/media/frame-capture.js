@@ -202,3 +202,135 @@ export function downloadDisplayedFrame(
     );
   }
 }
+
+export class DisplayedFrameCaptureController {
+  constructor({
+    resolveButton = () => null,
+    resolveSurface = () => null,
+    resolveMedia = () => null,
+    resolveZoomController = () => null,
+    captureGroupedFrame = async () => null,
+    resolveCamera = () => "camera",
+    isSafari = () => false,
+    resolveResultLabel = (success) => ({
+      localizationKey: "",
+      text: success ? "Snapshot saved" : "Snapshot failed",
+    }),
+    onShowControls = () => {},
+    captureFrame = captureDisplayedFrame,
+    downloadFrame = downloadDisplayedFrame,
+    buildFilename = buildDisplayedFrameFilename,
+    getComputedStyle = (media) =>
+      globalThis.getComputedStyle?.(media) || null,
+    createElement = (tagName) => globalThis.document?.createElement?.(tagName),
+    schedule = (callback, delayMs) =>
+      globalThis.setTimeout(callback, delayMs),
+    cancelSchedule = (timer) => globalThis.clearTimeout(timer),
+    resultDurationMs = 1800,
+    warn = () => {},
+  } = {}) {
+    this._resolveButton = resolveButton;
+    this._resolveSurface = resolveSurface;
+    this._resolveMedia = resolveMedia;
+    this._resolveZoomController = resolveZoomController;
+    this._captureGroupedFrame = captureGroupedFrame;
+    this._resolveCamera = resolveCamera;
+    this._isSafari = isSafari;
+    this._resolveResultLabel = resolveResultLabel;
+    this._onShowControls = onShowControls;
+    this._captureFrame = captureFrame;
+    this._downloadFrame = downloadFrame;
+    this._buildFilename = buildFilename;
+    this._getComputedStyle = getComputedStyle;
+    this._createElement = createElement;
+    this._schedule = schedule;
+    this._cancelSchedule = cancelSchedule;
+    this._resultDurationMs = resultDurationMs;
+    this._warn = warn;
+    this._resultTimers = new Map();
+  }
+
+  media(scope = "live") {
+    return this._resolveMedia(scope);
+  }
+
+  captureOptions(scope, media) {
+    const zoomController = this._resolveZoomController(scope);
+    const activeZoomController =
+      zoomController?.video === media ? zoomController : null;
+    const computedStyle = this._getComputedStyle(media);
+    return {
+      viewport: activeZoomController?.viewport || null,
+      zoomState: activeZoomController?.state || null,
+      objectFit:
+        computedStyle?.objectFit || media?.style?.objectFit || "contain",
+    };
+  }
+
+  showResult(scope, success) {
+    const surface = this._resolveSurface(scope);
+    if (!surface) return;
+    surface.querySelector?.(".snapshot-result-bubble")?.remove?.();
+    const bubble = this._createElement("div");
+    if (!bubble) return;
+    const { localizationKey = "", text = "" } =
+      this._resolveResultLabel(success) || {};
+    bubble.className = `snapshot-result-bubble ${success ? "success" : "failure"}`;
+    if (localizationKey) {
+      bubble.setAttribute?.("data-fvc-i18n", localizationKey);
+    }
+    bubble.textContent = text;
+    surface.appendChild?.(bubble);
+
+    const previousTimer = this._resultTimers.get(scope);
+    if (previousTimer) this._cancelSchedule(previousTimer);
+    const timer = this._schedule(() => {
+      bubble.remove?.();
+      if (this._resultTimers.get(scope) === timer) {
+        this._resultTimers.delete(scope);
+      }
+    }, this._resultDurationMs);
+    this._resultTimers.set(scope, timer);
+  }
+
+  async capture(scope = "live") {
+    const button = this._resolveButton(scope);
+    if (button?.disabled) return false;
+    if (button) button.disabled = true;
+    try {
+      const groupedBlob = await this._captureGroupedFrame(scope);
+      const media = groupedBlob ? null : this.media(scope);
+      if (!groupedBlob && !media) {
+        throw new Error("Displayed media frame is not ready.");
+      }
+      const blob =
+        groupedBlob ||
+        (await this._captureFrame(media, this.captureOptions(scope, media)));
+      this._downloadFrame(
+        blob,
+        this._buildFilename({ camera: this._resolveCamera(scope) }),
+        {
+          revokeDelayMs: this._isSafari()
+            ? SAFARI_FRAME_DOWNLOAD_REVOKE_DELAY_MS
+            : 0,
+        },
+      );
+      this.showResult(scope, true);
+      return true;
+    } catch (error) {
+      this._warn(error);
+      this.showResult(scope, false);
+      return false;
+    } finally {
+      if (button) button.disabled = false;
+      this._onShowControls(scope);
+    }
+  }
+
+  dispose() {
+    for (const timer of this._resultTimers.values()) {
+      if (timer) this._cancelSchedule(timer);
+    }
+    this._resultTimers.clear();
+  }
+}

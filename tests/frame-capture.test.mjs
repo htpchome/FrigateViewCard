@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildDisplayedFrameFilename,
   captureDisplayedFrame,
+  DisplayedFrameCaptureController,
   downloadDisplayedFrame,
   resolveDisplayedFrameGeometry,
   resolveDisplayedFrameSourceRect,
@@ -199,4 +200,158 @@ test("snapshot result feedback is centered over the active media surface", () =>
   );
   assert.match(STYLES, /\.snapshot-result-bubble\.success\{/);
   assert.match(STYLES, /\.snapshot-result-bubble\.failure\{/);
+});
+
+const createResultSurface = () => {
+  let bubble = null;
+  return {
+    appendChild: (element) => {
+      bubble = element;
+    },
+    querySelector: () => bubble,
+    get bubble() {
+      return bubble;
+    },
+  };
+};
+
+const createResultBubble = () => {
+  const attributes = new Map();
+  return {
+    className: "",
+    textContent: "",
+    removed: false,
+    setAttribute: (name, value) => attributes.set(name, value),
+    getAttribute: (name) => attributes.get(name) ?? null,
+    remove() {
+      this.removed = true;
+    },
+  };
+};
+
+test("displayed frame controller downloads grouped live frames and owns result cleanup", async () => {
+  const button = { disabled: false };
+  const surface = createResultSurface();
+  const groupedBlob = { type: "image/jpeg", grouped: true };
+  const downloads = [];
+  const controls = [];
+  const scheduled = [];
+  const cancelled = [];
+  const controller = new DisplayedFrameCaptureController({
+    resolveButton: () => button,
+    resolveSurface: () => surface,
+    resolveMedia: () => {
+      throw new Error("grouped frames must bypass native media capture");
+    },
+    captureGroupedFrame: async (scope) => {
+      assert.equal(scope, "live");
+      return groupedBlob;
+    },
+    resolveCamera: () => "Front Door",
+    isSafari: () => true,
+    resolveResultLabel: (success) => ({
+      localizationKey: success
+        ? "runtime.live.snapshotTaken"
+        : "runtime.live.snapshotFailed",
+      text: success ? "Snapshot saved" : "Failed",
+    }),
+    onShowControls: (scope) => controls.push(scope),
+    downloadFrame: (...args) => downloads.push(args),
+    createElement: () => createResultBubble(),
+    schedule: (callback, delayMs) => {
+      const timer = { callback, delayMs };
+      scheduled.push(timer);
+      return timer;
+    },
+    cancelSchedule: (timer) => cancelled.push(timer),
+  });
+
+  assert.equal(await controller.capture("live"), true);
+  assert.equal(button.disabled, false);
+  assert.deepEqual(controls, ["live"]);
+  assert.equal(downloads.length, 1);
+  assert.equal(downloads[0][0], groupedBlob);
+  assert.match(downloads[0][1], /^Front-Door_.*\.jpg$/);
+  assert.equal(
+    downloads[0][2].revokeDelayMs,
+    SAFARI_FRAME_DOWNLOAD_REVOKE_DELAY_MS,
+  );
+  assert.equal(surface.bubble.className, "snapshot-result-bubble success");
+  assert.equal(surface.bubble.textContent, "Snapshot saved");
+  assert.equal(
+    surface.bubble.getAttribute("data-fvc-i18n"),
+    "runtime.live.snapshotTaken",
+  );
+  assert.equal(scheduled[0].delayMs, 1800);
+
+  controller.dispose();
+  assert.deepEqual(cancelled, [scheduled[0]]);
+});
+
+test("displayed frame controller captures popup media with its matching zoom state", async () => {
+  const media = { style: { objectFit: "cover" } };
+  const zoomController = {
+    video: media,
+    viewport: { width: 640, height: 360 },
+    state: { scale: 2, x: -20, y: -10 },
+  };
+  const encodedBlob = { type: "image/jpeg" };
+  const captureCalls = [];
+  const downloadCalls = [];
+  const controller = new DisplayedFrameCaptureController({
+    resolveMedia: (scope) => {
+      assert.equal(scope, "popup");
+      return media;
+    },
+    resolveZoomController: () => zoomController,
+    resolveCamera: () => "Driveway",
+    captureFrame: async (...args) => {
+      captureCalls.push(args);
+      return encodedBlob;
+    },
+    downloadFrame: (...args) => downloadCalls.push(args),
+  });
+
+  assert.equal(await controller.capture("popup"), true);
+  assert.deepEqual(captureCalls, [
+    [
+      media,
+      {
+        viewport: zoomController.viewport,
+        zoomState: zoomController.state,
+        objectFit: "cover",
+      },
+    ],
+  ]);
+  assert.equal(downloadCalls[0][0], encodedBlob);
+  assert.match(downloadCalls[0][1], /^Driveway_.*\.jpg$/);
+});
+
+test("displayed frame controller reports capture failures and restores controls", async () => {
+  const button = { disabled: false };
+  const surface = createResultSurface();
+  const controls = [];
+  const warnings = [];
+  const controller = new DisplayedFrameCaptureController({
+    resolveButton: () => button,
+    resolveSurface: () => surface,
+    resolveMedia: () => null,
+    resolveResultLabel: (success) => ({
+      localizationKey: success
+        ? "runtime.live.snapshotTaken"
+        : "runtime.live.snapshotFailed",
+      text: success ? "Saved" : "Snapshot failed",
+    }),
+    onShowControls: (scope) => controls.push(scope),
+    createElement: () => createResultBubble(),
+    schedule: () => 1,
+    warn: (...args) => warnings.push(args),
+  });
+
+  assert.equal(await controller.capture("popup"), false);
+  assert.equal(button.disabled, false);
+  assert.deepEqual(controls, ["popup"]);
+  assert.equal(warnings.length, 1);
+  assert.equal(surface.bubble.className, "snapshot-result-bubble failure");
+  assert.equal(surface.bubble.textContent, "Snapshot failed");
 });
