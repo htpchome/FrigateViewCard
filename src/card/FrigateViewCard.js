@@ -38,7 +38,6 @@ import {
   cap,
   parseWs,
   normalizeCameraConnectionType,
-  labelColor,
   mkCamState,
   configuredCameraEntities,
   hassThemeSignature,
@@ -199,7 +198,11 @@ import {
   buildCalendarPanelMarkup,
   buildFilterPanelMarkup,
 } from "../features/browse/calendar-filter.tmpl.js";
-import { createBrowseControllers } from "../features/browse/composition.js";
+import {
+  createBrowseControllers,
+  renderBrowseEventListItem,
+  renderBrowseReviewListItem,
+} from "../features/browse/composition.js";
 import {
   buildFavoriteOptimisticMutation,
   buildFavoriteRollbackMutation,
@@ -242,14 +245,6 @@ import {
   buildTwoWayTalkSoundwaveMarkup,
   TwoWayTalkSoundwaveController,
 } from "../features/two-way-talk/soundwave.ctrl.js";
-import {
-  buildReviewListItemHtml,
-  buildReviewListItemModel,
-} from "../data/review-list.model.js";
-import {
-  buildEventListItemHtml,
-  buildEventListItemModel,
-} from "../data/event-list.model.js";
 import { resolveActiveListScroller } from "../shared/list-render.js";
 import {
   buildDisplayedFrameFilename,
@@ -6792,42 +6787,7 @@ export class FrigateViewCard extends HTMLElement {
     return range?.durationSec ?? this._dur(ev);
   }
   _eventCardHTML(ev, expanded, compact = false) {
-    const showDownloadButtons = !(
-      this._isLikelyMobileClient() &&
-      ["alerts", "clips", "snapshot"].includes(this._tab)
-    );
-    const fallbackReview =
-      this._browseCollectionController?.findReviewForEvent?.(ev) || null;
-    const model = buildEventListItemModel(ev, {
-      cap,
-      labelColor,
-      icons: ICONS,
-      media: (id, file) =>
-        this._mediaForCamera(id, file, ev?.camera),
-      durationLabel: (value) => this._eventMediaDuration(value),
-      formatTime: (ts) => this._time(ts),
-      formatDay: (ts) => this._weekdayDate(ts),
-      isKeptTab: this._tab === "kept",
-      browseTab: this._tab,
-      showDownloadButtons,
-      showFavoriteButton:
-        !this._config?.hidden_tabs?.includes?.("kept"),
-      showDurationBadge: this._tab !== "snapshot",
-      t: this._localization.t,
-      fallbackThumbSrc: fallbackReview
-        ? this._reviewThumbnailForCamera(fallbackReview, ev?.camera)
-        : "",
-      showCameraLabel:
-        (this._eventsMode === "all" ||
-          this._isGridMixedListMode() ||
-          isCameraGroup(this._activeCam)) &&
-        flattenCameraMembers(this._config.cameras).length > 1,
-    });
-    return buildEventListItemHtml(model, {
-      icons: ICONS,
-      expanded,
-      compact,
-    });
+    return renderBrowseEventListItem(this, ev, expanded, compact);
   }
 
   _setListHtmlIfChanged(list, html) {
@@ -6871,38 +6831,8 @@ export class FrigateViewCard extends HTMLElement {
 
   _reviewListItemHTML(
     review,
-    {
-      cameraAware = false,
-      showDownloadButtons = !this._isLikelyMobileClient(),
-      showFavoriteButton = true,
-    } = {},
+    options = {},
   ) {
-    const resolveCameraMedia =
-      cameraAware || isCameraGroup(this._activeCam);
-    const model = buildReviewListItemModel(review, {
-      cap,
-      icons: ICONS,
-      resolveSourceEvent: (value) =>
-        this._browseFilterController.reviewSourceEvent(value),
-      findEventById: (id) => this._findEventById(id),
-      media: (id, file) =>
-        resolveCameraMedia
-          ? this._mediaForCamera(id, file, review?.camera)
-          : this._media(id, file),
-      durationLabel: (value) => this._eventMediaDuration(value),
-      formatTime: (ts) => this._time(ts),
-      formatDay: (ts) => this._weekdayDate(ts),
-      labelColor,
-      fallbackThumbSrc: this._reviewThumbnailForCamera(
-        review,
-        review?.camera,
-      ),
-      showDownloadButtons,
-      showFavoriteButton:
-        showFavoriteButton &&
-        !this._config?.hidden_tabs?.includes?.("kept"),
-      t: this._localization.t,
-    });
-    return buildReviewListItemHtml(model, { cap, icons: ICONS });
+    return renderBrowseReviewListItem(this, review, options);
   }
 }

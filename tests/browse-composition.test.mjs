@@ -1,7 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { createBrowseControllers } from "../src/features/browse/composition.js";
+import {
+  createBrowseControllers,
+  renderBrowseEventListItem,
+  renderBrowseReviewListItem,
+} from "../src/features/browse/composition.js";
+
+test("browse composition exposes item presentation coordination", () => {
+  assert.equal(typeof renderBrowseEventListItem, "function");
+  assert.equal(typeof renderBrowseReviewListItem, "function");
+});
 
 test("browse composition preserves controller order and markup dependencies", () => {
   const calls = [];

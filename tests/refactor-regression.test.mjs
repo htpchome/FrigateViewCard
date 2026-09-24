@@ -209,6 +209,13 @@ const browseCompositionSource = fs.readFileSync(
   new URL("../src/features/browse/composition.js", import.meta.url),
   "utf8",
 );
+const browseItemPresentationControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/browse/item-presentation.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const browseCalendarActivityControllerSource = fs.readFileSync(
   new URL("../src/features/browse/calendar-activity.ctrl.js", import.meta.url),
   "utf8",
@@ -1092,9 +1099,8 @@ test("viewport helpers delegate through the viewport context controller", () => 
 
 test("browse controller composition is browse-owned", () => {
   assert.equal(
-    cardSource.includes(
-      'import { createBrowseControllers } from "../features/browse/composition.js";',
-    ),
+    cardSource.includes("createBrowseControllers,") &&
+      cardSource.includes('from "../features/browse/composition.js";'),
     true,
   );
   assert.equal(
@@ -1114,6 +1120,42 @@ test("browse controller composition is browse-owned", () => {
     assert.equal(cardSource.includes(`new ${controllerName}`), false);
     assert.equal(browseCompositionSource.includes(`new ${controllerName}`), true);
   }
+});
+
+test("browse event and review item presentation is browse-owned", () => {
+  assert.equal(cardSource.includes("buildEventListItemModel"), false);
+  assert.equal(cardSource.includes("buildEventListItemHtml"), false);
+  assert.equal(cardSource.includes("buildReviewListItemModel"), false);
+  assert.equal(cardSource.includes("buildReviewListItemHtml"), false);
+  assert.equal(cardSource.includes("labelColor"), false);
+  assert.equal(
+    cardSource.includes(
+      "return renderBrowseEventListItem(this, ev, expanded, compact);",
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "return renderBrowseReviewListItem(this, review, options);",
+    ),
+    true,
+  );
+  assert.equal(
+    browseItemPresentationControllerSource.includes(
+      "export const renderBrowseEventListItem",
+    ),
+    true,
+  );
+  assert.equal(
+    browseItemPresentationControllerSource.includes(
+      "export const renderBrowseReviewListItem",
+    ),
+    true,
+  );
+  assert.equal(
+    browseCompositionSource.includes("renderBrowseEventListItem,"),
+    true,
+  );
 });
 
 test("browse calendar activity helpers delegate through the browse calendar activity controller", () => {

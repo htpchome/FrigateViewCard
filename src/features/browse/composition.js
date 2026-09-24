@@ -8,6 +8,12 @@ import { BrowseCollectionController } from "./collection.ctrl.js";
 import { BrowseFilterController } from "./filter-state.js";
 import { BrowseTabDataController } from "./tab-data.ctrl.js";
 import { BrowseWindowLoaderController } from "./window-loader.ctrl.js";
+import {
+  renderBrowseEventListItem,
+  renderBrowseReviewListItem,
+} from "./item-presentation.ctrl.js";
+
+export { renderBrowseEventListItem, renderBrowseReviewListItem };
 
 const DEFAULT_FACTORIES = Object.freeze({
   createCalendarActivityController: (card) =>
