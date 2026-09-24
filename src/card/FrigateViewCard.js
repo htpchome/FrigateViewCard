@@ -14,7 +14,6 @@ import {
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   SLIDESHOW_ALERT_HOLD_MS,
   GRID_ALERT_HOLD_MS,
-  CARD_VIEW_OVERLAY_TIMING,
   PREVIEW_ALERT_HOLD_MS,
   MSE_SWITCH_GRACE_MS,
   DEFAULT_CAMERA_CONNECTION_TYPE,
@@ -179,6 +178,10 @@ import {
   getLiveMediaPresentationController,
   LiveMediaPresentationController,
 } from "../features/live/media-presentation.ctrl.js";
+import {
+  getLiveOverlayPresentationController,
+  LiveOverlayPresentationController,
+} from "../features/live/overlay-presentation.ctrl.js";
 import { LiveViewResizeController } from "../features/live/live-view-resize.ctrl.js";
 import { LiveAlertTakeoverController } from "../features/live/alert-takeover.ctrl.js";
 import { LiveFullscreenLifecycleController } from "../features/live/fullscreen-lifecycle.ctrl.js";
@@ -213,9 +216,6 @@ import {
   renderBrowseReviewListItem,
 } from "../features/browse/composition.js";
 import { ListScrollController } from "../features/browse/scroll.ctrl.js";
-import {
-  MediaOverlayControlsController as LiveOverlayControlsController,
-} from "../shared/media/overlay-controls.ctrl.js";
 import { createPopupControllers } from "../features/popup/composition.js";
 import {
   buildRecordingsListMarkup,
@@ -291,10 +291,6 @@ import {
   extractRealtimeMessageSeverity,
 } from "../features/slideshow/routing.js";
 
-const CARD_VIEW_OVERLAYS_IDLE_CLASS = "card-view-overlays-idle";
-const CARD_VIEW_OVERLAYS_TOUCH_IDLE_CLASS =
-  "card-view-overlays-touch-idle";
-
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -315,6 +311,8 @@ export class FrigateViewCard extends HTMLElement {
     this._liveAudioController = new LiveAudioController(this);
     this._liveMediaPresentationController =
       new LiveMediaPresentationController(this);
+    this._liveOverlayPresentationController =
+      new LiveOverlayPresentationController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -998,19 +996,13 @@ export class FrigateViewCard extends HTMLElement {
       } catch (_) {}
     }
     this._editorLiveHandoffController?.dispose?.();
-    if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
+    getLiveOverlayPresentationController(this).dispose();
     if (this._toastT) clearTimeout(this._toastT);
     this._toastT = null;
     Object.values(this._snapshotResultTimers || {}).forEach((timer) => {
       if (timer) clearTimeout(timer);
     });
     this._snapshotResultTimers = { live: null, popup: null };
-    if (this._liveOverlayControlsController) {
-      try {
-        this._liveOverlayControlsController.dispose();
-      } catch (_) {}
-      this._liveOverlayControlsController = null;
-    }
     this._liveViewResizeController?.dispose();
     this._cameraGroupLiveController?.teardown?.();
     this._liveFullscreenLifecycleController?.dispose();
@@ -3554,87 +3546,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _initLiveOverlayControls() {
-    const wrap = this._$("#live-stage");
-    if (!wrap) return;
-    if (this._liveOverlayControlsController) {
-      try {
-        this._liveOverlayControlsController.dispose();
-      } catch (_) {}
-      this._liveOverlayControlsController = null;
-    }
-    if (!wrap.classList.contains("live-stage--overlay")) return;
-    const card = this._$("#card");
-    const overlayCardView =
-      this._isCardViewPageActive() &&
-      this._cardViewPageController?.usesOverlayPresentation?.() === true;
-    const overlayMobileView =
-      this._isMobileViewPageActive() &&
-      this._config?.mobile_view_header_overlay === true;
-    const interactionSurface = overlayCardView
-      ? this._$(".card-view-live-panel") || wrap
-      : overlayMobileView
-        ? this._$("#mobile-top") || wrap
-        : wrap;
-    const show = (interaction = {}) => {
-      if (interaction.pointerType) {
-        this._lastLiveOverlayPointerType = interaction.pointerType;
-      }
-      wrap.classList.add("live-controls-visible");
-      card?.classList?.add("card-view-overlays-visible");
-      if (overlayCardView) {
-        card?.classList?.remove(CARD_VIEW_OVERLAYS_IDLE_CLASS);
-        card?.classList?.remove(CARD_VIEW_OVERLAYS_TOUCH_IDLE_CLASS);
-      }
-    };
-    const hideNow = () => {
-      wrap.classList.remove("live-controls-visible");
-      card?.classList?.remove("card-view-overlays-visible");
-      if (this._liveControlsHideTimer) {
-        clearTimeout(this._liveControlsHideTimer);
-        this._liveControlsHideTimer = null;
-      }
-    };
-    const hideSoon = (ms = 1400, interaction = {}) => {
-      if (this._liveControlsHideTimer)
-        clearTimeout(this._liveControlsHideTimer);
-      const touchInteraction = interaction.pointerType === "touch";
-      this._liveControlsHideTimer = setTimeout(() => {
-        wrap.classList.remove("live-controls-visible");
-        card?.classList?.remove("card-view-overlays-visible");
-        if (overlayCardView) {
-          card?.classList?.toggle(
-            CARD_VIEW_OVERLAYS_IDLE_CLASS,
-            !touchInteraction,
-          );
-          card?.classList?.toggle(
-            CARD_VIEW_OVERLAYS_TOUCH_IDLE_CLASS,
-            touchInteraction,
-          );
-        }
-        this._liveControlsHideTimer = null;
-      }, ms);
-    };
-    const cancelScheduledHide = () => {
-      if (this._liveControlsHideTimer === null) return;
-      clearTimeout(this._liveControlsHideTimer);
-      this._liveControlsHideTimer = null;
-    };
-    this._liveOverlayControlsController = new LiveOverlayControlsController({
-      surface: interactionSurface,
-      wrap,
-      show,
-      hideNow,
-      hideSoon,
-      cancelScheduledHide,
-      revealDurationMs: overlayCardView
-        ? CARD_VIEW_OVERLAY_TIMING.mouse.controlsHideMs
-        : 1300,
-      touchRevealDurationMs: overlayCardView
-        ? CARD_VIEW_OVERLAY_TIMING.touch.controlsHideMs
-        : 2300,
-      autoHideMouse: overlayCardView,
-    });
-    this._liveOverlayControlsController.bind();
+    getLiveOverlayPresentationController(this).init();
   }
 
   _syncBrowseHeadModeClass() {
@@ -5296,48 +5208,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _showLiveControlsTemporarily(ms = 2200) {
-    const wrap = this._$("#live-stage.live-stage--overlay");
-    if (!wrap) return;
-    const card = this._$("#card");
-    const overlayCardView =
-      this._isCardViewPageActive() &&
-      this._cardViewPageController?.usesOverlayPresentation?.() === true;
-    const touchInteraction =
-      overlayCardView && this._lastLiveOverlayPointerType === "touch";
-    wrap.classList.add("live-controls-visible");
-    card?.classList?.add("card-view-overlays-visible");
-    if (overlayCardView) {
-      card?.classList?.remove(CARD_VIEW_OVERLAYS_IDLE_CLASS);
-      card?.classList?.remove(CARD_VIEW_OVERLAYS_TOUCH_IDLE_CLASS);
-    }
-    if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
-    this._liveControlsHideTimer = setTimeout(
-      () => {
-        const nextWrap = this._$("#live-stage.live-stage--overlay");
-        nextWrap?.classList.remove("live-controls-visible");
-        const nextCard = this._$("#card");
-        nextCard?.classList?.remove("card-view-overlays-visible");
-        if (
-          this._isCardViewPageActive() &&
-          this._cardViewPageController?.usesOverlayPresentation?.() === true
-        ) {
-          nextCard?.classList?.toggle(
-            CARD_VIEW_OVERLAYS_IDLE_CLASS,
-            !touchInteraction,
-          );
-          nextCard?.classList?.toggle(
-            CARD_VIEW_OVERLAYS_TOUCH_IDLE_CLASS,
-            touchInteraction,
-          );
-        }
-        this._liveControlsHideTimer = null;
-      },
-      overlayCardView
-        ? CARD_VIEW_OVERLAY_TIMING[
-            touchInteraction ? "touch" : "mouse"
-          ].controlsHideMs
-        : Math.max(500, Number(ms) || 2200),
-    );
+    getLiveOverlayPresentationController(this).showTemporarily(ms);
   }
   _media(id, file, dl) {
     return this._frigateMediaResolverController.notificationMediaPath(

@@ -232,6 +232,13 @@ const liveMediaPresentationControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const liveOverlayPresentationControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/overlay-presentation.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const gridCompositionSource = fs.readFileSync(
   new URL("../src/features/grid/composition.js", import.meta.url),
   "utf8",
@@ -884,6 +891,42 @@ test("live media presentation is owned by its feature controller", () => {
   }
   assert.equal(cardSource.includes("const currentZoomController ="), false);
   assert.equal(cardSource.includes("const sameVideo ="), false);
+});
+
+test("live overlay presentation is owned by its feature controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'from "../features/live/overlay-presentation.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("new LiveOverlayPresentationController(this)"),
+    true,
+  );
+  assert.match(
+    cardSource,
+    /_initLiveOverlayControls\(\) \{\s*getLiveOverlayPresentationController\(this\)\.init\(\);\s*\}/,
+  );
+  assert.match(
+    cardSource,
+    /_showLiveControlsTemporarily\(ms = 2200\) \{\s*getLiveOverlayPresentationController\(this\)\.showTemporarily\(ms\);\s*\}/,
+  );
+  for (const ownedMechanic of [
+    "new MediaOverlayControlsController(options)",
+    "CARD_VIEW_OVERLAY_TIMING.mouse.controlsHideMs",
+    "CARD_VIEW_OVERLAY_TIMING.touch.controlsHideMs",
+    'host._lastLiveOverlayPointerType === "touch"',
+    "CARD_VIEW_OVERLAYS_TOUCH_IDLE_CLASS",
+  ]) {
+    assert.equal(
+      liveOverlayPresentationControllerSource.includes(ownedMechanic),
+      true,
+    );
+  }
+  assert.equal(cardSource.includes("CARD_VIEW_OVERLAYS_IDLE_CLASS"), false);
+  assert.equal(cardSource.includes("CARD_VIEW_OVERLAY_TIMING"), false);
+  assert.equal(cardSource.includes("LiveOverlayControlsController"), false);
 });
 
 test("generic fullscreen behavior is owned by shared media primitives", () => {

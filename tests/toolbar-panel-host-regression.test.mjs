@@ -38,6 +38,13 @@ const liveAudioControllerSource = fs.readFileSync(
   new URL("../src/features/live/audio.ctrl.js", import.meta.url),
   "utf8",
 );
+const liveOverlayPresentationSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/overlay-presentation.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const twoWayTalkSessionControllerSource = fs.readFileSync(
   new URL(
     "../src/features/two-way-talk/session.ctrl.js",
@@ -222,13 +229,13 @@ test("tabs and tools synchronize independently without layout repair", () => {
 
 test("live controls keep a shared overlay with a mobile inline mute exception", () => {
   assert.equal(
-    cardSource.includes(
+    liveOverlayPresentationSource.includes(
       'if (!wrap.classList.contains("live-stage--overlay")) return;',
     ),
     true,
   );
   assert.equal(
-    cardSource.includes('#live-stage.live-stage--overlay'),
+    liveOverlayPresentationSource.includes('#live-stage.live-stage--overlay'),
     true,
   );
   assert.equal(stylesSource.includes(".live-playback-controls,.popup-playback-controls{"), true);
@@ -307,27 +314,27 @@ test("Card View overlay timing matrix keeps mouse and touch behavior separate", 
     },
   });
   assert.match(
-    cardSource,
+    liveOverlayPresentationSource,
     /revealDurationMs: overlayCardView\s*\? CARD_VIEW_OVERLAY_TIMING\.mouse\.controlsHideMs\s*: 1300,/,
   );
   assert.match(
-    cardSource,
+    liveOverlayPresentationSource,
     /touchRevealDurationMs: overlayCardView\s*\? CARD_VIEW_OVERLAY_TIMING\.touch\.controlsHideMs\s*: 2300,/,
   );
   assert.match(
-    cardSource,
+    liveOverlayPresentationSource,
     /card\?\.classList\?\.remove\(CARD_VIEW_OVERLAYS_IDLE_CLASS\);/,
   );
   assert.match(
-    cardSource,
+    liveOverlayPresentationSource,
     /card\?\.classList\?\.toggle\(\s*CARD_VIEW_OVERLAYS_IDLE_CLASS,\s*!touchInteraction,\s*\);/,
   );
   assert.match(
-    cardSource,
+    liveOverlayPresentationSource,
     /CARD_VIEW_OVERLAYS_TOUCH_IDLE_CLASS/,
   );
   assert.match(
-    cardSource,
+    liveOverlayPresentationSource,
     /touchInteraction \? "touch" : "mouse"/,
   );
 });
