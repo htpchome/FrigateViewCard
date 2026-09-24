@@ -221,6 +221,10 @@ const liveMountControllerSource = fs.readFileSync(
   new URL("../src/features/live/mount-controller.js", import.meta.url),
   "utf8",
 );
+const liveMountStateControllerSource = fs.readFileSync(
+  new URL("../src/features/live/mount-state.ctrl.js", import.meta.url),
+  "utf8",
+);
 const liveAudioControllerSource = fs.readFileSync(
   new URL("../src/features/live/audio.ctrl.js", import.meta.url),
   "utf8",
@@ -768,7 +772,45 @@ test("live transport ownership is pulled out of the card shell", () => {
     ),
     true,
   );
-  assert.equal(cardSource.includes("adoptMountedAttemptResult"), true);
+  assert.equal(
+    cardSource.includes(
+      'import {\n  getLiveMountStateController,\n  LiveMountStateController,\n} from "../features/live/mount-state.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "this._liveMountStateController = new LiveMountStateController(this);",
+    ),
+    true,
+  );
+  for (const delegation of [
+    "getLiveMountStateController(this).cleanupEngine(options)",
+    "getLiveMountStateController(this).clearEngineSlot()",
+    "getLiveMountStateController(this).cancelPendingMount(",
+    "getLiveMountStateController(this).applyTrackingState(nextState)",
+    "getLiveMountStateController(this).adoptAttemptResult(",
+  ]) {
+    assert.equal(cardSource.includes(delegation), true);
+  }
+  assert.equal(cardSource.includes("invalidateMountTrackingIfActive"), false);
+  assert.equal(cardSource.includes("adoptMountedAttemptResult"), false);
+  assert.equal(
+    liveMountStateControllerSource.includes(
+      "export class LiveMountStateController",
+    ),
+    true,
+  );
+  assert.equal(
+    liveMountStateControllerSource.includes(
+      "invalidateMountTrackingIfActive",
+    ),
+    true,
+  );
+  assert.equal(
+    liveMountStateControllerSource.includes("adoptMountedAttemptResult"),
+    true,
+  );
   assert.equal(frigateUrlSource.includes("buildGo2rtcWsPath"), true);
   assert.equal(sharedUrlSource.includes("toAbsoluteSignedUrl"), true);
   assert.equal(

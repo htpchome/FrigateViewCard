@@ -55,6 +55,10 @@ const mountLifecycleSource = fs.readFileSync(
   new URL("../src/features/live/mount-lifecycle.js", import.meta.url),
   "utf8",
 );
+const mountStateControllerSource = fs.readFileSync(
+  new URL("../src/features/live/mount-state.ctrl.js", import.meta.url),
+  "utf8",
+);
 
 test("camera switching preserves recent live engines for short switch-back reuse", () => {
   assert.equal(
@@ -131,7 +135,11 @@ test("switch-camera cleanup keeps shell grace coordination and live race takeove
   assert.equal(cardSource.includes("cleanupEngine(options)"), true);
   assert.match(
     cardSource,
-    /_cleanupEngine\(options = \{\}\)[\s\S]*?cancelPendingWebRtcAttempts\?\.\(\)[\s\S]*?cleanupEngine\(options\)/,
+    /_cleanupEngine\(options = \{\}\)[\s\S]*?getLiveMountStateController\(this\)\.cleanupEngine\(options\)/,
+  );
+  assert.match(
+    mountStateControllerSource,
+    /cleanupEngine\(options = \{\}\)[\s\S]*?cancelPendingWebRtcAttempts\?\.\(\)[\s\S]*?cleanupEngine\(options\)/,
   );
   assert.match(
     mseGraceControllerSource,

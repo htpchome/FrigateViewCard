@@ -86,14 +86,12 @@ import {
   reviewStatusEntityCandidates,
 } from "../integrations/frigate/review-status.js";
 import {
-  invalidateMountTrackingIfActive,
   resolveCameraSwitchCleanupOptions,
   resolveCameraSwitchTransportEntity,
   shouldRetainMountedLiveForEditorTransition,
   shouldResetMseOnQuickReconnect,
 } from "../features/live/mount-lifecycle.js";
 import {
-  adoptMountedAttemptResult,
   cleanupStaleWinnerResult,
 } from "../features/live/mount-result.js";
 import {
@@ -139,6 +137,10 @@ import {
   getLiveFallbackController,
   LiveFallbackController,
 } from "../features/live/fallbacks/fallback.ctrl.js";
+import {
+  getLiveMountStateController,
+  LiveMountStateController,
+} from "../features/live/mount-state.ctrl.js";
 import { createLiveTransportControllers } from "../features/live/transport-composition.js";
 import { createLiveLifecycleControllers } from "../features/live/lifecycle-composition.js";
 import {
@@ -309,6 +311,7 @@ export class FrigateViewCard extends HTMLElement {
       new LiveDashboardRetentionController(this);
     this._liveStreamStatusController = new LiveStreamStatusController(this);
     this._liveFallbackController = new LiveFallbackController(this);
+    this._liveMountStateController = new LiveMountStateController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -1354,32 +1357,22 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _cleanupEngine(options = {}) {
-    this._go2rtcRaceMounter?.cancelPendingWebRtcAttempts?.();
-    return this._mseGraceController.cleanupEngine(options);
+    return getLiveMountStateController(this).cleanupEngine(options);
   }
 
   _clearLiveEngineSlot() {
-    const engineSlot = this._$("#engine");
-    if (engineSlot) engineSlot.innerHTML = "";
+    return getLiveMountStateController(this).clearEngineSlot();
   }
 
   _cancelPendingMount(reason = "", options = {}) {
-    this._applyMountTrackingState(
-      invalidateMountTrackingIfActive({
-        mountSeq: this._mountSeq,
-        mountInProgress: this._mountInProgress,
-        mountStartedAt: this._mountStartedAt,
-        mountTargetEntity: this._mountTargetEntity,
-      }),
+    return getLiveMountStateController(this).cancelPendingMount(
+      reason,
+      options,
     );
-    this._cleanupEngine(options);
   }
 
   _applyMountTrackingState(nextState) {
-    this._mountSeq = nextState.mountSeq;
-    this._mountInProgress = nextState.mountInProgress;
-    this._mountStartedAt = nextState.mountStartedAt;
-    this._mountTargetEntity = nextState.mountTargetEntity;
+    return getLiveMountStateController(this).applyTrackingState(nextState);
   }
 
   _waitForStreamStart(streamEl, timeoutMs = 3500, opts = {}) {
@@ -1459,23 +1452,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _adoptLiveAttemptResult(slot, result, options = {}) {
-    return adoptMountedAttemptResult({
-      targetSlot: slot,
+    return getLiveMountStateController(this).adoptAttemptResult(
+      slot,
       result,
-      preservePendingSlots: options.preservePendingSlots === true,
-      streamMuted: this._streamMuted,
-      rotateOverlayActive: this._rotateOverlayActive,
-      assignEngine: (engine) => this._assignLiveEngine(engine),
-      setEngineMountedMuted: (muted) => {
-        this._engineMountedMuted = muted;
-      },
-      setActiveStreamType: (type) => this._setActiveStreamType(type),
-      setStreamLoading: (loading) => this._setStreamLoading(loading),
-      setStreamFallbackVisible: (visible) =>
-        this._setStreamFallbackVisible(visible),
-      setLiveNativeControls: (enabled) =>
-        this._setLiveNativeControls(enabled),
-    });
+      options,
+    );
   }
 
   _isPreviewPageEnabled() {
