@@ -176,6 +176,10 @@ import {
   getLiveRecoveryController,
   LiveRecoveryController,
 } from "../features/live/recovery.ctrl.js";
+import {
+  getLiveDashboardRetentionController,
+  LiveDashboardRetentionController,
+} from "../features/live/dashboard-retention.ctrl.js";
 import { LiveViewResizeController } from "../features/live/live-view-resize.ctrl.js";
 import { LiveAlertTakeoverController } from "../features/live/alert-takeover.ctrl.js";
 import { LiveFullscreenLifecycleController } from "../features/live/fullscreen-lifecycle.ctrl.js";
@@ -305,6 +309,8 @@ export class FrigateViewCard extends HTMLElement {
       new LiveOverlayPresentationController(this);
     this._liveRotateOverlayController = new LiveRotateOverlayController(this);
     this._liveRecoveryController = new LiveRecoveryController(this);
+    this._liveDashboardRetentionController =
+      new LiveDashboardRetentionController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -3634,113 +3640,17 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _preserveLiveForDashboardNavigation() {
-    if (
-      !this._started ||
-      !this._engine ||
-      this._mountInProgress ||
-      this._isPreviewPageActive() ||
-      this._viewMode === "grid" ||
-      this._twoWayTalkStarting ||
-      this._twoWayTalkSession
-    ) {
-      return false;
-    }
-
-    const entity = resolveCameraSwitchTransportEntity({
-      cameraEntity: this._activeCam?.entity,
-      memberOverride: this._activeGroupMemberOverride,
-    });
-    const streamType = this._currentLiveStreamHint();
-    if (
-      !entity ||
-      !this._shouldUseGo2RtcForEntity(entity) ||
-      (streamType !== "webrtc" && streamType !== "mse")
-    ) {
-      return false;
-    }
-
-    const cleanupOptions = resolveCameraSwitchCleanupOptions({
-      previousEntity: entity,
-      mountInProgress: this._mountInProgress,
-    });
-    if (!cleanupOptions.preserveLiveEntity) return false;
-
-    this._cancelPendingMount("same-dashboard-navigation", cleanupOptions);
-    this._clearLiveEngineSlot();
-    this._dashboardLiveGraceActive = true;
-    return true;
+    return getLiveDashboardRetentionController(this).preserveForNavigation();
   }
 
   _handleDashboardScopeExited() {
-    this._dashboardLiveGraceActive = false;
-    const teardownIfDetached = () => {
-      if (this.isConnected) return;
-      if (this._disconnectTeardownT) {
-        clearTimeout(this._disconnectTeardownT);
-        this._disconnectTeardownT = null;
-      }
-      this._teardownDisconnected();
-    };
-    if (!this.isConnected) {
-      teardownIfDetached();
-      return;
-    }
-    setTimeout(teardownIfDetached, 0);
+    return getLiveDashboardRetentionController(this).handleScopeExited();
   }
 
   _handleDashboardSwipeNavigationSettled() {
-    const restoreRetainedWebRtc = () => {
-      if (
-        !this.isConnected ||
-        !this._started ||
-        !this._hass ||
-        !this._config ||
-        !this._isCardVisible() ||
-        this._isPreviewPageActive() ||
-        this._viewMode === "grid" ||
-        this._mountInProgress ||
-        this._$("#myPopup")?.classList.contains("is-open")
-      ) {
-        return;
-      }
-
-      const entity = resolveCameraSwitchTransportEntity({
-        cameraEntity: this._activeCam?.entity,
-        memberOverride: this._activeGroupMemberOverride,
-      });
-      if (
-        !entity ||
-        !this._shouldUseGo2RtcForEntity(entity) ||
-        this._currentLiveStreamHint() !== "webrtc"
-      ) {
-        return;
-      }
-
-      const engineHost = this._$("#engine");
-      const video =
-        this._findVideoDeep(engineHost) ||
-        this._findVideoDeep(this._engine) ||
-        this._engine?.video ||
-        null;
-      if (!this._engine || !video) {
-        this._scheduleResumeLive("dashboard-swipe-settled");
-        return;
-      }
-
-      // Reuse the established peer connection, but remount its video after
-      // Home Assistant's page transform so WebKit creates a fresh surface.
-      this._cancelPendingMount("dashboard-swipe-webrtc-rebind", {
-        preserveLiveEntity: entity,
-      });
-      this._clearLiveEngineSlot();
-      void this._mountEngine();
-    };
-
-    if (typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(restoreRetainedWebRtc);
-      return;
-    }
-    setTimeout(restoreRetainedWebRtc, 0);
+    return getLiveDashboardRetentionController(
+      this,
+    ).handleNavigationSettled();
   }
 
   _scheduleResumeLive(reason = "") {

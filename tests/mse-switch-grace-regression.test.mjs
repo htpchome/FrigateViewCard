@@ -29,6 +29,13 @@ const liveLifecycleCompositionSource = fs.readFileSync(
   ),
   "utf8",
 );
+const liveDashboardRetentionSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/dashboard-retention.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const haDashboardCompositionSource = fs.readFileSync(
   new URL(
     "../src/integrations/home-assistant/dashboard-composition.js",
@@ -176,11 +183,11 @@ test("dashboard swipe return remounts retained go2rtc WebRTC through the grace p
     /onDashboardNavigationSettled:\s*\(\)\s*=>\s*card\._handleDashboardSwipeNavigationSettled\(\)/,
   );
   assert.match(
-    cardSource,
-    /_handleDashboardSwipeNavigationSettled\(\)[\s\S]*?_shouldUseGo2RtcForEntity\(entity\)[\s\S]*?_currentLiveStreamHint\(\)\s*!==\s*"webrtc"/,
+    liveDashboardRetentionSource,
+    /handleNavigationSettled\(\)[\s\S]*?host\._shouldUseGo2RtcForEntity\(entity\)[\s\S]*?host\._currentLiveStreamHint\(\)\s*!==\s*"webrtc"/,
   );
   assert.match(
-    cardSource,
+    liveDashboardRetentionSource,
     /dashboard-swipe-webrtc-rebind[\s\S]*?preserveLiveEntity:\s*entity[\s\S]*?_clearLiveEngineSlot\(\)[\s\S]*?_mountEngine\(\)/,
   );
 });
@@ -191,8 +198,8 @@ test("same-dashboard departure uses the complete camera-switch grace policy", ()
     /MSE_SWITCH_GRACE_MS\s*=\s*20000/,
   );
   assert.match(
-    cardSource,
-    /_preserveLiveForDashboardNavigation\(\)[\s\S]*?streamType !== "webrtc" && streamType !== "mse"[\s\S]*?resolveCameraSwitchCleanupOptions\(\{[\s\S]*?_cancelPendingMount\("same-dashboard-navigation", cleanupOptions\)/,
+    liveDashboardRetentionSource,
+    /preserveForNavigation\(\)[\s\S]*?streamType !== "webrtc" && streamType !== "mse"[\s\S]*?resolveCameraSwitchCleanupOptions\(\{[\s\S]*?host\._cancelPendingMount\("same-dashboard-navigation", cleanupOptions\)/,
   );
   assert.match(
     cardSource,

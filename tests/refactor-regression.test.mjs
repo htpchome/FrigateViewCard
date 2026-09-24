@@ -250,6 +250,13 @@ const liveRecoveryControllerSource = fs.readFileSync(
   new URL("../src/features/live/recovery.ctrl.js", import.meta.url),
   "utf8",
 );
+const liveDashboardRetentionControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/dashboard-retention.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const gridCompositionSource = fs.readFileSync(
   new URL("../src/features/grid/composition.js", import.meta.url),
   "utf8",
@@ -1020,6 +1027,40 @@ test("live recovery scheduling and stale-media decisions have a feature owner", 
   assert.equal(cardSource.includes("resolveLiveKickIfStaleAction"), false);
   assert.equal(cardSource.includes("resolveLiveResumeAction"), false);
   assert.equal(cardSource.includes("findActiveHaCameraStreamVideo"), false);
+});
+
+test("dashboard live retention is owned by its live feature controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'from "../features/live/dashboard-retention.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("new LiveDashboardRetentionController(this)"),
+    true,
+  );
+  for (const delegation of [
+    "getLiveDashboardRetentionController(this).preserveForNavigation()",
+    "getLiveDashboardRetentionController(this).handleScopeExited()",
+    ").handleNavigationSettled()",
+  ]) {
+    assert.equal(cardSource.includes(delegation), true);
+  }
+  for (const ownedMechanic of [
+    'host._cancelPendingMount("same-dashboard-navigation", cleanupOptions)',
+    'host._cancelPendingMount("dashboard-swipe-webrtc-rebind", {',
+    'host._scheduleResumeLive("dashboard-swipe-settled")',
+    "host._dashboardLiveGraceActive = true",
+    "void host._mountEngine()",
+  ]) {
+    assert.equal(
+      liveDashboardRetentionControllerSource.includes(ownedMechanic),
+      true,
+    );
+  }
+  assert.equal(cardSource.includes("restoreRetainedWebRtc"), false);
+  assert.equal(cardSource.includes("teardownIfDetached"), false);
 });
 
 test("generic fullscreen behavior is owned by shared media primitives", () => {
