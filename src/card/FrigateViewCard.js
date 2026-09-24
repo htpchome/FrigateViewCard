@@ -13,11 +13,9 @@ import {
   SNAPSHOT_UPDATE_OPTIONS_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   SLIDESHOW_ALERT_HOLD_MS,
-  SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
   GRID_ALERT_HOLD_MS,
   CARD_VIEW_OVERLAY_TIMING,
   PREVIEW_ALERT_HOLD_MS,
-  PREVIEW_ALERT_END_GRACE_MS,
   MSE_SWITCH_GRACE_MS,
   DEFAULT_CAMERA_CONNECTION_TYPE,
   DEFAULT_EVENT_DAYS,
@@ -275,8 +273,7 @@ import {
   downloadDisplayedFrame,
   SAFARI_FRAME_DOWNLOAD_REVOKE_DELAY_MS,
 } from "../shared/media/frame-capture.js";
-import { PreviewAlertController } from "../features/preview/alert.ctrl.js";
-import { PreviewPageController } from "../features/preview/page.ctrl.js";
+import { initializePreviewControllers } from "../features/preview/composition.js";
 import { PageNavigationController } from "../features/navigation/page-navigation.ctrl.js";
 import { DeepLinkController } from "../features/navigation/deep-link.ctrl.js";
 import { CardStyleContextController } from "../features/card-style/context.ctrl.js";
@@ -405,16 +402,7 @@ export class FrigateViewCard extends HTMLElement {
     registerDefaultPageShellProfiles(this._pageShellRegistry, PAGE_IDS);
     this._deepLinkController = new DeepLinkController(this);
     Object.assign(this, createSlideshowControllers(this));
-    this._previewAlertController = new PreviewAlertController(this, {
-      DAY,
-      PREVIEW_ALERT_HOLD_MS,
-      PREVIEW_ALERT_END_GRACE_MS,
-      SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
-    });
-    this._previewPageController = new PreviewPageController(this, {
-      PAGE_IDS,
-      DEVICE_PROFILE,
-    });
+    initializePreviewControllers(this);
     Object.assign(this, createBrowseControllers(this));
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);

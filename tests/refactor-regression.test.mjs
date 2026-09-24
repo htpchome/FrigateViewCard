@@ -55,6 +55,10 @@ const slideshowCompositionSource = fs.readFileSync(
   new URL("../src/features/slideshow/composition.js", import.meta.url),
   "utf8",
 );
+const previewCompositionSource = fs.readFileSync(
+  new URL("../src/features/preview/composition.js", import.meta.url),
+  "utf8",
+);
 const wideViewPageTemplateSource = fs.readFileSync(
   new URL("../src/features/wide-view/page.tmpl.js", import.meta.url),
   "utf8",
@@ -1576,6 +1580,39 @@ test("Slideshow controller composition is feature-owned", () => {
   );
   assert.equal(
     slideshowCompositionSource.includes("SLIDESHOW_REVIEW_WATCH_MAX_MS"),
+    true,
+  );
+});
+
+test("Preview controller composition is feature-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { initializePreviewControllers } from "../features/preview/composition.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "initializePreviewControllers(this);",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("new PreviewAlertController"), false);
+  assert.equal(cardSource.includes("new PreviewPageController"), false);
+  assert.equal(
+    previewCompositionSource.includes("new PreviewAlertController"),
+    true,
+  );
+  assert.equal(
+    previewCompositionSource.includes("new PreviewPageController"),
+    true,
+  );
+  assert.equal(
+    previewCompositionSource.includes("PREVIEW_ALERT_END_GRACE_MS"),
+    true,
+  );
+  assert.equal(
+    previewCompositionSource.includes("DEVICE_PROFILE,"),
     true,
   );
 });
