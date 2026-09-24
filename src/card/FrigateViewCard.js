@@ -175,6 +175,10 @@ import {
   getLiveAudioController,
   LiveAudioController,
 } from "../features/live/audio.ctrl.js";
+import {
+  getLiveMediaPresentationController,
+  LiveMediaPresentationController,
+} from "../features/live/media-presentation.ctrl.js";
 import { LiveViewResizeController } from "../features/live/live-view-resize.ctrl.js";
 import { LiveAlertTakeoverController } from "../features/live/alert-takeover.ctrl.js";
 import { LiveFullscreenLifecycleController } from "../features/live/fullscreen-lifecycle.ctrl.js";
@@ -309,6 +313,8 @@ export class FrigateViewCard extends HTMLElement {
     this._twoWayTalkControlsController =
       new TwoWayTalkControlsController(this);
     this._liveAudioController = new LiveAudioController(this);
+    this._liveMediaPresentationController =
+      new LiveMediaPresentationController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -1333,23 +1339,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _assignLiveEngine(engine, options = {}) {
-    if (this._engine === engine) {
-      if (engine) this._attachMainLiveVideoZoom(engine);
-      this._syncPictureInPictureButtons();
-      return;
-    }
-    if (options.retainPrevious !== true) {
-      this._haDirectMounter?.release?.(this._engine);
-    }
-    this._clearLiveVideoZoom();
-    this._clearPictureInPictureButtonController("live");
-    this._liveViewResizeController?.attachMedia(null);
-    this._engine = engine;
-    if (engine) {
-      this._attachMainLiveVideoZoom(engine);
-    } else {
-      this._syncPictureInPictureButtons();
-    }
+    getLiveMediaPresentationController(this).assignEngine(engine, options);
   }
 
   _attachMainLiveVideoZoom(
@@ -1357,69 +1347,19 @@ export class FrigateViewCard extends HTMLElement {
     readyVideo = null,
     attachmentOptions = {},
   ) {
-    if (!engine || this._engine !== engine) return;
-    const video =
-      readyVideo ||
-      engine.video ||
-      this._findFullscreenVideo(engine) ||
-      this._findVideoDeep(engine);
-    if (video) {
-      this._applyVideoFit(video);
-      this._liveViewResizeController?.attachMedia(video);
-      const currentZoomController = this._liveVideoZoomController;
-      const sameVideo = currentZoomController?.video === video;
-      const host =
-        attachmentOptions.host ||
-        (sameVideo ? currentZoomController?.host : null) ||
-        video.parentElement ||
-        null;
-      const interactionTarget =
-        attachmentOptions.interactionTarget ||
-        (sameVideo ? currentZoomController?.interactionTarget : null) ||
-        video;
-      if (!host) {
-        this._clearLiveVideoZoom();
-        this._syncPictureInPictureButtons();
-        return;
-      }
-      if (
-        sameVideo &&
-        currentZoomController?.host === host &&
-        currentZoomController?.interactionTarget === interactionTarget
-      ) {
-        this._liveVideoZoomController.refresh();
-        this._syncPictureInPictureButtons();
-        return;
-      }
-      this._clearLiveVideoZoom();
-      this._liveVideoZoomController = attachVideoZoom(video, {
-        host,
-        interactionTarget,
-        onInteractionStart: () => this._dismissLinkedLightDimmers(),
-        onZoomStateChange: (zoomed) => {
-          this._$("#card")?.classList?.toggle?.(
-            "card-view-video-zoomed",
-            zoomed,
-          );
-        },
-      });
-      this._syncLiveRotateZoomPresentation();
-      this._syncPictureInPictureButtons();
-      return;
-    }
+    getLiveMediaPresentationController(this).attachVideoZoom(
+      engine,
+      readyVideo,
+      attachmentOptions,
+    );
   }
 
   _clearLiveVideoZoom() {
-    this._liveVideoZoomController?.dispose?.();
-    this._liveVideoZoomController = null;
+    getLiveMediaPresentationController(this).clearVideoZoom();
   }
 
   _syncLiveRotateZoomPresentation(card = this._$("#card")) {
-    const suspend = Boolean(
-      card?.classList?.contains("mobile-rotate-live") ||
-        card?.classList?.contains("mobile-rotate-live-exit"),
-    );
-    this._liveVideoZoomController?.setPresentationSuspended?.(suspend);
+    getLiveMediaPresentationController(this).syncRotateZoomPresentation(card);
   }
 
   _attachPopupVideoZoom(video) {

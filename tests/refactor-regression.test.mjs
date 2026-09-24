@@ -225,6 +225,13 @@ const liveAudioControllerSource = fs.readFileSync(
   new URL("../src/features/live/audio.ctrl.js", import.meta.url),
   "utf8",
 );
+const liveMediaPresentationControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/media-presentation.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const gridCompositionSource = fs.readFileSync(
   new URL("../src/features/grid/composition.js", import.meta.url),
   "utf8",
@@ -840,6 +847,43 @@ test("live audio behavior is owned by its feature controller", () => {
     liveAudioControllerSource.includes("[120, 400, 900].forEach"),
     true,
   );
+});
+
+test("live media presentation is owned by its feature controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'from "../features/live/media-presentation.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "new LiveMediaPresentationController(this)",
+    ),
+    true,
+  );
+  for (const delegation of [
+    "getLiveMediaPresentationController(this).assignEngine(engine, options)",
+    "getLiveMediaPresentationController(this).attachVideoZoom(",
+    "getLiveMediaPresentationController(this).clearVideoZoom()",
+    "getLiveMediaPresentationController(this).syncRotateZoomPresentation(card)",
+  ]) {
+    assert.equal(cardSource.includes(delegation), true);
+  }
+  for (const ownedMechanic of [
+    "hostCard._applyVideoFit(video)",
+    "hostCard._liveViewResizeController?.attachMedia(video)",
+    "host._haDirectMounter?.release?.(host._engine)",
+    "attachVideoZoom(video, {",
+    "setPresentationSuspended?.(suspend)",
+  ]) {
+    assert.equal(
+      liveMediaPresentationControllerSource.includes(ownedMechanic),
+      true,
+    );
+  }
+  assert.equal(cardSource.includes("const currentZoomController ="), false);
+  assert.equal(cardSource.includes("const sameVideo ="), false);
 });
 
 test("generic fullscreen behavior is owned by shared media primitives", () => {

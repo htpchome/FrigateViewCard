@@ -17,6 +17,13 @@ const liveTransportCompositionSource = fs.readFileSync(
   ),
   "utf8",
 );
+const liveMediaPresentationSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/media-presentation.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const popupLoaderSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
@@ -46,6 +53,12 @@ test("media zoom is attached through committed main-live and popup lifecycles", 
     true,
   );
   assert.equal(
+    liveMediaPresentationSource.includes(
+      'import { attachVideoZoom } from "../../shared/media/video-zoom.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
     liveTransportCompositionSource.includes(
       "assignCommittedEngine: (engine) => card._assignLiveEngine(engine)",
     ),
@@ -60,7 +73,9 @@ test("media zoom is attached through committed main-live and popup lifecycles", 
   assert.equal(cardSource.includes("nativeCoverPan: true"), true);
   assert.equal(
     (cardSource.match(/onInteractionStart: \(\) => this\._dismissLinkedLightDimmers\(\)/g) || [])
-      .length,
+      .length +
+      (liveMediaPresentationSource.match(/onInteractionStart: \(\) => hostCard\._dismissLinkedLightDimmers\(\)/g) || [])
+        .length,
     3,
   );
   assert.equal(
@@ -74,12 +89,14 @@ test("media zoom is attached through committed main-live and popup lifecycles", 
     /_usePopupCustomControls\(mediaType\) \{\s*return this\._isPopupVideoMediaType\(mediaType\);/,
   );
   assert.equal(
-    cardSource.includes("this._syncLiveRotateZoomPresentation();"),
+    liveMediaPresentationSource.includes(
+      "this.syncRotateZoomPresentation();",
+    ),
     true,
   );
   assert.equal(
-    cardSource.includes(
-      "this._liveVideoZoomController?.setPresentationSuspended?.(suspend)",
+    liveMediaPresentationSource.includes(
+      "this._host._liveVideoZoomController?.setPresentationSuspended?.(suspend)",
     ),
     true,
   );
@@ -100,20 +117,20 @@ test("media zoom is attached through committed main-live and popup lifecycles", 
     true,
   );
 
-  const liveMediaAttachStart = cardSource.indexOf(
-    "  _attachMainLiveVideoZoom(",
+  const liveMediaAttachStart = liveMediaPresentationSource.indexOf(
+    "  attachVideoZoom(",
   );
-  const liveMediaAttachEnd = cardSource.indexOf(
-    "  _clearLiveVideoZoom()",
+  const liveMediaAttachEnd = liveMediaPresentationSource.indexOf(
+    "  clearVideoZoom()",
     liveMediaAttachStart,
   );
-  const liveMediaAttachMethod = cardSource.slice(
+  const liveMediaAttachMethod = liveMediaPresentationSource.slice(
     liveMediaAttachStart,
     liveMediaAttachEnd,
   );
   assert.notEqual(liveMediaAttachStart, -1);
   assert.equal(liveMediaAttachMethod.includes("setTimeout"), false);
-  assert.equal(liveMediaAttachMethod.includes("this._applyVideoFit(video)"), true);
+  assert.equal(liveMediaAttachMethod.includes("hostCard._applyVideoFit(video)"), true);
 });
 
 test("PTZ zoom actions are routed to the existing main-live zoom controller", () => {
