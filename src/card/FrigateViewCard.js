@@ -129,6 +129,12 @@ import {
   supportsNativeHlsPlayback,
 } from "../shared/media/video-factory.js";
 import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
+import {
+  exitDocumentFullscreen,
+  findFullscreenVideo,
+  findVideoDeep,
+  requestMediaFullscreen,
+} from "../shared/media/fullscreen.js";
 import { CameraGroupLiveController } from "../features/camera-groups/live.ctrl.js";
 import { LinkedLightController } from "../features/linked-entities/light.ctrl.js";
 import {
@@ -5600,48 +5606,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _findFullscreenVideo(el) {
-    if (!el) return null;
-    if (el.tagName?.toLowerCase() === "video") return el;
-
-    const direct = el.querySelector?.("video");
-    if (direct) return direct;
-
-    const hosts = el.querySelectorAll?.(
-      "ha-camera-stream,ha-hls-player,webrtc-camera",
-    );
-    if (hosts && hosts.length) {
-      for (const h of hosts) {
-        const v =
-          h.shadowRoot?.querySelector("video") || h.querySelector?.("video");
-        if (v) return v;
-      }
-    }
-
-    return el.shadowRoot?.querySelector?.("video") || null;
+    return findFullscreenVideo(el);
   }
 
   _findVideoDeep(root, maxDepth = 7) {
-    if (!root || maxDepth < 0) return null;
-    if (root.tagName?.toLowerCase?.() === "video") return root;
-
-    const direct = root.querySelector?.("video");
-    if (direct) return direct;
-
-    if (root.shadowRoot) {
-      const shadowVideo = this._findVideoDeep(
-        root.shadowRoot,
-        maxDepth - 1,
-      );
-      if (shadowVideo) return shadowVideo;
-    }
-
-    const kids = root.children ? Array.from(root.children) : [];
-    for (const k of kids) {
-      const v = this._findVideoDeep(k, maxDepth - 1);
-      if (v) return v;
-    }
-
-    return null;
+    return findVideoDeep(root, maxDepth);
   }
 
   _fullscreen(el, opts = {}) {
@@ -5653,75 +5622,32 @@ export class FrigateViewCard extends HTMLElement {
         this._findVideoDeep(this._$("#engine")) ||
         this._findVideoDeep(this._engine);
     }
-    const iOS =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const elementFullscreenRequest =
-      el.requestFullscreen || el.webkitRequestFullscreen;
-    const preferElementFullscreen =
-      opts.preferElementFullscreen === true &&
-      typeof elementFullscreenRequest === "function";
-
-    // iOS Safari often only supports fullscreen via the video element API.
-    if (iOS && video && !preferElementFullscreen) {
-      const enterVideoFs =
-        video.webkitEnterFullscreen || video.webkitEnterFullScreen;
-      if (typeof enterVideoFs === "function") {
+    requestMediaFullscreen({
+      element: el,
+      video,
+      preferElementFullscreen: opts.preferElementFullscreen === true,
+      onBeginNativeVideoFullscreen: (fullscreenVideo) => {
         if (opts.preferLive) {
           this._liveFullscreenLifecycleController?.beginNativeVideoFullscreen(
-            video,
+            fullscreenVideo,
           );
         }
-        try {
-          enterVideoFs.call(video);
-          return;
-        } catch (_) {
-          if (opts.preferLive) {
-            this._liveFullscreenLifecycleController?.cancel();
-          }
-        }
-      }
-    }
-
-    let reqTarget = el;
-    let req = elementFullscreenRequest;
-    if (!req && video) {
-      reqTarget = video;
-      req = video.requestFullscreen || video.webkitRequestFullscreen;
-    }
-    if (typeof req === "function") {
-      if (opts.preferLive) {
-        this._liveFullscreenLifecycleController?.beginDocumentFullscreen(video);
-      }
-      try {
-        const requestResult = req.call(reqTarget);
-        if (opts.preferLive && requestResult?.catch) {
-          requestResult.catch(() => {
-            this._liveFullscreenLifecycleController?.cancel();
-          });
-        }
-      } catch (_) {
+      },
+      onBeginDocumentFullscreen: (fullscreenVideo) => {
         if (opts.preferLive) {
-          this._liveFullscreenLifecycleController?.cancel();
+          this._liveFullscreenLifecycleController?.beginDocumentFullscreen(
+            fullscreenVideo,
+          );
         }
-      }
-    }
+      },
+      onRequestFailure: opts.preferLive
+        ? () => this._liveFullscreenLifecycleController?.cancel()
+        : null,
+    });
   }
 
   _exitFullscreen() {
-    const documentObj = this.ownerDocument || globalThis.document;
-    const exit =
-      documentObj?.exitFullscreen ||
-      documentObj?.webkitExitFullscreen ||
-      documentObj?.webkitCancelFullScreen;
-    if (typeof exit !== "function") return false;
-    try {
-      const exitResult = exit.call(documentObj);
-      exitResult?.catch?.(() => {});
-      return true;
-    } catch (_) {
-      return false;
-    }
+    return exitDocumentFullscreen(this.ownerDocument || globalThis.document);
   }
   _frigateContextForCameraName(cameraName = "") {
     return this._frigateMediaResolverController.contextForCameraName(

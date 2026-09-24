@@ -129,6 +129,10 @@ const sharedMediaControlsSource = fs.readFileSync(
   new URL("../src/shared/media/controls.js", import.meta.url),
   "utf8",
 );
+const sharedMediaFullscreenSource = fs.readFileSync(
+  new URL("../src/shared/media/fullscreen.js", import.meta.url),
+  "utf8",
+);
 const frigateBootstrapSource = fs.readFileSync(
   new URL("../src/integrations/frigate/bootstrap.js", import.meta.url),
   "utf8",
@@ -828,6 +832,42 @@ test("live audio behavior is owned by its feature controller", () => {
     liveAudioControllerSource.includes("[120, 400, 900].forEach"),
     true,
   );
+});
+
+test("generic fullscreen behavior is owned by shared media primitives", () => {
+  assert.equal(
+    cardSource.includes(
+      'from "../shared/media/fullscreen.js";',
+    ),
+    true,
+  );
+  assert.match(
+    cardSource,
+    /_findFullscreenVideo\(el\) \{\s*return findFullscreenVideo\(el\);\s*\}/,
+  );
+  assert.match(
+    cardSource,
+    /_findVideoDeep\(root, maxDepth = 7\) \{\s*return findVideoDeep\(root, maxDepth\);\s*\}/,
+  );
+  assert.equal(cardSource.includes("requestMediaFullscreen({"), true);
+  assert.equal(
+    cardSource.includes(
+      "return exitDocumentFullscreen(this.ownerDocument || globalThis.document);",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("webkitEnterFullscreen"), false);
+  assert.equal(cardSource.includes("webkitEnterFullScreen"), false);
+  assert.equal(cardSource.includes("webkitExitFullscreen"), false);
+  assert.equal(cardSource.includes("webkitCancelFullScreen"), false);
+  for (const ownedExport of [
+    "export function findFullscreenVideo",
+    "export function findVideoDeep",
+    "export function requestMediaFullscreen",
+    "export function exitDocumentFullscreen",
+  ]) {
+    assert.equal(sharedMediaFullscreenSource.includes(ownedExport), true);
+  }
 });
 
 test("two-way-talk session lifecycle is owned by its feature controller", () => {
