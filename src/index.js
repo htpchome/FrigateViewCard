@@ -4,8 +4,10 @@ import { registerLiveStreamHostElement } from "./features/live/stream.element.js
 import { DEVICE_PROFILE } from "./helpers.js";
 import { installHomeAssistantDashboardNavbarCustomization } from "./integrations/home-assistant/navbar.ctrl.js";
 import { installHomeAssistantDashboardSwipeNavigation } from "./integrations/home-assistant/dashboard-swipe-navigation.ctrl.js";
+import { installDeepLinkHashRouteBridge } from "./features/navigation/deep-link.ctrl.js";
 
 // index.js — registers custom elements and announces card to HA
+installDeepLinkHashRouteBridge();
 if (!customElements.get(CARD_TAG))
   customElements.define(CARD_TAG, FrigateViewCard);
 registerLiveStreamHostElement();

@@ -113,8 +113,6 @@ test("bottom HA navbar styling does not trap Bubble popup behind its backdrop", 
 test("Bubble notification hash opens its route before the card media popup", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {
-    await import("/frigate-view-card.js");
-    const card = document.createElement("frigate-view-card");
     const calls = [];
     const host = {
       _started: true,
@@ -159,34 +157,40 @@ test("Bubble notification hash opens its route before the card media popup", asy
         loadWindow: async () => {},
       },
     };
-    const controller = card._deepLinkController;
-    controller._host = host;
+    let controller = null;
     let bubbleOpen = false;
     let bubbleOpenCount = 0;
-    const syncBubbleRoute = () => {
+    let trustedHashChange = false;
+    const syncBubbleRoute = (event) => {
       if (location.hash !== "#test2" || bubbleOpen) return;
+      trustedHashChange = event.isTrusted;
       bubbleOpen = true;
       bubbleOpenCount += 1;
       calls.push("bubbleOpen");
+      const card = document.createElement("frigate-view-card");
+      controller = card._deepLinkController;
+      controller._host = host;
+      controller.connect();
     };
     window.addEventListener("hashchange", syncBubbleRoute);
-    window.addEventListener("location-changed", syncBubbleRoute);
     history.replaceState(
       history.state,
       "",
       "/dashboard-testarea/home#test2?camera=driveway&event=event-2&review=review-2",
     );
-
-    controller.connect();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    controller.disconnect();
+    await import("/frigate-view-card.js");
+    const deadline = performance.now() + 2000;
+    while (!calls.includes("showSnapshot") && performance.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    controller?.disconnect();
     window.removeEventListener("hashchange", syncBubbleRoute);
-    window.removeEventListener("location-changed", syncBubbleRoute);
     return {
       bubbleOpen,
       bubbleOpenCount,
       calls,
       hash: location.hash,
+      trustedHashChange,
     };
   });
 
@@ -195,6 +199,7 @@ test("Bubble notification hash opens its route before the card media popup", asy
     bubbleOpenCount: 1,
     calls: ["bubbleOpen", "switchCamera", "showSnapshot"],
     hash: "#test2",
+    trustedHashChange: true,
   });
 });
 

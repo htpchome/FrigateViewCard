@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { DeepLinkController } from "../src/features/navigation/deep-link.ctrl.js";
+import {
+  DeepLinkController,
+  installDeepLinkHashRouteBridge,
+} from "../src/features/navigation/deep-link.ctrl.js";
 
 const createHarness = () => {
   const calls = [];
@@ -55,17 +58,28 @@ const withWindow = async (windowShape, run) => {
 
 const navigationWindow = () => {
   const target = new EventTarget();
-  target.location = new URL("https://example.local/dashboard/view");
+  const setLocation = (url, { notify = false } = {}) => {
+    const previousUrl = target.location?.href || "";
+    const nextLocation = new URL(url, previousUrl || undefined);
+    nextLocation.replace = (nextUrl) =>
+      setLocation(nextUrl, { notify: true });
+    target.location = nextLocation;
+    if (notify && previousUrl !== nextLocation.href) {
+      target.dispatchEvent(new Event("hashchange"));
+    }
+  };
+  setLocation("https://example.local/dashboard/view");
   target.history = {
     state: null,
     replaceState: (_state, _title, url) => {
-      target.location = new URL(url, target.location);
+      setLocation(url);
     },
   };
   target.navigate = (url, event = "location-changed") => {
-    target.location = new URL(url, target.location);
+    setLocation(url);
     target.dispatchEvent(new Event(event));
   };
+  target.setLocation = setLocation;
   return target;
 };
 
@@ -120,6 +134,7 @@ test("Bubble hash deep links activate the outer route before media opens", async
   });
 
   await withWindow(win, async () => {
+    installDeepLinkHashRouteBridge(win);
     controller.connect();
     win.navigate(
       "#test2?camera=camera.driveway&event=event-2&review=review-2",
@@ -146,11 +161,12 @@ test("Bubble hash route still opens when notification media cannot resolve", asy
   const { host, calls, controller } = navigationHarness();
   const win = navigationWindow();
   host._findEventById = () => null;
-  win.addEventListener("location-changed", () => {
+  win.addEventListener("hashchange", () => {
     if (win.location.hash === "#test2") calls.push(["bubbleOpen"]);
   });
 
   await withWindow(win, async () => {
+    installDeepLinkHashRouteBridge(win);
     controller.connect();
     win.navigate("#test2?camera=front_door&event=missing-event");
 
@@ -168,7 +184,7 @@ test("Bubble hash route still opens when notification media cannot resolve", asy
 test("startup activates a Bubble hash route before camera resolution", async () => {
   const { host, calls, controller } = createHarness();
   const win = navigationWindow();
-  win.location = new URL(
+  win.setLocation(
     "https://example.local/dashboard-testarea/home#test2?camera=driveway&event=event-2&review=review-2",
   );
   win.addEventListener("hashchange", () => {
@@ -183,6 +199,41 @@ test("startup activates a Bubble hash route before camera resolution", async () 
     assert.deepEqual(calls, [["bubbleOpen"]]);
     assert.equal(await cameraTarget, 1);
     assert.equal(host._activeCamIdx, 1);
+  });
+});
+
+test("global hash bridge opens Bubble before its FrigateViewCard mounts", async () => {
+  const { host, calls, controller } = navigationHarness();
+  const win = navigationWindow();
+  let mounted = false;
+  win.addEventListener("hashchange", () => {
+    if (win.location.hash !== "#test2" || mounted) return;
+    mounted = true;
+    calls.push(["bubbleOpen"]);
+    controller.connect();
+  });
+  win.setLocation(
+    "https://example.local/dashboard-testarea/home#test2?camera=driveway&event=event-2&review=review-2",
+  );
+
+  await withWindow(win, async () => {
+    installDeepLinkHashRouteBridge(win);
+    await settleNavigation();
+
+    assert.equal(mounted, true);
+    assert.equal(win.location.hash, "#test2");
+    assert.equal(host._deepLinkApplied, true);
+    assert.deepEqual(calls, [
+      ["bubbleOpen"],
+      ["switchCamera", 1, { skipBrowseLoad: true }],
+      ["showSnapshot", "event-2"],
+      [
+        "loadWindow",
+        true,
+        { supersede: true, reuseRecentCache: true },
+      ],
+    ]);
+    controller.disconnect();
   });
 });
 
