@@ -5,6 +5,7 @@ import {
   buildTwoWayTalkButtonMarkup,
   buildTwoWayTalkControlRowMarkup,
   buildTwoWayTalkMicrophoneMuteButtonMarkup,
+  buildTwoWayTalkMobileSlotMarkup,
   resolveMicrophoneButtonLabel,
   resolveTwoWayTalkButtonLabel,
 } from "../src/features/two-way-talk/controls.tmpl.js";
@@ -73,4 +74,16 @@ test("two-way-talk control row composes soundwave and incoming audio markup", ()
       markup.indexOf('id="two-way-talk-btn"'),
   );
   assert.match(markup, /id="incoming-audio"/);
+});
+
+test("two-way-talk mobile slot preserves its page-shell region", () => {
+  const markup = buildTwoWayTalkMobileSlotMarkup({
+    visible: true,
+    buttonMarkup: '<button id="talk"></button>',
+  });
+
+  assert.match(markup, /id="mobile-view-two-way-talk-slot"/);
+  assert.match(markup, /data-fvc-region="two-way-talk"/);
+  assert.doesNotMatch(markup, / hidden/);
+  assert.match(markup, /id="talk"/);
 });

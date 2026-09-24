@@ -843,10 +843,16 @@ test("two-way-talk session lifecycle is owned by its feature controller", () => 
 
 test("two-way-talk labels and markup are owned by its feature template", () => {
   assert.equal(
+    twoWayTalkControlsControllerSource.includes(
+      'from "./controls.tmpl.js";',
+    ),
+    true,
+  );
+  assert.equal(
     cardSource.includes(
       'from "../features/two-way-talk/controls.tmpl.js";',
     ),
-    true,
+    false,
   );
   assert.equal(cardSource.includes("const TWO_WAY_TALK_LABELS"), false);
   assert.equal(
@@ -906,6 +912,18 @@ test("two-way-talk DOM synchronization is owned by its controls controller", () 
   assert.equal(
     twoWayTalkControlsControllerSource.includes(
       "host._syncTwoWayTalkSoundwaveSurface?.();",
+    ),
+    true,
+  );
+  assert.equal(
+    /_buildTwoWayTalkControlRowMarkup\([^)]*\) \{[\s\S]*?getTwoWayTalkControlsController\(this\)\.buildControlRowMarkup\(/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    twoWayTalkControlsControllerSource.includes(
+      "buildControlRowMarkup({ includeIncomingAudioMute = true } = {})",
     ),
     true,
   );

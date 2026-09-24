@@ -103,3 +103,19 @@ test("two-way-talk controls preserve existing action slots", () => {
   assert.equal(slot.hidden, false);
   assert.equal(slot.innerHTML, "existing");
 });
+
+test("two-way-talk controls compose mobile route markup", () => {
+  const host = {
+    _pageId: "mobile-view",
+    _shouldRenderTwoWayTalkButtonForActiveCamera: () => true,
+    _buildTwoWayTalkButtonMarkup: () => '<button id="talk"></button>',
+  };
+  const controller = new TwoWayTalkControlsController(host);
+
+  assert.match(
+    controller.buildMobileButtonMarkup(),
+    /id="mobile-view-two-way-talk-slot"[^>]*><button id="talk">/,
+  );
+  host._pageId = "single-view";
+  assert.equal(controller.buildMobileButtonMarkup(), "");
+});

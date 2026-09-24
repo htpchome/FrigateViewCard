@@ -1,6 +1,12 @@
 import { DEVICE_PROFILE } from "../../helpers.js";
 import { ICONS } from "../../icons.js";
+import { buildLiveMuteControlMarkup } from "../live/view.tmpl.js";
+import { normalizePageRoute, PAGE_IDS } from "../navigation/router.js";
 import {
+  buildTwoWayTalkButtonMarkup,
+  buildTwoWayTalkControlRowMarkup,
+  buildTwoWayTalkMicrophoneMuteButtonMarkup,
+  buildTwoWayTalkMobileSlotMarkup,
   resolveMicrophoneButtonLabel,
   resolveTwoWayTalkButtonLabel,
 } from "./controls.tmpl.js";
@@ -23,6 +29,97 @@ export class TwoWayTalkControlsController {
       (this._deviceProfile.isDesktop === true &&
         !host._isMobileTabletViewport())
     );
+  }
+
+  buildInfoButtonMarkup() {
+    const host = this._host;
+    const pageId = normalizePageRoute(host._pageId);
+    if (pageId !== PAGE_IDS.singleView && pageId !== PAGE_IDS.wideView) {
+      return "";
+    }
+    return host._buildTwoWayTalkControlRowMarkup();
+  }
+
+  buildMobileButtonMarkup() {
+    const host = this._host;
+    if (normalizePageRoute(host._pageId) !== PAGE_IDS.mobileView) {
+      return "";
+    }
+    const visible = host._shouldRenderTwoWayTalkButtonForActiveCamera();
+    return buildTwoWayTalkMobileSlotMarkup({
+      visible,
+      buttonMarkup: host._buildTwoWayTalkButtonMarkup(),
+    });
+  }
+
+  buildMobileMicrophoneMuteButtonMarkup() {
+    const host = this._host;
+    if (normalizePageRoute(host._pageId) !== PAGE_IDS.mobileView) return "";
+    return host._buildTwoWayTalkMicrophoneMuteButtonMarkup({
+      buttonId: "mobile-view-microphone-mute-btn",
+      extraClass: "mobile-view-microphone-mute-btn",
+    });
+  }
+
+  buildControlRowMarkup({ includeIncomingAudioMute = true } = {}) {
+    const host = this._host;
+    const active = host._twoWayTalkActiveForCurrentCamera();
+    const connecting = host._twoWayTalkStarting === true && !active;
+    const microphoneMuted =
+      host._twoWayTalkMicrophoneMutedForCurrentCamera();
+    const muted = host._resolveLiveMuteControlMuted();
+    const soundwaveEnabled =
+      host._shouldRenderTwoWayTalkSoundwave?.() === true;
+    const incomingAudioMuteMarkup = includeIncomingAudioMute
+      ? buildLiveMuteControlMarkup({
+          icons: this._icons,
+          streamMuted: muted,
+          buttonClass: "icon-btn",
+          buttonId: "two-way-talk-mute-btn",
+          region: "",
+          extraClass: `two-way-talk-inline-mute-btn${active && !muted ? " talk-audio-active" : ""}`,
+          pressed: !muted,
+          hidden: !active,
+        })
+      : "";
+    return buildTwoWayTalkControlRowMarkup({
+      icons: this._icons,
+      active,
+      connecting,
+      microphoneMuted,
+      visible: host._shouldRenderTwoWayTalkButtonForActiveCamera(),
+      soundwaveEnabled,
+      incomingAudioMuteMarkup,
+      translate: host._localization?.t,
+    });
+  }
+
+  buildMicrophoneMuteButtonMarkup({
+    buttonId = "two-way-talk-microphone-mute-btn",
+    extraClass = "",
+  } = {}) {
+    const host = this._host;
+    return buildTwoWayTalkMicrophoneMuteButtonMarkup({
+      icons: this._icons,
+      active: host._twoWayTalkActiveForCurrentCamera(),
+      microphoneMuted: host._twoWayTalkMicrophoneMutedForCurrentCamera(),
+      buttonId,
+      extraClass,
+      translate: host._localization?.t,
+    });
+  }
+
+  buildButtonMarkup() {
+    const host = this._host;
+    const active = host._twoWayTalkActiveForCurrentCamera();
+    return buildTwoWayTalkButtonMarkup({
+      icons: this._icons,
+      connecting: host._twoWayTalkStarting === true && !active,
+      active,
+      microphoneMuted: host._twoWayTalkMicrophoneMutedForCurrentCamera(),
+      visible: host._shouldRenderTwoWayTalkButtonForActiveCamera(),
+      translate: host._localization?.t,
+    });
   }
 
   syncSoundwaveSurface() {

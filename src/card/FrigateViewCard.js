@@ -227,11 +227,6 @@ import {
   TwoWayTalkSessionController,
 } from "../features/two-way-talk/session.ctrl.js";
 import {
-  buildTwoWayTalkButtonMarkup,
-  buildTwoWayTalkControlRowMarkup,
-  buildTwoWayTalkMicrophoneMuteButtonMarkup,
-} from "../features/two-way-talk/controls.tmpl.js";
-import {
   getTwoWayTalkControlsController,
   TwoWayTalkControlsController,
 } from "../features/two-way-talk/controls.ctrl.js";
@@ -3586,27 +3581,17 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _buildTwoWayTalkInfoButtonMarkup() {
-    const pageId = normalizePageRoute(this._pageId);
-    if (pageId !== PAGE_IDS.singleView && pageId !== PAGE_IDS.wideView) {
-      return "";
-    }
-    return this._buildTwoWayTalkControlRowMarkup();
+    return getTwoWayTalkControlsController(this).buildInfoButtonMarkup();
   }
 
   _buildTwoWayTalkMobileButtonMarkup() {
-    if (normalizePageRoute(this._pageId) !== PAGE_IDS.mobileView) {
-      return "";
-    }
-    const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    return `<div class="mobile-view-two-way-talk-slot" id="mobile-view-two-way-talk-slot" data-fvc-region="two-way-talk" ${visible ? "" : "hidden"}>${this._buildTwoWayTalkButtonMarkup()}</div>`;
+    return getTwoWayTalkControlsController(this).buildMobileButtonMarkup();
   }
 
   _buildMobileViewMicrophoneMuteButtonMarkup() {
-    if (normalizePageRoute(this._pageId) !== PAGE_IDS.mobileView) return "";
-    return this._buildTwoWayTalkMicrophoneMuteButtonMarkup({
-      buttonId: "mobile-view-microphone-mute-btn",
-      extraClass: "mobile-view-microphone-mute-btn",
-    });
+    return getTwoWayTalkControlsController(
+      this,
+    ).buildMobileMicrophoneMuteButtonMarkup();
   }
 
   _buildMobileViewInlineMuteButtonMarkup() {
@@ -3628,34 +3613,8 @@ export class FrigateViewCard extends HTMLElement {
   _buildTwoWayTalkControlRowMarkup({
     includeIncomingAudioMute = true,
   } = {}) {
-    const active = this._twoWayTalkActiveForCurrentCamera();
-    const connecting = this._twoWayTalkStarting === true && !active;
-    const microphoneMuted =
-      this._twoWayTalkMicrophoneMutedForCurrentCamera();
-    const muted = this._resolveLiveMuteControlMuted();
-    const soundwaveEnabled =
-      this._shouldRenderTwoWayTalkSoundwave?.() === true;
-    const incomingAudioMuteMarkup = includeIncomingAudioMute
-      ? buildLiveMuteControlMarkup({
-          icons: ICONS,
-          streamMuted: muted,
-          buttonClass: "icon-btn",
-          buttonId: "two-way-talk-mute-btn",
-          region: "",
-          extraClass: `two-way-talk-inline-mute-btn${active && !muted ? " talk-audio-active" : ""}`,
-          pressed: !muted,
-          hidden: !active,
-        })
-      : "";
-    return buildTwoWayTalkControlRowMarkup({
-      icons: ICONS,
-      active,
-      connecting,
-      microphoneMuted,
-      visible: this._shouldRenderTwoWayTalkButtonForActiveCamera(),
-      soundwaveEnabled,
-      incomingAudioMuteMarkup,
-      translate: this._localization?.t,
+    return getTwoWayTalkControlsController(this).buildControlRowMarkup({
+      includeIncomingAudioMute,
     });
   }
 
@@ -3663,16 +3622,11 @@ export class FrigateViewCard extends HTMLElement {
     buttonId = "two-way-talk-microphone-mute-btn",
     extraClass = "",
   } = {}) {
-    const active = this._twoWayTalkActiveForCurrentCamera();
-    const microphoneMuted =
-      this._twoWayTalkMicrophoneMutedForCurrentCamera();
-    return buildTwoWayTalkMicrophoneMuteButtonMarkup({
-      icons: ICONS,
-      active,
-      microphoneMuted,
+    return getTwoWayTalkControlsController(
+      this,
+    ).buildMicrophoneMuteButtonMarkup({
       buttonId,
       extraClass,
-      translate: this._localization?.t,
     });
   }
 
@@ -3685,17 +3639,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _buildTwoWayTalkButtonMarkup() {
-    const active = this._twoWayTalkActiveForCurrentCamera();
-    const connecting = this._twoWayTalkStarting === true && !active;
-    const microphoneMuted = this._twoWayTalkMicrophoneMutedForCurrentCamera();
-    return buildTwoWayTalkButtonMarkup({
-      icons: ICONS,
-      connecting,
-      active,
-      microphoneMuted,
-      visible: this._shouldRenderTwoWayTalkButtonForActiveCamera(),
-      translate: this._localization?.t,
-    });
+    return getTwoWayTalkControlsController(this).buildButtonMarkup();
   }
 
   _buildLinkedLightControlMarkup({

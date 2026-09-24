@@ -96,6 +96,13 @@ export function buildTwoWayTalkButtonMarkup({
   return `<button class="info-row-mic-btn${active ? " active" : ""}${connecting ? " connecting" : ""}${microphoneMuted ? " microphone-muted" : ""} round-btn" id="two-way-talk-btn" type="button" ${visible ? "" : "hidden"} aria-pressed="${active ? "true" : "false"}" aria-busy="${connecting ? "true" : "false"}" title="${label}" aria-label="${label}" data-fvc-i18n-title="${key}" data-fvc-i18n-aria-label="${key}">${active ? icons.micOn || "" : icons.micOff || ""}</button>`;
 }
 
+export function buildTwoWayTalkMobileSlotMarkup({
+  visible = false,
+  buttonMarkup = "",
+} = {}) {
+  return `<div class="mobile-view-two-way-talk-slot" id="mobile-view-two-way-talk-slot" data-fvc-region="two-way-talk" ${visible ? "" : "hidden"}>${buttonMarkup}</div>`;
+}
+
 export function buildTwoWayTalkControlRowMarkup({
   icons = {},
   active = false,
