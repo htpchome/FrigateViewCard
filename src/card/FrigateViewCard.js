@@ -305,12 +305,10 @@ import {
 } from "../features/mobile-view/utils.js";
 import { SingleViewPageController } from "../features/single-view/page.ctrl.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../features/single-view/page.tmpl.js";
-import { WideViewPageController } from "../features/wide-view/page.ctrl.js";
-import { WideViewCompanionController } from "../features/wide-view/companion.ctrl.js";
 import {
-  resolveWideTimelineCameraContextKey,
-  WideViewTimelineController,
-} from "../features/wide-view/timeline.ctrl.js";
+  createWideViewCompanionController,
+  createWideViewTimelineControllers,
+} from "../features/wide-view/composition.js";
 import { CardViewPageController } from "../features/card-view/page.ctrl.js";
 import { SlideshowAlertController } from "../features/slideshow/alert.ctrl.js";
 import { SlideshowPageController } from "../features/slideshow/page.ctrl.js";
@@ -394,14 +392,8 @@ export class FrigateViewCard extends HTMLElement {
     this._singleViewPageController = new SingleViewPageController(this, {
       PAGE_IDS,
     });
-    this._wideViewCompanionController = new WideViewCompanionController(this, {
-      DAY,
-      ICONS,
-      PAGE_IDS,
-      PREVIEW_ALERT_HOLD_MS,
-      PREVIEW_ALERT_END_GRACE_MS,
-      SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
-    });
+    this._wideViewCompanionController =
+      createWideViewCompanionController(this);
     this._liveAlertTakeoverController = new LiveAlertTakeoverController(this);
     this._cameraGroupLiveController = new CameraGroupLiveController(this, {
       icons: ICONS,
@@ -415,68 +407,7 @@ export class FrigateViewCard extends HTMLElement {
         console.warn("[Frigate] PTZ motion failed", context, error);
       },
     });
-    this._wideViewTimelineController = new WideViewTimelineController(this, {
-      icons: ICONS,
-      getAllEvents: () =>
-        this._isGridMixedListMode()
-          ? this._allGridEvents()
-          : this._events || [],
-      getVisibleEvents: () =>
-        (this._isGridMixedListMode()
-          ? this._allGridEvents()
-          : this._events || []).filter((event) =>
-          this._browseFilterController?.matchesEventFilters?.(event),
-        ),
-      getVisibleReviews: () =>
-        (this._isGridMixedListMode() || isCameraGroup(this._activeCam)
-          ? this._browseFilterController?.filteredReviews?.()
-          : this._browseFilterController?.filteredActiveCameraReviews?.()) ||
-        [],
-      getWindowStart: () =>
-        this._winStart ||
-        (this._winEnd || Date.now() / 1000) -
-          (this._config?.event_days || DEFAULT_EVENT_DAYS) * DAY,
-      getWindowEnd: () => this._winEnd || Date.now() / 1000,
-      getCameraKey: () =>
-        resolveWideTimelineCameraContextKey({
-          gridMixed: this._isGridMixedListMode(),
-          cameraEntity: this._activeCam?.entity || "",
-          cameraMembers: cameraMemberEntities(this._activeCam),
-        }),
-      getSelectedDay: () => this._calSelectedDay || "",
-      isLoading: () => this._loading === true,
-      mediaUrl: (id, file, camera = "") =>
-        this._mediaForCamera(id, file, camera),
-      durationForEvent: (event) => this._eventMediaDuration(event),
-      capitalize: (value) => cap(value),
-      formatTime: (timestamp) => this._time(timestamp),
-      formatDay: (timestamp) => this._weekdayDate(timestamp, "weekdayDateDot"),
-      dayKey: (timestamp) => this._dayKey(timestamp),
-      timezoneParts: (timestamp) => this._tzParts(timestamp),
-      timezoneDateTimeToEpoch: (...parts) =>
-        this._tzDateTimeToEpochSeconds(...parts),
-      onOpenEntry: (entry) => {
-        this._pauseSlideshowForInteraction();
-        if (entry?.kind === "alert") {
-          this._popupMediaLoaderController?.showClipById(entry.eventId, {
-            mediaType: "alert",
-            startTime: entry.reviewStartTime,
-            camera: entry.camera,
-          });
-          return;
-        }
-        this._popupMediaLoaderController?.showCarouselEventById(
-          entry?.eventId,
-          entry?.hasClip ? "clip" : "snapshot",
-        );
-      },
-    });
-    this._wideViewPageController = new WideViewPageController(this, {
-      PAGE_IDS,
-    }, {
-      companionController: this._wideViewCompanionController,
-      timelineController: this._wideViewTimelineController,
-    });
+    Object.assign(this, createWideViewTimelineControllers(this));
     this._cardViewPageController = new CardViewPageController(this, {
       PAGE_IDS,
       buildCalendarPanelMarkup,

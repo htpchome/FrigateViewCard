@@ -51,6 +51,10 @@ const wideViewPageTemplateSource = fs.readFileSync(
   new URL("../src/features/wide-view/page.tmpl.js", import.meta.url),
   "utf8",
 );
+const wideViewCompositionSource = fs.readFileSync(
+  new URL("../src/features/wide-view/composition.js", import.meta.url),
+  "utf8",
+);
 const cardViewPageTemplateSource = fs.readFileSync(
   new URL("../src/features/card-view/page.tmpl.js", import.meta.url),
   "utf8",
@@ -1522,6 +1526,54 @@ test("page chrome is owned by route templates and controllers", () => {
   assert.equal(
     mobileViewPageControllerSource.includes(
       "new BrowseRenderController(host)",
+    ),
+    true,
+  );
+});
+
+test("Wide View controller composition is owned by the Wide View feature", () => {
+  assert.equal(
+    cardSource.includes(
+      'from "../features/wide-view/composition.js"',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("createWideViewCompanionController(this)"),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("createWideViewTimelineControllers(this)"),
+    true,
+  );
+  assert.equal(cardSource.includes("new WideViewCompanionController"), false);
+  assert.equal(cardSource.includes("new WideViewTimelineController"), false);
+  assert.equal(cardSource.includes("new WideViewPageController"), false);
+  assert.equal(
+    cardSource.includes("resolveWideTimelineCameraContextKey"),
+    false,
+  );
+  assert.equal(
+    wideViewCompositionSource.includes("new WideViewCompanionController"),
+    true,
+  );
+  assert.equal(
+    wideViewCompositionSource.includes("new WideViewTimelineController"),
+    true,
+  );
+  assert.equal(
+    wideViewCompositionSource.includes("new WideViewPageController"),
+    true,
+  );
+  assert.equal(
+    wideViewCompositionSource.includes(
+      "resolveWideTimelineCameraContextKey({",
+    ),
+    true,
+  );
+  assert.equal(
+    wideViewCompositionSource.includes(
+      "card._popupMediaLoaderController?.showClipById",
     ),
     true,
   );
