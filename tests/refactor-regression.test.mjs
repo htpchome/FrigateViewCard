@@ -264,6 +264,13 @@ const liveStreamStatusControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const liveFallbackControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/fallbacks/fallback.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const gridCompositionSource = fs.readFileSync(
   new URL("../src/features/grid/composition.js", import.meta.url),
   "utf8",
@@ -1103,6 +1110,38 @@ test("live stream status presentation is owned by its live feature controller", 
     cardSource.includes("applyStreamFallbackVisibilityForCard"),
     false,
   );
+});
+
+test("live fallback adapter orchestration is owned by its live feature controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'from "../features/live/fallbacks/fallback.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("new LiveFallbackController(this)"), true);
+  for (const delegation of [
+    "getLiveFallbackController(this).originForAdapters()",
+    "getLiveFallbackController(this).loadPrimary(entity)",
+    "getLiveFallbackController(this).loadAlternate(entity)",
+    "getLiveFallbackController(this).refreshImage()",
+  ]) {
+    assert.equal(cardSource.includes(delegation), true);
+  }
+  for (const ownedMechanic of [
+    "loadFallbackPrimaryForCard({",
+    "loadFallbackAltForCard({",
+    "runFallbackRefreshCycleForCard({",
+    "applyFallbackImageHandlers({",
+    "applySource: setFallbackImageSourceIfChanged",
+  ]) {
+    assert.equal(liveFallbackControllerSource.includes(ownedMechanic), true);
+  }
+  assert.equal(cardSource.includes("loadFallbackPrimaryForCard"), false);
+  assert.equal(cardSource.includes("loadFallbackAltForCard"), false);
+  assert.equal(cardSource.includes("runFallbackRefreshCycleForCard"), false);
+  assert.equal(cardSource.includes("applyFallbackImageHandlers"), false);
+  assert.equal(cardSource.includes("setFallbackImageSourceIfChanged"), false);
 });
 
 test("generic fullscreen behavior is owned by shared media primitives", () => {

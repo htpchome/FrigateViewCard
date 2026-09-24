@@ -136,14 +136,9 @@ import {
 import { buildFrigateReceiverMediaPath } from "../integrations/frigate/receiver-media.js";
 import { resolveAbsoluteReceiverSourceUrl } from "../integrations/home-assistant/receiver-source.js";
 import {
-  loadFallbackAltForCard,
-  loadFallbackPrimaryForCard,
-} from "../features/live/fallbacks/fallback-url.js";
-import {
-  applyFallbackImageHandlers,
-  setFallbackImageSourceIfChanged,
-} from "../features/live/fallbacks/fallback-image.js";
-import { runFallbackRefreshCycleForCard } from "../features/live/fallbacks/fallback-refresh.js";
+  getLiveFallbackController,
+  LiveFallbackController,
+} from "../features/live/fallbacks/fallback.ctrl.js";
 import { createLiveTransportControllers } from "../features/live/transport-composition.js";
 import { createLiveLifecycleControllers } from "../features/live/lifecycle-composition.js";
 import {
@@ -313,6 +308,7 @@ export class FrigateViewCard extends HTMLElement {
     this._liveDashboardRetentionController =
       new LiveDashboardRetentionController(this);
     this._liveStreamStatusController = new LiveStreamStatusController(this);
+    this._liveFallbackController = new LiveFallbackController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -1420,35 +1416,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _fallbackOriginForAdapters() {
-    this._fallbackOrigin = window.location.origin;
-    return this._fallbackOrigin;
+    return getLiveFallbackController(this).originForAdapters();
   }
 
   async _streamFallbackUrl(entity) {
-    return await loadFallbackPrimaryForCard({
-      card: this,
-      entity,
-      origin: this._fallbackOriginForAdapters(),
-    });
+    return await getLiveFallbackController(this).loadPrimary(entity);
   }
 
   _streamFallbackAltUrl(entity) {
-    return loadFallbackAltForCard({
-      card: this,
-      entity,
-      origin: this._fallbackOriginForAdapters(),
-    });
+    return getLiveFallbackController(this).loadAlternate(entity);
   }
 
   async _refreshStreamFallbackImage() {
-    await runFallbackRefreshCycleForCard({
-      card: this,
-      applyHandlers: (payload) => applyFallbackImageHandlers({
-        ...payload,
-        t: this._localization.t,
-      }),
-      applySource: setFallbackImageSourceIfChanged,
-    });
+    return await getLiveFallbackController(this).refreshImage();
   }
 
   _cameraContext(entity) {

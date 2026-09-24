@@ -5988,6 +5988,13 @@ test.describe("touch input", () => {
         root.querySelector("[data-rotate-overlay-dismiss]"),
       );
       await new Promise((resolve) => setTimeout(resolve, 2100));
+      const opacitySettleDeadline = performance.now() + 500;
+      while (
+        getComputedStyle(sideControls).opacity !== "0" &&
+        performance.now() < opacitySettleDeadline
+      ) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
 
       return {
         hostHeight: hostRect.height,
