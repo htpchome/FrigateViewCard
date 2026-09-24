@@ -102,6 +102,10 @@ const frigateMediaDownloadControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const frigatePtzInfoSource = fs.readFileSync(
+  new URL("../src/integrations/frigate/ptz-info.js", import.meta.url),
+  "utf8",
+);
 const sharedUrlSource = fs.readFileSync(
   new URL("../src/shared/media/url-utils.js", import.meta.url),
   "utf8",
@@ -2298,6 +2302,28 @@ test("Frigate download routing is owned by the Frigate integration", () => {
   );
   assert.equal(
     sharedMediaDownloadSource.includes("export const triggerBrowserDownload"),
+    true,
+  );
+});
+
+test("Frigate PTZ information requests are integration-owned", () => {
+  assert.equal(cardSource.includes('type: "frigate/ptz/info"'), false);
+  assert.equal(editorSource.includes('type: "frigate/ptz/info"'), false);
+  assert.equal(
+    cardSource.includes(
+      'import { fetchFrigatePtzInfo } from "../integrations/frigate/ptz-info.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    editorSource.includes(
+      'import { fetchFrigatePtzInfo } from "../integrations/frigate/ptz-info.js";',
+    ),
+    true,
+  );
+  assert.equal(frigatePtzInfoSource.includes('type: "frigate/ptz/info"'), true);
+  assert.equal(
+    frigatePtzInfoSource.includes("normalizeFrigatePtzInfoResponse"),
     true,
   );
 });

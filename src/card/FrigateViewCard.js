@@ -86,6 +86,7 @@ import {
 } from "../integrations/frigate/url.js";
 import { resolveFrigateEventPrePostRollRange } from "../integrations/frigate/event-media.js";
 import { FrigateMediaDownloadController } from "../integrations/frigate/media-download.ctrl.js";
+import { fetchFrigatePtzInfo } from "../integrations/frigate/ptz-info.js";
 import {
   resolveCameraConnectionType,
   resolveGo2RtcEntity,
@@ -6897,14 +6898,11 @@ export class FrigateViewCard extends HTMLElement {
 
     cache.ptzInfoPromise = (async () => {
       try {
-        const result = await this._ws({
-          type: "frigate/ptz/info",
-          instance_id: cache.clientId,
+        cache.ptzInfo = await fetchFrigatePtzInfo({
+          request: (message) => this._ws(message),
+          instanceId: cache.clientId,
           camera: cache.cam,
         });
-        cache.ptzInfo = Array.isArray(result)
-          ? result[0] || null
-          : result || null;
       } catch (error) {
         console.warn("[Frigate] PTZ info fetch failed", error);
         cache.ptzInfo = null;

@@ -66,6 +66,7 @@ import {
 import { hasTwoWayTalkCapability } from "../features/two-way-talk/index.js";
 import { hasHaCameraWebRtcPlaybackCapability } from "../integrations/home-assistant/camera-capabilities.js";
 import { resolveFrigateViewCardUpdateStatus } from "../integrations/home-assistant/card-update-status.js";
+import { fetchFrigatePtzInfo } from "../integrations/frigate/ptz-info.js";
 import {
   findHomeAssistantLovelacePanel,
   resolveCurrentHomeAssistantViewName,
@@ -779,14 +780,11 @@ export class FrigateViewCardEditor extends HTMLElement {
     };
     entry.promise = (async () => {
       try {
-        const result = parseWs(
-          await this._hass.callWS({
-            type: "frigate/ptz/info",
-            instance_id: context.instanceId,
-            camera: context.cameraName,
-          }),
-        );
-        entry.info = Array.isArray(result) ? result[0] || null : result || null;
+        entry.info = await fetchFrigatePtzInfo({
+          request: (message) => this._hass.callWS(message),
+          instanceId: context.instanceId,
+          camera: context.cameraName,
+        });
       } catch (error) {
         console.warn("[Frigate] Editor PTZ info fetch failed", error);
         entry.info = null;
