@@ -1,10 +1,19 @@
 import { resolvePtzHoldPlan } from "./index.js";
 import { createPtzActionController } from "./action.ctrl.js";
 import { createPtzCapabilityController } from "./capability.ctrl.js";
+import {
+  renderPtzControls,
+  syncPtzControlsLabels,
+} from "./controls.ctrl.js";
 import { PtzInteractionController } from "./interaction.ctrl.js";
 import { PtzMotionController } from "./motion.ctrl.js";
 
-export { createPtzActionController, createPtzCapabilityController };
+export {
+  createPtzActionController,
+  createPtzCapabilityController,
+  renderPtzControls,
+  syncPtzControlsLabels,
+};
 
 export const createPtzMotionController = (card) =>
   new PtzMotionController({

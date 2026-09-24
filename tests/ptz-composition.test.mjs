@@ -6,6 +6,8 @@ import {
   createPtzCapabilityController,
   createPtzInteractionController,
   createPtzMotionController,
+  renderPtzControls,
+  syncPtzControlsLabels,
 } from "../src/features/ptz/composition.js";
 import { resolvePtzHoldPlan } from "../src/features/ptz/index.js";
 import { PtzInteractionController } from "../src/features/ptz/interaction.ctrl.js";
@@ -72,6 +74,11 @@ test("PTZ composition creates the feature-owned action controller", () => {
   const controller = createPtzActionController({ _hass: {} });
 
   assert.equal(typeof controller.execute, "function");
+});
+
+test("PTZ composition exposes feature-owned controls coordination", () => {
+  assert.equal(typeof renderPtzControls, "function");
+  assert.equal(typeof syncPtzControlsLabels, "function");
 });
 
 test("PTZ composition wires interaction behavior to card delegates", async () => {

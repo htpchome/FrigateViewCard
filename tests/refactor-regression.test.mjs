@@ -311,6 +311,10 @@ const ptzCapabilityControllerSource = fs.readFileSync(
   new URL("../src/features/ptz/capability.ctrl.js", import.meta.url),
   "utf8",
 );
+const ptzControlsControllerSource = fs.readFileSync(
+  new URL("../src/features/ptz/controls.ctrl.js", import.meta.url),
+  "utf8",
+);
 const ptzInteractionControllerSource = fs.readFileSync(
   new URL("../src/features/ptz/interaction.ctrl.js", import.meta.url),
   "utf8",
@@ -2472,6 +2476,48 @@ test("PTZ capability loading and motion context are feature-owned", () => {
   );
   assert.equal(
     ptzCompositionSource.includes("createPtzCapabilityController"),
+    true,
+  );
+});
+
+test("PTZ controls presentation and nested labels are feature-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      "return renderPtzControls(this, list);",
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("syncPtzControlsLabels(this);"),
+    true,
+  );
+  assert.equal(cardSource.includes("buildControlsSectionMarkup"), false);
+  assert.equal(cardSource.includes("syncControlsPadLabels"), false);
+  assert.equal(cardSource.includes("hasPtzPanTiltCapability"), false);
+  assert.equal(cardSource.includes("normalizePtzPresetNames"), false);
+  assert.equal(cardSource.includes("isPtzHomePreset"), false);
+  assert.equal(
+    ptzControlsControllerSource.includes("buildControlsSectionMarkup"),
+    true,
+  );
+  assert.equal(
+    ptzControlsControllerSource.includes("syncControlsPadLabels"),
+    true,
+  );
+  assert.equal(
+    ptzControlsControllerSource.includes(
+      "export const renderPtzControls",
+    ),
+    true,
+  );
+  assert.equal(
+    ptzControlsControllerSource.includes(
+      "export const syncPtzControlsLabels",
+    ),
+    true,
+  );
+  assert.equal(
+    ptzCompositionSource.includes("renderPtzControls,"),
     true,
   );
 });

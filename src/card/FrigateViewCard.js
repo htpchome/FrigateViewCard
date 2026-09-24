@@ -194,10 +194,6 @@ import {
   buildBrowseHeaderRegionMarkup,
   buildBrowseRegionMarkup,
 } from "../features/browse/shell.tmpl.js";
-import {
-  buildControlsSectionMarkup,
-  syncControlsPadLabels,
-} from "../features/ptz/controls.tmpl.js";
 import { buildPopupShellMarkup } from "../features/popup/shell.tmpl.js";
 import {
   buildCalendarPanelMarkup,
@@ -225,15 +221,14 @@ import {
 } from "../features/recordings/index.js";
 import {
   hasCameraPtz,
-  hasPtzPanTiltCapability,
-  isPtzHomePreset,
-  normalizePtzPresetNames,
 } from "../features/ptz/index.js";
 import {
   createPtzActionController,
   createPtzCapabilityController,
   createPtzInteractionController,
   createPtzMotionController,
+  renderPtzControls,
+  syncPtzControlsLabels,
 } from "../features/ptz/composition.js";
 import {
   releaseTwoWayTalkTouchFocus,
@@ -819,7 +814,7 @@ export class FrigateViewCard extends HTMLElement {
     if (languageChanged) {
       applyLocalizedText(this.shadowRoot, this._localization.t);
       this._previewPageController?.updatePreviewMeta();
-      syncControlsPadLabels(this._$("#controls-pad"), this._localization.t);
+      syncPtzControlsLabels(this);
     }
     if (!this._config) return;
     if (this._editorPreviewController.renderCardPickerDemo()) {
@@ -6847,28 +6842,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _renderControlsSection(list) {
-    void this._ptzCapabilityController.ensureActiveInfo();
-    this._renderListLabel();
-    const ptzInfo = this._ptzCapabilityController.activeInfo();
-    const ptzConfigured = hasCameraPtz(this._activeCam);
-    const panTiltEnabled = ptzConfigured && hasPtzPanTiltCapability(ptzInfo);
-    const zoomEnabled = ptzConfigured;
-    const presetItems = ptzConfigured
-      ? normalizePtzPresetNames(ptzInfo).map((name) => ({
-          name,
-          isHome: isPtzHomePreset(name),
-        }))
-      : [];
-    this._setListHtmlIfChanged(
-      list,
-      buildControlsSectionMarkup({
-        panTiltEnabled,
-        zoomEnabled,
-        presetItems,
-        t: this._localization.t,
-      }),
-    );
-    syncControlsPadLabels(this._$("#controls-pad"), this._localization.t);
+    return renderPtzControls(this, list);
   }
 
   _handleCirclePadPtzEvent(event, eventType) {
