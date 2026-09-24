@@ -136,6 +136,10 @@ import {
   requestMediaFullscreen,
 } from "../shared/media/fullscreen.js";
 import { waitForMediaStart } from "../shared/media/first-frame.js";
+import {
+  applyContainedVideoFit,
+  attachContainedVideoFit,
+} from "../shared/media/video-fit.js";
 import { CameraGroupLiveController } from "../features/camera-groups/live.ctrl.js";
 import { LinkedLightController } from "../features/linked-entities/light.ctrl.js";
 import {
@@ -1483,27 +1487,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _applyVideoFit(videoEl) {
-    if (!videoEl) return;
-    videoEl.style.display = "block";
-    videoEl.style.width = "100%";
-    videoEl.style.height = "100%";
-    videoEl.style.objectPosition = "center center";
-    videoEl.style.objectFit = "contain";
+    applyContainedVideoFit(videoEl);
   }
 
   _attachVideoFit(streamEl, retries = 12) {
-    if (!streamEl) return;
-    const v =
-      streamEl.tagName?.toLowerCase() === "video"
-        ? streamEl
-        : streamEl.querySelector("video") ||
-          streamEl.shadowRoot?.querySelector("video");
-    if (v) {
-      this._applyVideoFit(v);
-      return;
-    }
-    if (retries <= 0) return;
-    setTimeout(() => this._attachVideoFit(streamEl, retries - 1), 160);
+    attachContainedVideoFit(streamEl, retries);
   }
 
   _setStreamLoading(loading, text = "Loading…") {

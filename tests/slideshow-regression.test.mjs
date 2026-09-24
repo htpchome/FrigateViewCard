@@ -17,6 +17,10 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
+const videoFitSource = fs.readFileSync(
+  new URL("../src/shared/media/video-fit.js", import.meta.url),
+  "utf8",
+);
 
 test("slideshow config is wired through the card", () => {
   assert.equal(source.includes("slideshow_rotation_enabled"), true);
@@ -105,7 +109,8 @@ test("main live video fit remains stable after metadata loads", () => {
   const fitMethod = cardSource.slice(fitStart, fitEnd);
 
   assert.notEqual(fitStart, -1);
-  assert.equal(fitMethod.includes('videoEl.style.objectFit = "contain";'), true);
-  assert.equal(fitMethod.includes("loadedmetadata"), false);
-  assert.equal(fitMethod.includes('"cover"'), false);
+  assert.equal(fitMethod.includes("applyContainedVideoFit(videoEl);"), true);
+  assert.equal(videoFitSource.includes('objectFit = "contain";'), true);
+  assert.equal(videoFitSource.includes("loadedmetadata"), false);
+  assert.equal(videoFitSource.includes('"cover"'), false);
 });

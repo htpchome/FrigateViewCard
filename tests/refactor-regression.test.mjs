@@ -137,6 +137,10 @@ const sharedMediaFirstFrameSource = fs.readFileSync(
   new URL("../src/shared/media/first-frame.js", import.meta.url),
   "utf8",
 );
+const sharedMediaVideoFitSource = fs.readFileSync(
+  new URL("../src/shared/media/video-fit.js", import.meta.url),
+  "utf8",
+);
 const frigateBootstrapSource = fs.readFileSync(
   new URL("../src/integrations/frigate/bootstrap.js", import.meta.url),
   "utf8",
@@ -900,6 +904,37 @@ test("generic media readiness behavior is owned by shared media primitives", () 
     assert.equal(cardSource.includes(readinessMechanic), false);
     assert.equal(sharedMediaFirstFrameSource.includes(readinessMechanic), true);
   }
+});
+
+test("generic contained-video fitting is owned by shared media primitives", () => {
+  assert.equal(
+    cardSource.includes('from "../shared/media/video-fit.js";'),
+    true,
+  );
+  assert.match(
+    cardSource,
+    /_applyVideoFit\(videoEl\) \{\s*applyContainedVideoFit\(videoEl\);\s*\}/,
+  );
+  assert.match(
+    cardSource,
+    /_attachVideoFit\(streamEl, retries = 12\) \{\s*attachContainedVideoFit\(streamEl, retries\);\s*\}/,
+  );
+  for (const styleAssignment of [
+    'style.display = "block"',
+    'style.width = "100%"',
+    'style.height = "100%"',
+    'style.objectPosition = "center center"',
+    'style.objectFit = "contain"',
+  ]) {
+    assert.equal(cardSource.includes(styleAssignment), false);
+    assert.equal(sharedMediaVideoFitSource.includes(styleAssignment), true);
+  }
+  assert.equal(
+    sharedMediaVideoFitSource.includes(
+      "setTimeout(() => attachContainedVideoFit(mediaRoot, retries - 1), 160)",
+    ),
+    true,
+  );
 });
 
 test("two-way-talk session lifecycle is owned by its feature controller", () => {
