@@ -47,6 +47,10 @@ const mobileViewPageControllerSource = fs.readFileSync(
   new URL("../src/features/mobile-view/page.ctrl.js", import.meta.url),
   "utf8",
 );
+const mobileViewCompositionSource = fs.readFileSync(
+  new URL("../src/features/mobile-view/composition.js", import.meta.url),
+  "utf8",
+);
 const wideViewPageTemplateSource = fs.readFileSync(
   new URL("../src/features/wide-view/page.tmpl.js", import.meta.url),
   "utf8",
@@ -1503,6 +1507,37 @@ test("page chrome is owned by route templates and controllers", () => {
   assert.equal(
     mobileViewPageControllerSource.includes(
       "new BrowseRenderController(host)",
+    ),
+    true,
+  );
+});
+
+test("Mobile View controller composition is feature-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { createMobileViewControllers } from "../features/mobile-view/composition.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "Object.assign(this, createMobileViewControllers(this));",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("new MobileViewPageController"), false);
+  assert.equal(cardSource.includes("new MobileCamSwitcherController"), false);
+  assert.equal(
+    mobileViewCompositionSource.includes("new MobileViewPageController"),
+    true,
+  );
+  assert.equal(
+    mobileViewCompositionSource.includes("new MobileCamSwitcherController"),
+    true,
+  );
+  assert.equal(
+    mobileViewCompositionSource.includes(
+      '"[data-mobile-cam-picker]"',
     ),
     true,
   );

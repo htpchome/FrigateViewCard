@@ -287,8 +287,7 @@ import {
   EditorPreviewContextController,
 } from "../features/editor-preview/context.ctrl.js";
 import { ViewportContextController } from "../features/viewport/context.ctrl.js";
-import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
-import { MobileCamSwitcherController } from "../features/mobile-view/cam-switcher.ctrl.js";
+import { createMobileViewControllers } from "../features/mobile-view/composition.js";
 import {
   MOBILE_VIEW_ACTIVE_CLASS,
   MOBILE_VIEW_ROTATE_COVER_CLASS,
@@ -354,23 +353,7 @@ export class FrigateViewCard extends HTMLElement {
     this._dateFormatterCache = createDateFormatterCache();
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
-    this._mobileViewPageController = new MobileViewPageController(this, {
-      PAGE_IDS,
-    });
-    this._mobileCamSwitcherController = new MobileCamSwitcherController({
-      isOpen: () => this._mobileCamSwitcherOpen === true,
-      setOpen: (open) => {
-        this._mobileCamSwitcherOpen = open === true;
-      },
-      renderCamSwitcher: () => this._renderCamSwitcher(),
-      getPicker: () =>
-        this._pageShellRegionElement?.(
-          "cameraSwitcher",
-          "[data-mobile-cam-picker]",
-        ) || null,
-      pauseSlideshowForInteraction: () => this._pauseSlideshowForInteraction(),
-      switchCamera: (idx) => this._switchCamera(idx),
-    });
+    Object.assign(this, createMobileViewControllers(this));
     this._singleViewPageController = new SingleViewPageController(this, {
       PAGE_IDS,
     });
