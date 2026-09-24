@@ -112,6 +112,80 @@ test("mounted card consumes cached notification navigation", async () => {
   });
 });
 
+test("Bubble hash deep links activate the outer route before media opens", async () => {
+  const { calls, controller } = navigationHarness();
+  const win = navigationWindow();
+  win.addEventListener("hashchange", () => {
+    if (win.location.hash === "#test2") calls.push(["bubbleOpen"]);
+  });
+
+  await withWindow(win, async () => {
+    controller.connect();
+    win.navigate(
+      "#test2?camera=camera.driveway&event=event-2&review=review-2",
+    );
+
+    assert.equal(win.location.hash, "#test2");
+    assert.deepEqual(calls, [["bubbleOpen"]]);
+    await settleNavigation();
+    assert.deepEqual(calls, [
+      ["bubbleOpen"],
+      ["switchCamera", 1, { skipBrowseLoad: true }],
+      ["showSnapshot", "event-2"],
+      [
+        "loadWindow",
+        true,
+        { supersede: true, reuseRecentCache: true },
+      ],
+    ]);
+    controller.disconnect();
+  });
+});
+
+test("Bubble hash route still opens when notification media cannot resolve", async () => {
+  const { host, calls, controller } = navigationHarness();
+  const win = navigationWindow();
+  host._findEventById = () => null;
+  win.addEventListener("location-changed", () => {
+    if (win.location.hash === "#test2") calls.push(["bubbleOpen"]);
+  });
+
+  await withWindow(win, async () => {
+    controller.connect();
+    win.navigate("#test2?camera=front_door&event=missing-event");
+
+    assert.equal(win.location.hash, "#test2");
+    assert.equal(calls.some(([name]) => name === "bubbleOpen"), true);
+    await settleNavigation();
+    assert.equal(
+      calls.some(([name]) => name === "showClip" || name === "showSnapshot"),
+      false,
+    );
+    controller.disconnect();
+  });
+});
+
+test("startup activates a Bubble hash route before camera resolution", async () => {
+  const { host, calls, controller } = createHarness();
+  const win = navigationWindow();
+  win.location = new URL(
+    "https://example.local/dashboard-testarea/home#test2?camera=driveway&event=event-2&review=review-2",
+  );
+  win.addEventListener("hashchange", () => {
+    if (win.location.hash === "#test2") calls.push(["bubbleOpen"]);
+  });
+
+  await withWindow(win, async () => {
+    controller.initDeepLinkFromUrl();
+    const cameraTarget = controller.prepareStartupCameraTarget();
+
+    assert.equal(win.location.hash, "#test2");
+    assert.deepEqual(calls, [["bubbleOpen"]]);
+    assert.equal(await cameraTarget, 1);
+    assert.equal(host._activeCamIdx, 1);
+  });
+});
+
 test("cached same-camera navigation opens without refreshing the window", async () => {
   const { calls, controller } = navigationHarness();
   const win = navigationWindow();

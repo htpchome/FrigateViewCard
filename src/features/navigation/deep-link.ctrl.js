@@ -1,5 +1,22 @@
 import { cameraMemberEntities } from "../camera-groups/model.js";
 
+const DEEP_LINK_KEYS = new Set([
+  "event",
+  "event_id",
+  "frigate_event",
+  "frigate_event_id",
+  "review",
+  "review_id",
+  "frigate_review",
+  "frigate_review_id",
+  "media",
+  "view",
+  "open",
+  "camera",
+  "cam",
+  "camera_entity",
+]);
+
 const normalizeCameraHintToken = (value) =>
   String(value || "")
     .trim()
@@ -69,6 +86,7 @@ export class DeepLinkController {
 
     this.initDeepLinkFromUrl();
     if (!this.isDeepLinkCandidateForCard()) return;
+    this.activatePendingHashRoute();
     const navigationUrl = window.location.href;
     this._pendingNavigationUrl = navigationUrl;
     void this._handlePendingNavigation(navigationUrl);
@@ -168,46 +186,77 @@ export class DeepLinkController {
     return params;
   }
 
-  clearDeepLinkParamsFromUrl() {
-    if (!this.isDeepLinkHandlingEnabled()) return;
-    const deepLinkKeys = new Set([
-      "event",
-      "event_id",
-      "frigate_event",
-      "frigate_event_id",
-      "review",
-      "review_id",
-      "frigate_review",
-      "frigate_review_id",
-      "media",
-      "view",
-      "open",
-      "camera",
-      "cam",
-      "camera_entity",
-    ]);
-
+  _notifyHashRouteChange(previousUrl, nextUrl) {
+    if (
+      typeof window === "undefined" ||
+      typeof window.dispatchEvent !== "function"
+    ) {
+      return;
+    }
+    const EventConstructor = window.Event || globalThis.Event;
+    if (typeof EventConstructor !== "function") return;
     try {
-      const url = new URL(window.location.href);
-      for (const key of [...url.searchParams.keys()]) {
-        if (deepLinkKeys.has(key)) url.searchParams.delete(key);
-      }
+      const hashChangeEvent =
+        typeof window.HashChangeEvent === "function"
+          ? new window.HashChangeEvent("hashchange", {
+              oldURL: previousUrl,
+              newURL: nextUrl,
+            })
+          : new EventConstructor("hashchange");
+      window.dispatchEvent(hashChangeEvent);
+      window.dispatchEvent(new EventConstructor("location-changed"));
+    } catch (_) {}
+  }
 
-      const rawHash = String(url.hash || "");
-      const queryIndex = rawHash.indexOf("?");
-      if (queryIndex >= 0) {
-        const hashPath = rawHash.slice(0, queryIndex);
-        const hashQuery = new URLSearchParams(rawHash.slice(queryIndex + 1));
-        for (const key of [...hashQuery.keys()]) {
-          if (deepLinkKeys.has(key)) hashQuery.delete(key);
-        }
-        const nextHashQuery = hashQuery.toString();
-        url.hash = nextHashQuery ? `${hashPath}?${nextHashQuery}` : hashPath;
-      }
+  _removeDeepLinkHashParams(url) {
+    const rawHash = String(url.hash || "");
+    const queryIndex = rawHash.indexOf("?");
+    if (queryIndex < 0) return false;
+    const hashPath = rawHash.slice(0, queryIndex);
+    const hashQuery = new URLSearchParams(rawHash.slice(queryIndex + 1));
+    let changed = false;
+    for (const key of [...hashQuery.keys()]) {
+      if (!DEEP_LINK_KEYS.has(key)) continue;
+      hashQuery.delete(key);
+      changed = true;
+    }
+    if (!changed) return false;
+    const nextHashQuery = hashQuery.toString();
+    url.hash = nextHashQuery ? `${hashPath}?${nextHashQuery}` : hashPath;
+    return true;
+  }
 
+  activatePendingHashRoute() {
+    if (!this.hasPendingDeepLinkTarget()) return false;
+    try {
+      const previousUrl = window.location.href;
+      const url = new URL(previousUrl);
+      if (!this._removeDeepLinkHashParams(url)) return false;
       const nextUrl = `${url.pathname}${url.search}${url.hash}`;
       window.history.replaceState(window.history.state, "", nextUrl);
       this._pendingNavigationUrl = null;
+      this._notifyHashRouteChange(previousUrl, window.location.href);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  clearDeepLinkParamsFromUrl() {
+    if (!this.isDeepLinkHandlingEnabled()) return;
+    try {
+      const previousUrl = window.location.href;
+      const url = new URL(window.location.href);
+      for (const key of [...url.searchParams.keys()]) {
+        if (DEEP_LINK_KEYS.has(key)) url.searchParams.delete(key);
+      }
+      const hashChanged = this._removeDeepLinkHashParams(url);
+      const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState(window.history.state, "", nextUrl);
+      this._pendingNavigationUrl = null;
+      if (hashChanged) {
+        this._notifyHashRouteChange(previousUrl, window.location.href);
+      }
     } catch (_) {}
   }
 
@@ -320,7 +369,8 @@ export class DeepLinkController {
   }
 
   async prepareStartupCameraTarget() {
-    if (!this.hasParsedDeepLinkTarget()) return -1;
+    if (!this.hasPendingDeepLinkTarget()) return -1;
+    this.activatePendingHashRoute();
     const target = await this.resolveDeepLinkCameraTarget({
       lookupEvent: true,
     });

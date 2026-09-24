@@ -110,6 +110,94 @@ test("bottom HA navbar styling does not trap Bubble popup behind its backdrop", 
   });
 });
 
+test("Bubble notification hash opens its route before the card media popup", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    const calls = [];
+    const host = {
+      _started: true,
+      isConnected: true,
+      _config: {
+        deep_link_enabled: true,
+        cameras: [
+          { entity: "camera.front_door" },
+          { entity: "camera.driveway", name: "Driveway" },
+        ],
+      },
+      _camCache: {
+        "camera.front_door": { cam: "front_door" },
+        "camera.driveway": { cam: "driveway" },
+      },
+      _deepLinkEventId: "",
+      _deepLinkReviewId: "",
+      _deepLinkMediaHint: "",
+      _deepLinkCameraHint: "",
+      _deepLinkApplied: false,
+      _deepLinkEventLookupTried: false,
+      _deepLinkReviewLookupTried: false,
+      _activeCamIdx: 0,
+      _activeGroupMemberOverride: "",
+      _reviews: [],
+      _findEventById: (id) =>
+        id === "event-2"
+          ? {
+              id,
+              camera: "driveway",
+              has_clip: false,
+            }
+          : null,
+      _switchCamera: async (index) => {
+        calls.push("switchCamera");
+        host._activeCamIdx = index;
+      },
+      _showSnapshot: () => calls.push("showSnapshot"),
+      _loadReviews: async () => {},
+      _browseWindowLoaderController: {
+        invalidateActiveWindowCaches: () => {},
+        loadWindow: async () => {},
+      },
+    };
+    const controller = card._deepLinkController;
+    controller._host = host;
+    let bubbleOpen = false;
+    let bubbleOpenCount = 0;
+    const syncBubbleRoute = () => {
+      if (location.hash !== "#test2" || bubbleOpen) return;
+      bubbleOpen = true;
+      bubbleOpenCount += 1;
+      calls.push("bubbleOpen");
+    };
+    window.addEventListener("hashchange", syncBubbleRoute);
+    window.addEventListener("location-changed", syncBubbleRoute);
+    history.replaceState(
+      history.state,
+      "",
+      "/dashboard-testarea/home#test2?camera=driveway&event=event-2&review=review-2",
+    );
+
+    controller.connect();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.disconnect();
+    window.removeEventListener("hashchange", syncBubbleRoute);
+    window.removeEventListener("location-changed", syncBubbleRoute);
+    return {
+      bubbleOpen,
+      bubbleOpenCount,
+      calls,
+      hash: location.hash,
+    };
+  });
+
+  expect(state).toEqual({
+    bubbleOpen: true,
+    bubbleOpenCount: 1,
+    calls: ["bubbleOpen", "switchCamera", "showSnapshot"],
+    hash: "#test2",
+  });
+});
+
 test("rotated Mobile View inside Bubble fills the viewport above its backdrop", async ({ page }) => {
   await page.setViewportSize({ width: 844, height: 390 });
   await page.goto(baseUrl);
