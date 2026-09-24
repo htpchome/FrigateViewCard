@@ -12,6 +12,13 @@ import {
   buildReviewListItemHtml,
   buildReviewListItemModel,
 } from "../../data/review-list.model.js";
+import { resolveFrigateEventMediaDuration } from "../../integrations/frigate/event-media.js";
+
+const eventMediaDuration = (host, event) =>
+  resolveFrigateEventMediaDuration(
+    event,
+    host._config?.event_pre_post_roll_enabled === true,
+  );
 
 export const renderBrowseEventListItem = (
   host,
@@ -31,7 +38,7 @@ export const renderBrowseEventListItem = (
     icons: ICONS,
     media: (id, file) =>
       host._mediaForCamera(id, file, event?.camera),
-    durationLabel: (value) => host._eventMediaDuration(value),
+    durationLabel: (value) => eventMediaDuration(host, value),
     formatTime: (timestamp) => host._time(timestamp),
     formatDay: (timestamp) => host._weekdayDate(timestamp),
     isKeptTab: host._tab === "kept",
@@ -78,7 +85,7 @@ export const renderBrowseReviewListItem = (
       resolveCameraMedia
         ? host._mediaForCamera(id, file, review?.camera)
         : host._media(id, file),
-    durationLabel: (value) => host._eventMediaDuration(value),
+    durationLabel: (value) => eventMediaDuration(host, value),
     formatTime: (timestamp) => host._time(timestamp),
     formatDay: (timestamp) => host._weekdayDate(timestamp),
     labelColor,

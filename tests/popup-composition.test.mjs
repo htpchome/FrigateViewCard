@@ -78,7 +78,6 @@ const createHarness = () => {
       calls.push(["clear-pip", scope]),
     _clearPopupVideoZoom: () => calls.push(["clear-zoom"]),
     _dateTimeLabel: (value) => `date-time:${value}`,
-    _dur: (value) => `duration:${value.id}`,
     _findEventById: (id) => ({ id }),
     _frigateContextForCameraName: (camera) => ({ cam: camera }),
     _frigateMediaDownloadController: {
@@ -182,6 +181,10 @@ test("popup composition creates the complete controller set and preserves cross-
   options.mediaControls.onSyncPictureInPictureButtons();
   options.mediaControls.onSyncFullscreenButtons();
   assert.equal(options.mediaControls.isAutoHideActive(), true);
+  assert.equal(
+    options.info.formatEventDuration({ start_time: 100, end_time: 112 }),
+    12,
+  );
 
   options.lifecycle.onDisposeCarousel();
   options.lifecycle.onClearCarousel();

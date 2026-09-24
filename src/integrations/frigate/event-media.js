@@ -42,3 +42,19 @@ export const resolveFrigateEventPrePostRollRange = ({
     paddingSeconds: padding,
   });
 };
+
+export const resolveFrigateEventDuration = (
+  event,
+  nowSeconds = Date.now() / 1000,
+) =>
+  Math.max(
+    1,
+    Math.round((event.end_time || nowSeconds) - event.start_time),
+  );
+
+export const resolveFrigateEventMediaDuration = (
+  event,
+  enabled = false,
+) =>
+  resolveFrigateEventPrePostRollRange({ event, enabled })?.durationSec ??
+  resolveFrigateEventDuration(event);

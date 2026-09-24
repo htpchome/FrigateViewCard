@@ -39,9 +39,8 @@ test("Wide View composition creates companion, timeline, and page controllers wi
       matchesEventFilters: (event) => event.id.endsWith("visible"),
     },
     _calSelectedDay: "2026-09-23",
-    _config: { event_days: 3 },
+    _config: { event_days: 3, event_pre_post_roll_enabled: true },
     _dayKey: (timestamp) => `day:${timestamp}`,
-    _eventMediaDuration: (event) => event.duration,
     _events: [{ id: "event-visible" }, { id: "event-hidden" }],
     _isGridMixedListMode: () => false,
     _loading: true,
@@ -96,7 +95,10 @@ test("Wide View composition creates companion, timeline, and page controllers wi
   assert.equal(options.getSelectedDay(), "2026-09-23");
   assert.equal(options.isLoading(), true);
   assert.equal(options.mediaUrl("id", "clip", "front"), "media:id:clip:front");
-  assert.equal(options.durationForEvent({ duration: 12 }), 12);
+  assert.equal(
+    options.durationForEvent({ start_time: 100, end_time: 112 }),
+    22,
+  );
   assert.equal(options.capitalize("person"), "Person");
   assert.equal(options.formatTime(10), "time:10");
   assert.equal(options.formatDay(10), "weekday:10:weekdayDateDot");

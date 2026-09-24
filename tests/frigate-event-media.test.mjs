@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import { EVENT_PRE_POST_ROLL_SECONDS } from "../src/constants.js";
 import {
+  resolveFrigateEventDuration,
+  resolveFrigateEventMediaDuration,
   resolveFrigateEventPrePostRollRange,
   resolveFrigateEventRecordingRange,
 } from "../src/integrations/frigate/event-media.js";
@@ -56,4 +58,24 @@ test("Frigate event playback range requires the toggle and a completed event", (
     }),
     null,
   );
+});
+
+test("Frigate event duration uses completed bounds or the current time", () => {
+  assert.equal(
+    resolveFrigateEventDuration({ start_time: 100.2, end_time: 109.6 }),
+    9,
+  );
+  assert.equal(
+    resolveFrigateEventDuration(
+      { start_time: 100, end_time: null },
+      112.4,
+    ),
+    12,
+  );
+});
+
+test("Frigate media duration includes enabled pre-roll and post-roll", () => {
+  const event = { start_time: 100, end_time: 112 };
+  assert.equal(resolveFrigateEventMediaDuration(event, true), 22);
+  assert.equal(resolveFrigateEventMediaDuration(event, false), 12);
 });

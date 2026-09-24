@@ -23,8 +23,8 @@ const createHost = () => ({
       { entity: "camera.driveway" },
     ],
     hidden_tabs: [],
+    event_pre_post_roll_enabled: true,
   },
-  _eventMediaDuration: () => 22,
   _eventsMode: "all",
   _findEventById: () => null,
   _isGridMixedListMode: () => false,
@@ -102,6 +102,8 @@ test("browse review presentation selects grouped-camera media and options", () =
     camera: "driveway",
     label: "person",
     zones: ["drive"],
+    start_time: 100,
+    end_time: 112,
     has_clip: true,
     has_snapshot: true,
   };

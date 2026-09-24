@@ -106,6 +106,10 @@ const frigatePtzInfoSource = fs.readFileSync(
   new URL("../src/integrations/frigate/ptz-info.js", import.meta.url),
   "utf8",
 );
+const frigateEventMediaSource = fs.readFileSync(
+  new URL("../src/integrations/frigate/event-media.js", import.meta.url),
+  "utf8",
+);
 const sharedUrlSource = fs.readFileSync(
   new URL("../src/shared/media/url-utils.js", import.meta.url),
   "utf8",
@@ -1154,6 +1158,43 @@ test("browse event and review item presentation is browse-owned", () => {
   );
   assert.equal(
     browseCompositionSource.includes("renderBrowseEventListItem,"),
+    true,
+  );
+});
+
+test("Frigate event duration mapping is integration-owned", () => {
+  assert.equal(cardSource.includes("_dur(ev)"), false);
+  assert.equal(cardSource.includes("_eventMediaDuration(ev)"), false);
+  assert.equal(
+    cardSource.includes("resolveFrigateEventPrePostRollRange"),
+    false,
+  );
+  assert.equal(
+    frigateEventMediaSource.includes(
+      "export const resolveFrigateEventDuration",
+    ),
+    true,
+  );
+  assert.equal(
+    frigateEventMediaSource.includes(
+      "export const resolveFrigateEventMediaDuration",
+    ),
+    true,
+  );
+  assert.equal(
+    browseItemPresentationControllerSource.includes(
+      "resolveFrigateEventMediaDuration",
+    ),
+    true,
+  );
+  assert.equal(
+    popupCompositionSource.includes("resolveFrigateEventDuration"),
+    true,
+  );
+  assert.equal(
+    wideViewCompositionSource.includes(
+      "resolveFrigateEventMediaDuration",
+    ),
     true,
   );
 });

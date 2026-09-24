@@ -83,7 +83,6 @@ import {
   buildFrigateNotificationMediaPath,
   buildFrigateReviewThumbnailPath,
 } from "../integrations/frigate/url.js";
-import { resolveFrigateEventPrePostRollRange } from "../integrations/frigate/event-media.js";
 import { FrigateMediaDownloadController } from "../integrations/frigate/media-download.ctrl.js";
 import {
   resolveCameraConnectionType,
@@ -6772,19 +6771,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _syncOlderHint(forceHide = null) {
     this._activeStandardPageController().syncOlderHint(forceHide);
-  }
-  _dur(ev) {
-    return Math.max(
-      1,
-      Math.round((ev.end_time || Date.now() / 1000) - ev.start_time),
-    );
-  }
-  _eventMediaDuration(ev) {
-    const range = resolveFrigateEventPrePostRollRange({
-      event: ev,
-      enabled: this._config?.event_pre_post_roll_enabled === true,
-    });
-    return range?.durationSec ?? this._dur(ev);
   }
   _eventCardHTML(ev, expanded, compact = false) {
     return renderBrowseEventListItem(this, ev, expanded, compact);

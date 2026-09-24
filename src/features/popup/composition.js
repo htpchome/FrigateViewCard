@@ -1,5 +1,6 @@
 import { ICONS } from "../../icons.js";
 import { DEVICE_PROFILE } from "../../helpers.js";
+import { resolveFrigateEventDuration } from "../../integrations/frigate/event-media.js";
 import {
   buildVideoOptionsForView,
   createVideoElement,
@@ -144,7 +145,7 @@ export const createPopupControllers = (
     formatMonthDay: (timestamp, options) =>
       card._monthDay(timestamp, options),
     formatFullDate: (timestamp) => card._fullDate(timestamp),
-    formatEventDuration: (event) => card._dur(event),
+    formatEventDuration: resolveFrigateEventDuration,
     onResetRecordingScrub: () => popupRecordingScrubController.teardown(),
     onMediaCameraChange: (camera) => {
       popupLifecycleController.setMediaCamera(camera);

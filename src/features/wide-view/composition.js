@@ -7,6 +7,7 @@ import {
 } from "../../constants.js";
 import { cap } from "../../helpers.js";
 import { ICONS } from "../../icons.js";
+import { resolveFrigateEventMediaDuration } from "../../integrations/frigate/event-media.js";
 import {
   cameraMemberEntities,
   isCameraGroup,
@@ -85,7 +86,11 @@ export const createWideViewTimelineControllers = (
       isLoading: () => card._loading === true,
       mediaUrl: (id, file, camera = "") =>
         card._mediaForCamera(id, file, camera),
-      durationForEvent: (event) => card._eventMediaDuration(event),
+      durationForEvent: (event) =>
+        resolveFrigateEventMediaDuration(
+          event,
+          card._config?.event_pre_post_roll_enabled === true,
+        ),
       capitalize: (value) => cap(value),
       formatTime: (timestamp) => card._time(timestamp),
       formatDay: (timestamp) =>

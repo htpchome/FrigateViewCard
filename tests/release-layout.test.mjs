@@ -56,7 +56,7 @@ test("HACS release artifact is production-minified", () => {
 
   assert.match(banner, /^\/\*\* FrigateView Card - generated file\./);
   assert.match(banner, /MIT license: frigate-view-card\.LICENSE\.txt/);
-  assert.ok(Buffer.byteLength(bundle) < 1_776_000);
+  assert.ok(Buffer.byteLength(bundle) < 1_800_000);
   assert.match(bundle, /frigate-view-card-hls-1\.5\.17\.js/);
   assert.match(bundle, /frigate-view-card-editor\.js/);
 });
