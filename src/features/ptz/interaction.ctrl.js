@@ -52,7 +52,7 @@ export class PtzInteractionController {
       await this._host?._ptzCapabilityController?.resolveContext?.();
     if (!context) return;
     try {
-      await this._host?._executePtzCameraAction?.({
+      await this._host?._ptzExec?.execute?.({
         ...context,
         action,
         eventType,
@@ -71,7 +71,7 @@ export class PtzInteractionController {
       const context =
         await this._host?._ptzCapabilityController?.resolveContext?.();
       if (!context) return;
-      await this._host?._executePtzCameraAction?.({
+      await this._host?._ptzExec?.execute?.({
         ...context,
         action: "preset",
         eventType: "press",

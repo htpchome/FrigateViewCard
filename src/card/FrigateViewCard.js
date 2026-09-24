@@ -97,7 +97,6 @@ import {
   reviewStatusEntityCandidates,
 } from "../integrations/frigate/review-status.js";
 import { findActiveHaCameraStreamVideo } from "../integrations/home-assistant/playback.js";
-import { executeHomeAssistantPtzPlan } from "../integrations/home-assistant/ptz-service.js";
 import {
   invalidateMountTrackingIfActive,
   isMseReturnRemountReason,
@@ -229,9 +228,9 @@ import {
   hasPtzPanTiltCapability,
   isPtzHomePreset,
   normalizePtzPresetNames,
-  resolvePtzServicePlan,
 } from "../features/ptz/index.js";
 import {
+  createPtzActionController,
   createPtzCapabilityController,
   createPtzInteractionController,
   createPtzMotionController,
@@ -348,6 +347,7 @@ export class FrigateViewCard extends HTMLElement {
     });
     this._linkedLightController = new LinkedLightController(this);
     this._ptzCapabilityController = createPtzCapabilityController(this);
+    this._ptzExec = createPtzActionController(this);
     this._ptzMotionController = createPtzMotionController(this);
     this._ptzInteractionController = createPtzInteractionController(this);
     Object.assign(this, createWideViewTimelineControllers(this));
@@ -6881,24 +6881,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _handlePtzPreset(presetName, button = null) {
     return this._ptzInteractionController.handlePreset(presetName, button);
-  }
-
-  async _executePtzCameraAction({
-    camera,
-    ptzInfo,
-    action,
-    eventType,
-    argument = null,
-  }) {
-    const plan = resolvePtzServicePlan({
-      camera,
-      ptzInfo,
-      action,
-      eventType,
-      argument,
-    });
-    if (!plan) return;
-    await executeHomeAssistantPtzPlan({ hass: this._hass, plan });
   }
 
   _stopPtzMotion(reason = "release") {

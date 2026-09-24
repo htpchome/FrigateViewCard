@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  createPtzActionController,
   createPtzCapabilityController,
   createPtzInteractionController,
   createPtzMotionController,
@@ -23,9 +24,11 @@ test("PTZ composition preserves motion delegates and error reporting", async () 
         return context;
       },
     },
-    _executePtzCameraAction: (value) => {
-      calls.push(["execute-action", value]);
-      return "executed";
+    _ptzExec: {
+      execute: (value) => {
+        calls.push(["execute-action", value]);
+        return "executed";
+      },
     },
   };
   const controller = createPtzMotionController(card);
@@ -65,6 +68,12 @@ test("PTZ composition creates the feature-owned capability controller", () => {
   assert.equal(typeof controller.resolveContext, "function");
 });
 
+test("PTZ composition creates the feature-owned action controller", () => {
+  const controller = createPtzActionController({ _hass: {} });
+
+  assert.equal(typeof controller.execute, "function");
+});
+
 test("PTZ composition wires interaction behavior to card delegates", async () => {
   const calls = [];
   const card = {
@@ -77,8 +86,9 @@ test("PTZ composition wires interaction behavior to card delegates", async () =>
     _ptzCapabilityController: {
       resolveContext: async () => ({ id: "context" }),
     },
-    _executePtzCameraAction: async (value) =>
-      calls.push(["execute", value]),
+    _ptzExec: {
+      execute: async (value) => calls.push(["execute", value]),
+    },
     _attachMainLiveVideoZoom: (engine) => calls.push(["attach", engine]),
     _liveVideoZoomController: {
       zoomBy: (delta) => calls.push(["zoom", delta]),

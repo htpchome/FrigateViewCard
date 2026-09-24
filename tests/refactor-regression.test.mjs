@@ -303,6 +303,10 @@ const ptzCompositionSource = fs.readFileSync(
   new URL("../src/features/ptz/composition.js", import.meta.url),
   "utf8",
 );
+const ptzActionControllerSource = fs.readFileSync(
+  new URL("../src/features/ptz/action.ctrl.js", import.meta.url),
+  "utf8",
+);
 const ptzCapabilityControllerSource = fs.readFileSync(
   new URL("../src/features/ptz/capability.ctrl.js", import.meta.url),
   "utf8",
@@ -2349,11 +2353,17 @@ test("Home Assistant PTZ service execution is integration-owned", () => {
     cardSource.includes(
       'import { executeHomeAssistantPtzPlan } from "../integrations/home-assistant/ptz-service.js";',
     ),
+    false,
+  );
+  assert.equal(
+    ptzActionControllerSource.includes(
+      'import { executeHomeAssistantPtzPlan } from "../../integrations/home-assistant/ptz-service.js";',
+    ),
     true,
   );
   assert.equal(
-    cardSource.includes(
-      "await executeHomeAssistantPtzPlan({ hass: this._hass, plan });",
+    ptzActionControllerSource.includes(
+      "await executeHomeAssistantPtzPlan({ hass: host._hass, plan });",
     ),
     true,
   );
@@ -2364,6 +2374,31 @@ test("Home Assistant PTZ service execution is integration-owned", () => {
   );
   assert.equal(
     homeAssistantPtzServiceSource.includes('executionMode === "parallel"'),
+    true,
+  );
+});
+
+test("PTZ action planning and execution coordination is feature-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      "this._ptzExec = createPtzActionController(this);",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("_executePtzCameraAction"), false);
+  assert.equal(cardSource.includes("resolvePtzServicePlan"), false);
+  assert.equal(
+    ptzActionControllerSource.includes(
+      'import { resolvePtzServicePlan } from "./index.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    ptzActionControllerSource.includes("export const createPtzActionController"),
+    true,
+  );
+  assert.equal(
+    ptzCompositionSource.includes("createPtzActionController,"),
     true,
   );
 });
@@ -2436,7 +2471,7 @@ test("PTZ capability loading and motion context are feature-owned", () => {
     true,
   );
   assert.equal(
-    ptzCompositionSource.includes("export { createPtzCapabilityController }"),
+    ptzCompositionSource.includes("createPtzCapabilityController"),
     true,
   );
 });

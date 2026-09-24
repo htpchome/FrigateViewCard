@@ -23,8 +23,9 @@ const createHarness = ({ camera = { entity: "camera.driveway", ptz: true } } = {
         return context;
       },
     },
-    _executePtzCameraAction: async (request) =>
-      calls.push(["execute", request]),
+    _ptzExec: {
+      execute: async (request) => calls.push(["execute", request]),
+    },
     _attachMainLiveVideoZoom: () => calls.push(["attach"]),
     _liveVideoZoomController: {
       zoomBy: (delta) => calls.push(["zoom", delta]),

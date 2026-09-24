@@ -73,7 +73,9 @@ test("imported PTZ preset buttons execute the named preset and restore UI state"
         ptzInfo: { features: ["pt"], presets: ["preset1"] },
       }),
     },
-    _executePtzCameraAction: async (request) => calls.push(request),
+    _ptzExec: {
+      execute: async (request) => calls.push(request),
+    },
   });
 
   await controller.handlePreset("preset1", button);
