@@ -48,7 +48,8 @@ export class PtzInteractionController {
       return;
     }
 
-    const context = await this._host?._resolvePtzMotionContext?.();
+    const context =
+      await this._host?._ptzCapabilityController?.resolveContext?.();
     if (!context) return;
     try {
       await this._host?._executePtzCameraAction?.({
@@ -67,7 +68,8 @@ export class PtzInteractionController {
 
     this._setPresetButtonPending(button, true);
     try {
-      const context = await this._host?._resolvePtzMotionContext?.();
+      const context =
+        await this._host?._ptzCapabilityController?.resolveContext?.();
       if (!context) return;
       await this._host?._executePtzCameraAction?.({
         ...context,

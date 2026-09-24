@@ -1762,13 +1762,13 @@ export class CardViewPageController {
     }
     return canCameraUsePtz(
       this._host._activeCam,
-      this._host._activeCameraPtzInfo?.(),
+      this._host._ptzCapabilityController?.activeInfo?.(),
     );
   }
 
   async _discoverPtzSupport() {
     if (!this._host._activeCam?.ptz?.enabled) return;
-    await this._host._ensureActiveCameraPtzInfo?.();
+    await this._host._ptzCapabilityController?.ensureActiveInfo?.();
     if (this.isActive()) this.renderToolbar();
   }
 

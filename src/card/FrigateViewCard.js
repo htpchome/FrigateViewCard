@@ -86,7 +86,6 @@ import {
 } from "../integrations/frigate/url.js";
 import { resolveFrigateEventPrePostRollRange } from "../integrations/frigate/event-media.js";
 import { FrigateMediaDownloadController } from "../integrations/frigate/media-download.ctrl.js";
-import { fetchFrigatePtzInfo } from "../integrations/frigate/ptz-info.js";
 import {
   resolveCameraConnectionType,
   resolveGo2RtcEntity,
@@ -233,6 +232,7 @@ import {
   resolvePtzServicePlan,
 } from "../features/ptz/index.js";
 import {
+  createPtzCapabilityController,
   createPtzInteractionController,
   createPtzMotionController,
 } from "../features/ptz/composition.js";
@@ -347,6 +347,7 @@ export class FrigateViewCard extends HTMLElement {
       icons: ICONS,
     });
     this._linkedLightController = new LinkedLightController(this);
+    this._ptzCapabilityController = createPtzCapabilityController(this);
     this._ptzMotionController = createPtzMotionController(this);
     this._ptzInteractionController = createPtzInteractionController(this);
     Object.assign(this, createWideViewTimelineControllers(this));
@@ -6846,9 +6847,9 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _renderControlsSection(list) {
-    void this._ensureActiveCameraPtzInfo();
+    void this._ptzCapabilityController.ensureActiveInfo();
     this._renderListLabel();
-    const ptzInfo = this._activeCameraPtzInfo();
+    const ptzInfo = this._ptzCapabilityController.activeInfo();
     const ptzConfigured = hasCameraPtz(this._activeCam);
     const panTiltEnabled = ptzConfigured && hasPtzPanTiltCapability(ptzInfo);
     const zoomEnabled = ptzConfigured;
@@ -6870,59 +6871,6 @@ export class FrigateViewCard extends HTMLElement {
     syncControlsPadLabels(this._$("#controls-pad"), this._localization.t);
   }
 
-  _activeCameraPtzInfo() {
-    return this._cc().ptzInfo || null;
-  }
-
-  async _ensureActiveCameraPtzInfo() {
-    const entity = this._activeCam?.entity;
-    if (!entity || !this._isControlsButtonVisible()) return null;
-    return this._ensurePtzInfoForEntity(entity);
-  }
-
-  async _ensurePtzInfoForEntity(entity) {
-    const targetEntity = String(entity || "").trim();
-    if (!targetEntity) return null;
-    if (!this._camCache[targetEntity]) {
-      this._camCache[targetEntity] = mkCamState();
-    }
-    const cache = this._camCache[targetEntity];
-    if (cache.ptzInfoFetched) return cache.ptzInfo;
-    if (cache.ptzInfoPromise) return cache.ptzInfoPromise;
-
-    await this._discoverOne(targetEntity);
-    if (!cache.discovered || !cache.clientId || !cache.cam) {
-      cache.ptzInfoFetched = true;
-      return null;
-    }
-
-    cache.ptzInfoPromise = (async () => {
-      try {
-        cache.ptzInfo = await fetchFrigatePtzInfo({
-          request: (message) => this._ws(message),
-          instanceId: cache.clientId,
-          camera: cache.cam,
-        });
-      } catch (error) {
-        console.warn("[Frigate] PTZ info fetch failed", error);
-        cache.ptzInfo = null;
-      } finally {
-        cache.ptzInfoFetched = true;
-        cache.ptzInfoPromise = null;
-        this._camCache[targetEntity] = cache;
-        if (
-          this._tab === "controls" &&
-          this._activeCam?.entity === targetEntity
-        ) {
-          this._renderList();
-        }
-      }
-      return cache.ptzInfo;
-    })();
-
-    return cache.ptzInfoPromise;
-  }
-
   _handleCirclePadPtzEvent(event, eventType) {
     return this._ptzInteractionController.handleCirclePadEvent(event, eventType);
   }
@@ -6933,23 +6881,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _handlePtzPreset(presetName, button = null) {
     return this._ptzInteractionController.handlePreset(presetName, button);
-  }
-
-  async _resolvePtzMotionContext() {
-    const activeCamera = this._activeCam;
-    const entity = String(activeCamera?.entity || "").trim();
-    if (!entity) return null;
-    const camera = {
-      ...activeCamera,
-      ...(activeCamera?.ptz && typeof activeCamera.ptz === "object"
-        ? { ptz: { ...activeCamera.ptz } }
-        : {}),
-    };
-    const ptzInfo =
-      this._activeCameraPtzInfo() ||
-      (await this._ensureActiveCameraPtzInfo());
-    if (String(this._activeCam?.entity || "").trim() !== entity) return null;
-    return { camera, ptzInfo };
   }
 
   async _executePtzCameraAction({

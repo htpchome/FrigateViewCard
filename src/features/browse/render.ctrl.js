@@ -174,7 +174,8 @@ export class BrowseRenderController {
 
   controlsHeadingLabel() {
     const camera = this._host._activeCam || {};
-    const ptzInfo = this._host._activeCameraPtzInfo?.() || null;
+    const ptzInfo =
+      this._host._ptzCapabilityController?.activeInfo?.() || null;
     const ptzConfigured = hasCameraPtz(camera);
     const ptzReady =
       ptzConfigured &&

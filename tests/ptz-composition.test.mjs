@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  createPtzCapabilityController,
   createPtzInteractionController,
   createPtzMotionController,
 } from "../src/features/ptz/composition.js";
@@ -16,9 +17,11 @@ test("PTZ composition preserves motion delegates and error reporting", async () 
     ptzInfo: { features: ["pt"] },
   };
   const card = {
-    _resolvePtzMotionContext: () => {
-      calls.push(["resolve-context"]);
-      return context;
+    _ptzCapabilityController: {
+      resolveContext: () => {
+        calls.push(["resolve-context"]);
+        return context;
+      },
     },
     _executePtzCameraAction: (value) => {
       calls.push(["execute-action", value]);
@@ -53,6 +56,15 @@ test("PTZ composition preserves motion delegates and error reporting", async () 
   ]);
 });
 
+test("PTZ composition creates the feature-owned capability controller", () => {
+  const card = { _activeCam: null, _camCache: {} };
+  const controller = createPtzCapabilityController(card);
+
+  assert.equal(typeof controller.activeInfo, "function");
+  assert.equal(typeof controller.ensureActiveInfo, "function");
+  assert.equal(typeof controller.resolveContext, "function");
+});
+
 test("PTZ composition wires interaction behavior to card delegates", async () => {
   const calls = [];
   const card = {
@@ -62,7 +74,9 @@ test("PTZ composition wires interaction behavior to card delegates", async () =>
       start: async (action) => calls.push(["start", action]),
       stop: async (reason) => calls.push(["stop", reason]),
     },
-    _resolvePtzMotionContext: async () => ({ id: "context" }),
+    _ptzCapabilityController: {
+      resolveContext: async () => ({ id: "context" }),
+    },
     _executePtzCameraAction: async (value) =>
       calls.push(["execute", value]),
     _attachMainLiveVideoZoom: (engine) => calls.push(["attach", engine]),

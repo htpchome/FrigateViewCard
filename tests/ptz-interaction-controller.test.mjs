@@ -17,9 +17,11 @@ const createHarness = ({ camera = { entity: "camera.driveway", ptz: true } } = {
   const host = {
     _activeCam: camera,
     _ptzMotionController: motionController,
-    _resolvePtzMotionContext: async () => {
-      calls.push(["context"]);
-      return context;
+    _ptzCapabilityController: {
+      resolveContext: async () => {
+        calls.push(["context"]);
+        return context;
+      },
     },
     _executePtzCameraAction: async (request) =>
       calls.push(["execute", request]),

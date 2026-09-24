@@ -303,6 +303,10 @@ const ptzCompositionSource = fs.readFileSync(
   new URL("../src/features/ptz/composition.js", import.meta.url),
   "utf8",
 );
+const ptzCapabilityControllerSource = fs.readFileSync(
+  new URL("../src/features/ptz/capability.ctrl.js", import.meta.url),
+  "utf8",
+);
 const ptzInteractionControllerSource = fs.readFileSync(
   new URL("../src/features/ptz/interaction.ctrl.js", import.meta.url),
   "utf8",
@@ -2320,9 +2324,10 @@ test("Frigate download routing is owned by the Frigate integration", () => {
 test("Frigate PTZ information requests are integration-owned", () => {
   assert.equal(cardSource.includes('type: "frigate/ptz/info"'), false);
   assert.equal(editorSource.includes('type: "frigate/ptz/info"'), false);
+  assert.equal(cardSource.includes("fetchFrigatePtzInfo"), false);
   assert.equal(
-    cardSource.includes(
-      'import { fetchFrigatePtzInfo } from "../integrations/frigate/ptz-info.js";',
+    ptzCapabilityControllerSource.includes(
+      'import { fetchFrigatePtzInfo } from "../../integrations/frigate/ptz-info.js";',
     ),
     true,
   );
@@ -2399,6 +2404,41 @@ test("PTZ motion controller composition is feature-owned", () => {
     true,
   );
   assert.equal(ptzCompositionSource.includes("resolvePtzHoldPlan"), true);
+});
+
+test("PTZ capability loading and motion context are feature-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      "this._ptzCapabilityController = createPtzCapabilityController(this);",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("_activeCameraPtzInfo()"), false);
+  assert.equal(cardSource.includes("_ensureActiveCameraPtzInfo()"), false);
+  assert.equal(cardSource.includes("_ensurePtzInfoForEntity("), false);
+  assert.equal(cardSource.includes("_resolvePtzMotionContext()"), false);
+  assert.equal(
+    ptzCapabilityControllerSource.includes(
+      "export const createPtzCapabilityController",
+    ),
+    true,
+  );
+  assert.equal(
+    ptzCapabilityControllerSource.includes(
+      "const ensureInfo = async (entity)",
+    ),
+    true,
+  );
+  assert.equal(
+    ptzCapabilityControllerSource.includes(
+      "const resolveContext = async ()",
+    ),
+    true,
+  );
+  assert.equal(
+    ptzCompositionSource.includes("export { createPtzCapabilityController }"),
+    true,
+  );
 });
 
 test("PTZ interaction state and behavior are feature-owned", () => {
