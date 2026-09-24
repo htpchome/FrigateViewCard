@@ -135,6 +135,7 @@ import {
   findVideoDeep,
   requestMediaFullscreen,
 } from "../shared/media/fullscreen.js";
+import { waitForMediaStart } from "../shared/media/first-frame.js";
 import { CameraGroupLiveController } from "../features/camera-groups/live.ctrl.js";
 import { LinkedLightController } from "../features/linked-entities/light.ctrl.js";
 import {
@@ -1472,104 +1473,12 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _waitForStreamStart(streamEl, timeoutMs = 3500, opts = {}) {
-    const minCurrentTime = Number(opts.minCurrentTime ?? 0.05);
-    const minDecodedFrames = Number(opts.minDecodedFrames ?? 1);
-    const requireReadyState = Number(opts.requireReadyState ?? 0);
-    const strict = opts.strict === true;
-    const abortSignal = opts.abortSignal || null;
-    return new Promise((resolve) => {
-      let settled = false;
-      let frameCallbackBound = false;
-      let eventBound = false;
-      let boundVideo = null;
-      let frameCallbackVideo = null;
-      let frameCallbackId = null;
-      let finish = null;
-      let onAbort = null;
-      let tick = null;
-      let timeout = null;
-      const clearVideoBindings = () => {
-        if (boundVideo && finish) {
-          boundVideo.removeEventListener?.("loadeddata", finish);
-          boundVideo.removeEventListener?.("canplay", finish);
-          boundVideo.removeEventListener?.("playing", finish);
-          boundVideo.removeEventListener?.("timeupdate", finish);
-        }
-        if (
-          frameCallbackVideo &&
-          frameCallbackId != null &&
-          typeof frameCallbackVideo.cancelVideoFrameCallback === "function"
-        ) {
-          frameCallbackVideo.cancelVideoFrameCallback(frameCallbackId);
-        }
-        boundVideo = null;
-        frameCallbackVideo = null;
-        frameCallbackId = null;
-        finish = null;
-        frameCallbackBound = false;
-        eventBound = false;
-      };
-      const done = (ok, video = null) => {
-        if (settled) return;
-        settled = true;
-        if (tick != null) clearInterval(tick);
-        if (timeout != null) clearTimeout(timeout);
-        clearVideoBindings();
-        if (abortSignal && onAbort) {
-          try {
-            abortSignal.removeEventListener("abort", onAbort);
-          } catch (_) {}
-        }
-        if (ok && video && typeof opts.onVideoReady === "function") {
-          try {
-            opts.onVideoReady(video);
-          } catch (_) {}
-        }
-        resolve(ok);
-      };
-      if (abortSignal) {
-        onAbort = () => done(false);
-        if (abortSignal.aborted) {
-          done(false);
-          return;
-        }
-        abortSignal.addEventListener("abort", onAbort, { once: true });
-      }
-      tick = setInterval(() => {
-        const v =
-          typeof opts.resolveVideo === "function"
-            ? opts.resolveVideo(streamEl)
-            : this._findVideoDeep(streamEl);
-        if (!v) return;
-        if (boundVideo && boundVideo !== v) clearVideoBindings();
-        if (!frameCallbackBound && v.requestVideoFrameCallback) {
-          frameCallbackBound = true;
-          frameCallbackVideo = v;
-          frameCallbackId = v.requestVideoFrameCallback(() => done(true, v));
-        }
-        if (!eventBound) {
-          eventBound = true;
-          boundVideo = v;
-          finish = () => {
-            if (!strict) done(true, v);
-          };
-          v.addEventListener("loadeddata", finish, { once: true });
-          v.addEventListener("canplay", finish, { once: true });
-          v.addEventListener("playing", finish, { once: true });
-          v.addEventListener("timeupdate", finish, { once: true });
-        }
-        const decoded =
-          Number(v.webkitDecodedFrameCount) ||
-          Number(v.getVideoPlaybackQuality?.().totalVideoFrames) ||
-          0;
-        const ready = Number(v.readyState) || 0;
-        const timeOk = v.currentTime >= minCurrentTime;
-        const decodeOk = decoded >= minDecodedFrames;
-        if (ready >= requireReadyState && (timeOk || decodeOk)) {
-          done(true, v);
-        }
-      }, 180);
-      timeout = setTimeout(() => done(false), timeoutMs);
+    return waitForMediaStart(streamEl, timeoutMs, {
+      ...opts,
+      resolveVideo:
+        typeof opts.resolveVideo === "function"
+          ? opts.resolveVideo
+          : (root) => this._findVideoDeep(root),
     });
   }
 

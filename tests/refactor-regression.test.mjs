@@ -133,6 +133,10 @@ const sharedMediaFullscreenSource = fs.readFileSync(
   new URL("../src/shared/media/fullscreen.js", import.meta.url),
   "utf8",
 );
+const sharedMediaFirstFrameSource = fs.readFileSync(
+  new URL("../src/shared/media/first-frame.js", import.meta.url),
+  "utf8",
+);
 const frigateBootstrapSource = fs.readFileSync(
   new URL("../src/integrations/frigate/bootstrap.js", import.meta.url),
   "utf8",
@@ -867,6 +871,34 @@ test("generic fullscreen behavior is owned by shared media primitives", () => {
     "export function exitDocumentFullscreen",
   ]) {
     assert.equal(sharedMediaFullscreenSource.includes(ownedExport), true);
+  }
+});
+
+test("generic media readiness behavior is owned by shared media primitives", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { waitForMediaStart } from "../shared/media/first-frame.js";',
+    ),
+    true,
+  );
+  assert.match(
+    cardSource,
+    /_waitForStreamStart\(streamEl, timeoutMs = 3500, opts = \{\}\) \{\s*return waitForMediaStart\(streamEl, timeoutMs, \{/,
+  );
+  assert.equal(
+    sharedMediaFirstFrameSource.includes(
+      "export function waitForMediaStart",
+    ),
+    true,
+  );
+  for (const readinessMechanic of [
+    'addEventListener("timeupdate"',
+    "requestVideoFrameCallback",
+    "webkitDecodedFrameCount",
+    "getVideoPlaybackQuality",
+  ]) {
+    assert.equal(cardSource.includes(readinessMechanic), false);
+    assert.equal(sharedMediaFirstFrameSource.includes(readinessMechanic), true);
   }
 });
 
