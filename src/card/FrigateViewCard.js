@@ -230,9 +230,11 @@ import {
   buildTwoWayTalkButtonMarkup,
   buildTwoWayTalkControlRowMarkup,
   buildTwoWayTalkMicrophoneMuteButtonMarkup,
-  resolveMicrophoneButtonLabel,
-  resolveTwoWayTalkButtonLabel,
 } from "../features/two-way-talk/controls.tmpl.js";
+import {
+  getTwoWayTalkControlsController,
+  TwoWayTalkControlsController,
+} from "../features/two-way-talk/controls.ctrl.js";
 import {
   TwoWayTalkSoundwaveController,
 } from "../features/two-way-talk/soundwave.ctrl.js";
@@ -295,6 +297,8 @@ export class FrigateViewCard extends HTMLElement {
     this._localizedDateController = new LocalizedDateController(this);
     this._twoWayTalkSessionController =
       new TwoWayTalkSessionController(this);
+    this._twoWayTalkControlsController =
+      new TwoWayTalkControlsController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -3673,27 +3677,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _shouldRenderTwoWayTalkSoundwave() {
-    return (
-      (this._isCardViewPageActive?.() === true &&
-        this._cardViewPageController?.usesOverlayPresentation?.() === true) ||
-      (DEVICE_PROFILE.isDesktop === true &&
-        !this._isMobileTabletViewport())
-    );
+    return getTwoWayTalkControlsController(this).shouldRenderSoundwave();
   }
 
   _syncTwoWayTalkSoundwaveSurface() {
-    const active =
-      this._twoWayTalkActiveForCurrentCamera() &&
-      this._shouldRenderTwoWayTalkSoundwave();
-    this.shadowRoot
-      ?.querySelectorAll?.(".two-way-talk-control-row")
-      ?.forEach((row) => row.classList.toggle("has-soundwave", active));
-    this.shadowRoot
-      ?.querySelectorAll?.("[data-two-way-talk-soundwave]")
-      ?.forEach((surface) => {
-        surface.hidden = !active;
-      });
-    this._twoWayTalkSoundwaveController?.syncCanvas();
+    getTwoWayTalkControlsController(this).syncSoundwaveSurface();
   }
 
   _buildTwoWayTalkButtonMarkup() {
@@ -3745,100 +3733,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _syncTwoWayTalkActionSlot() {
-    const infoRow = this._pageShellRegion("information");
-    if (!infoRow) return;
-
-    const existingSlot = this._pageShellRegionElement(
-      "information",
-      `[data-fvc-region="two-way-talk"]`,
-    );
-    if (!existingSlot) return;
-
-    const actionMarkup = this._buildTwoWayTalkInfoButtonMarkup();
-    if (!actionMarkup) {
-      existingSlot.innerHTML = "";
-      existingSlot.hidden = true;
-      return;
-    }
-
-    existingSlot.hidden = false;
-    if (!existingSlot.querySelector("#two-way-talk-btn")) {
-      existingSlot.innerHTML = actionMarkup;
-    }
+    getTwoWayTalkControlsController(this).syncActionSlot();
   }
 
   _syncMobileViewTwoWayTalkSlot() {
-    if (!this._isMobileViewPageActive()) return;
-    const slot = this._pageShellRegion("twoWayTalk");
-    if (!slot) return;
-    slot.hidden = !this._shouldRenderTwoWayTalkButtonForActiveCamera();
+    getTwoWayTalkControlsController(this).syncMobileViewSlot();
   }
 
   _syncTwoWayTalkButton() {
-    this._syncTwoWayTalkActionSlot();
-    this._syncMobileViewTwoWayTalkSlot();
-    const button = this._pageShellRegionElement("twoWayTalk", "#two-way-talk-btn");
-    const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    const active = this._twoWayTalkActiveForCurrentCamera();
-    const connecting = this._twoWayTalkStarting === true && !active;
-    this._$("#card")?.classList?.toggle?.(
-      "two-way-talk-active",
-      active || connecting,
-    );
-    if (active) this._dismissLinkedLightDimmers();
-    const microphoneMuted = this._twoWayTalkMicrophoneMutedForCurrentCamera();
-    const { key, fallback } = resolveTwoWayTalkButtonLabel({
-      connecting,
-      active,
-      microphoneMuted,
-    });
-    const label = this._localization?.t?.(key) || fallback;
-    this.shadowRoot
-      ?.querySelectorAll?.(".two-way-talk-control-row")
-      ?.forEach((row) => row.classList.toggle("has-inline-mute", active));
-    if (button) {
-      button.hidden = !visible;
-      button.disabled = !visible;
-      button.classList.toggle("active", active);
-      button.classList.toggle("connecting", connecting);
-      button.classList.toggle("microphone-muted", microphoneMuted);
-      button.setAttribute("aria-pressed", active ? "true" : "false");
-      button.setAttribute("aria-busy", connecting ? "true" : "false");
-      button.setAttribute("data-fvc-i18n-title", key);
-      button.setAttribute("data-fvc-i18n-aria-label", key);
-      button.setAttribute("title", label);
-      button.setAttribute("aria-label", label);
-      button.innerHTML = active ? ICONS.micOn : ICONS.micOff;
-    }
-    this.shadowRoot
-      ?.querySelectorAll?.(".two-way-talk-microphone-mute-btn")
-      ?.forEach((microphoneMuteButton) => {
-        const microphoneState = resolveMicrophoneButtonLabel(microphoneMuted);
-        const microphoneLabel =
-          this._localization?.t?.(microphoneState.key) ||
-          microphoneState.fallback;
-        microphoneMuteButton.hidden = !active;
-        microphoneMuteButton.style.display = active ? "" : "none";
-        microphoneMuteButton.classList.toggle("active", !microphoneMuted);
-        microphoneMuteButton.classList.toggle(
-          "talk-audio-active",
-          !microphoneMuted,
-        );
-        microphoneMuteButton.setAttribute(
-          "aria-pressed",
-          microphoneMuted ? "false" : "true",
-        );
-        microphoneMuteButton.setAttribute("data-fvc-i18n-title", microphoneState.key);
-        microphoneMuteButton.setAttribute("data-fvc-i18n-aria-label", microphoneState.key);
-        microphoneMuteButton.setAttribute("title", microphoneLabel);
-        microphoneMuteButton.setAttribute("aria-label", microphoneLabel);
-        microphoneMuteButton.innerHTML = microphoneMuted
-          ? ICONS.micOff
-          : ICONS.micOn;
-      });
-    this._syncTwoWayTalkSoundwaveSurface?.();
-    this._renderMuteButton();
-    this._syncToolbarButtons?.();
+    getTwoWayTalkControlsController(this).syncButton();
   }
 
   async _toggleTwoWayTalkSession() {

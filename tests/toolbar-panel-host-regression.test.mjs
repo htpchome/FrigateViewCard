@@ -41,6 +41,13 @@ const twoWayTalkSessionControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const twoWayTalkControlsControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/two-way-talk/controls.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 test("tools markup owns filter and calendar panel hosts", () => {
   assert.equal(
@@ -66,17 +73,20 @@ test("camera switch checks the named calendar panel region", () => {
 });
 
 test("two-way talk updates its existing region without repairing layout", () => {
-  const start = cardSource.indexOf("_syncTwoWayTalkActionSlot() {");
-  const end = cardSource.indexOf(
-    "_syncMobileViewTwoWayTalkSlot()",
+  const start = twoWayTalkControlsControllerSource.indexOf("syncActionSlot() {");
+  const end = twoWayTalkControlsControllerSource.indexOf(
+    "syncMobileViewSlot()",
     start,
   );
-  const methodSource = cardSource.slice(start, end);
+  const methodSource = twoWayTalkControlsControllerSource.slice(start, end);
 
   assert.equal(methodSource.includes("if (!existingSlot) return;"), true);
   assert.equal(methodSource.includes("document.createElement"), false);
   assert.equal(methodSource.includes("existingSlot?.remove()"), false);
-  assert.equal(cardSource.includes("button.hidden = !visible;"), true);
+  assert.equal(
+    twoWayTalkControlsControllerSource.includes("button.hidden = !visible;"),
+    true,
+  );
 });
 
 test("two-way talk hidden button keeps the info row layout stable", () => {

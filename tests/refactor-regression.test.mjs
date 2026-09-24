@@ -194,6 +194,13 @@ const twoWayTalkControlsTemplateSource = fs.readFileSync(
   ),
   "utf8",
 );
+const twoWayTalkControlsControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/two-way-talk/controls.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const mseGraceControllerSource = fs.readFileSync(
   new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
   "utf8",
@@ -861,6 +868,44 @@ test("two-way-talk labels and markup are owned by its feature template", () => {
   assert.equal(
     twoWayTalkControlsTemplateSource.includes(
       "export function buildTwoWayTalkMicrophoneMuteButtonMarkup",
+    ),
+    true,
+  );
+});
+
+test("two-way-talk DOM synchronization is owned by its controls controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'from "../features/two-way-talk/controls.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("new TwoWayTalkControlsController(this)"),
+    true,
+  );
+  assert.equal(
+    /_syncTwoWayTalkButton\(\) \{\s*getTwoWayTalkControlsController\(this\)\.syncButton\(\);\s*\}/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("button.hidden = !visible;"), false);
+  assert.equal(
+    twoWayTalkControlsControllerSource.includes(
+      "export class TwoWayTalkControlsController",
+    ),
+    true,
+  );
+  assert.equal(
+    twoWayTalkControlsControllerSource.includes(
+      "button.hidden = !visible;",
+    ),
+    true,
+  );
+  assert.equal(
+    twoWayTalkControlsControllerSource.includes(
+      "host._syncTwoWayTalkSoundwaveSurface?.();",
     ),
     true,
   );
