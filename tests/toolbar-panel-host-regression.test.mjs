@@ -34,6 +34,10 @@ const popupCompositionSource = fs.readFileSync(
   new URL("../src/features/popup/composition.js", import.meta.url),
   "utf8",
 );
+const liveAudioControllerSource = fs.readFileSync(
+  new URL("../src/features/live/audio.ctrl.js", import.meta.url),
+  "utf8",
+);
 const twoWayTalkSessionControllerSource = fs.readFileSync(
   new URL(
     "../src/features/two-way-talk/session.ctrl.js",
@@ -271,7 +275,9 @@ test("live controls keep a shared overlay with a mobile inline mute exception", 
     true,
   );
   assert.equal(
-    cardSource.includes('button.classList.toggle("active", audioEnabled);'),
+    liveAudioControllerSource.includes(
+      'button.classList.toggle("active", audioEnabled);',
+    ),
     true,
   );
   assert.equal(

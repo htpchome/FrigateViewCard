@@ -209,6 +209,10 @@ const liveMountControllerSource = fs.readFileSync(
   new URL("../src/features/live/mount-controller.js", import.meta.url),
   "utf8",
 );
+const liveAudioControllerSource = fs.readFileSync(
+  new URL("../src/features/live/audio.ctrl.js", import.meta.url),
+  "utf8",
+);
 const gridCompositionSource = fs.readFileSync(
   new URL("../src/features/grid/composition.js", import.meta.url),
   "utf8",
@@ -778,6 +782,50 @@ test("live transport ownership is pulled out of the card shell", () => {
     /const beginLiveMountSession = \(entity\) => \{[\s\S]*?beginMountTracking\([\s\S]*?setTimeout\([\s\S]*?onMountWatchdogTimeout\(mountToken\)/.test(
       liveMountControllerSource,
     ),
+    true,
+  );
+});
+
+test("live audio behavior is owned by its feature controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import {\n  getLiveAudioController,\n  LiveAudioController,\n} from "../features/live/audio.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("this._liveAudioController = new LiveAudioController(this);"),
+    true,
+  );
+  for (const delegation of [
+    "getLiveAudioController(this).buildMobileInlineControlMarkup()",
+    "getLiveAudioController(this).resolveMuted()",
+    "getLiveAudioController(this).setMuted(muted)",
+    "getLiveAudioController(this).syncMuteButtons()",
+    "getLiveAudioController(this).applyMuteChange(nextMuted, { source })",
+    "getLiveAudioController(this).toggleMute()",
+  ]) {
+    assert.equal(cardSource.includes(delegation), true);
+  }
+  assert.equal(cardSource.includes("setIncomingAudioMuted"), false);
+  assert.equal(cardSource.includes("needsHaDirectRecovery"), false);
+  assert.equal(liveAudioControllerSource.includes("setIncomingAudioMuted"), true);
+  assert.equal(
+    liveAudioControllerSource.includes("const needsHaDirectRecovery ="),
+    true,
+  );
+  assert.equal(
+    liveAudioControllerSource.includes("host._useHaDirectStreamPath()"),
+    true,
+  );
+  assert.equal(
+    liveAudioControllerSource.includes(
+      "host._mountEngine(null, { quiet: true });",
+    ),
+    true,
+  );
+  assert.equal(
+    liveAudioControllerSource.includes("[120, 400, 900].forEach"),
     true,
   );
 });

@@ -159,8 +159,11 @@ import {
   buildLivePictureInPictureControlMarkup,
   buildRotateOverlayDismissButtonMarkup,
   buildLiveTakeSnapshotControlMarkup,
-  buildLiveMuteControlMarkup,
 } from "../features/live/view.tmpl.js";
+import {
+  getLiveAudioController,
+  LiveAudioController,
+} from "../features/live/audio.ctrl.js";
 import { LiveViewResizeController } from "../features/live/live-view-resize.ctrl.js";
 import { LiveAlertTakeoverController } from "../features/live/alert-takeover.ctrl.js";
 import { LiveFullscreenLifecycleController } from "../features/live/fullscreen-lifecycle.ctrl.js";
@@ -294,6 +297,7 @@ export class FrigateViewCard extends HTMLElement {
       new TwoWayTalkSessionController(this);
     this._twoWayTalkControlsController =
       new TwoWayTalkControlsController(this);
+    this._liveAudioController = new LiveAudioController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -3321,9 +3325,7 @@ export class FrigateViewCard extends HTMLElement {
         icons: ICONS,
         buttonClass: shellProfile?.liveTakeSnapshotButtonClass,
       }),
-      liveMute: buildLiveMuteControlMarkup({
-        icons: ICONS,
-        streamMuted: this._streamMuted,
+      liveMute: this._liveAudioController.buildControlMarkup({
         buttonClass: shellProfile?.liveMuteButtonClass,
       }),
       cardViewVideoBackIcon: ICONS.back,
@@ -3595,19 +3597,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _buildMobileViewInlineMuteButtonMarkup() {
-    if (normalizePageRoute(this._pageId) !== PAGE_IDS.mobileView) return "";
-    const muted = this._resolveLiveMuteControlMuted();
-    const talkAudioActive =
-      this._twoWayTalkActiveForCurrentCamera() && !muted;
-    return buildLiveMuteControlMarkup({
-      icons: ICONS,
-      streamMuted: muted,
-      buttonClass: "icon-btn",
-      buttonId: "mobile-view-mute-btn",
-      region: "",
-      extraClass: `mobile-view-inline-mute-btn${talkAudioActive ? " talk-audio-active" : ""}`,
-      pressed: !muted,
-    });
+    return getLiveAudioController(this).buildMobileInlineControlMarkup();
   }
 
   _buildTwoWayTalkControlRowMarkup({
@@ -3669,7 +3659,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _resolveLiveMuteControlMuted() {
-    return this._streamMuted;
+    return getLiveAudioController(this).resolveMuted();
   }
 
   _syncTwoWayTalkRuntimeState() {
@@ -5104,102 +5094,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _setLiveMuted(muted) {
-    this._streamMuted = !!muted;
-    this._twoWayTalkSession?.engine?.setIncomingAudioMuted?.(
-      this._streamMuted,
-    );
-    const eng = this._engine;
-    if (!eng) return;
-
-    const applyToVideo = (video) => {
-      if (!video) return false;
-      if (typeof video.muted === "boolean") video.muted = this._streamMuted;
-      if (typeof video.defaultMuted === "boolean")
-        video.defaultMuted = this._streamMuted;
-      if (!this._streamMuted) {
-        if (typeof video.volume === "number") video.volume = 1;
-        video.play?.().catch(() => {});
-      }
-      return true;
-    };
-
-    if (typeof eng.muted === "boolean") eng.muted = this._streamMuted;
-    if (typeof eng.defaultMuted === "boolean")
-      eng.defaultMuted = this._streamMuted;
-    if (eng.video && typeof eng.video.muted === "boolean")
-      eng.video.muted = this._streamMuted;
-    if (eng.video && typeof eng.video.defaultMuted === "boolean")
-      eng.video.defaultMuted = this._streamMuted;
-    if (!this._streamMuted && eng.video) {
-      if (typeof eng.video.volume === "number") eng.video.volume = 1;
-      eng.video.play?.().catch(() => {});
-    }
-
-    let v =
-      eng.tagName?.toLowerCase() === "video"
-        ? eng
-        : eng.querySelector?.("video") ||
-          eng.shadowRoot?.querySelector?.("video");
-    if (!v) v = this._findVideoDeep(eng);
-    applyToVideo(v);
-
-    // Legacy live players can attach or replace their nested video slightly
-    // after the host element is already running, so re-apply briefly.
-    [120, 400, 900].forEach((delay) => {
-      setTimeout(() => {
-        if (eng !== this._engine) return;
-        const liveVideo = this._findVideoDeep(eng);
-        applyToVideo(liveVideo);
-      }, delay);
-    });
+    getLiveAudioController(this).setMuted(muted);
   }
 
   _renderMuteButton() {
-    const buttons = [
-      this._$("#mute-btn"),
-      this._$("#mobile-view-mute-btn"),
-      this._$("#two-way-talk-mute-btn"),
-    ].filter(Boolean);
-    if (!buttons.length) return;
-    const talkActive = this._twoWayTalkActiveForCurrentCamera();
-    const muted = this._resolveLiveMuteControlMuted();
-    const labelKey = talkActive
-      ? muted
-        ? "runtime.live.unmuteIncoming"
-        : "runtime.live.muteIncoming"
-      : muted
-        ? "runtime.live.unmute"
-        : "runtime.live.mute";
-    const fallbackLabel = talkActive
-      ? muted
-        ? "Unmute incoming audio"
-        : "Mute incoming audio"
-      : muted
-        ? "Unmute live view"
-        : "Mute live view";
-    const label = this._localization?.t?.(labelKey) || fallbackLabel;
-    buttons.forEach((button) => {
-      const inlineTalkMute = button.id === "two-way-talk-mute-btn";
-      const hideMute =
-        this._viewMode === "grid" || (inlineTalkMute && !talkActive);
-      if (button.id === "mobile-view-mute-btn" || inlineTalkMute) {
-        const audioEnabled = !muted;
-        button.classList.toggle("active", audioEnabled);
-        button.classList.toggle(
-          "talk-audio-active",
-          talkActive && audioEnabled,
-        );
-        button.setAttribute("aria-pressed", audioEnabled ? "true" : "false");
-      }
-      button.hidden = hideMute;
-      button.style.display = hideMute ? "none" : "";
-      if (hideMute) return;
-      button.setAttribute("data-fvc-i18n-title", labelKey);
-      button.setAttribute("data-fvc-i18n-aria-label", labelKey);
-      button.title = label;
-      button.setAttribute("aria-label", label);
-      button.innerHTML = muted ? ICONS.volOff : ICONS.volOn;
-    });
+    getLiveAudioController(this).syncMuteButtons();
   }
 
   _timezoneDisplay() {
@@ -5219,30 +5118,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _applyLiveMuteChange(nextMuted, { source = "button" } = {}) {
-    this._setLiveMuted(nextMuted);
-    this._cameraGroupLiveController?.syncAudio?.();
-    this._renderMuteButton();
-
-    // HA direct live players can fail to start audio when the stream was
-    // originally mounted muted. Apply the same recovery whether unmute came
-    // from our button or native rotated-overlay controls.
-    const nativeOverlayUnmute =
-      source === "native-controls" && this._rotateOverlayActive;
-    const needsHaDirectRecovery =
-      this._useHaDirectStreamPath() &&
-      !this._twoWayTalkActiveForCurrentCamera() &&
-      !nextMuted &&
-      (!nativeOverlayUnmute || this._engineMountedMuted);
-    if (needsHaDirectRecovery) {
-      this._mountEngine(null, { quiet: true });
-      return;
-    }
-    if (!nextMuted) this._engineMountedMuted = false;
+    getLiveAudioController(this).applyMuteChange(nextMuted, { source });
   }
 
   _toggleMute() {
-    const nextMuted = !this._resolveLiveMuteControlMuted();
-    this._applyLiveMuteChange(nextMuted, { source: "button" });
+    getLiveAudioController(this).toggleMute();
   }
 
   _syncFullscreenButtonsVisibility() {
