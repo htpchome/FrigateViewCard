@@ -180,6 +180,13 @@ const liveLifecycleCompositionSource = fs.readFileSync(
   ),
   "utf8",
 );
+const twoWayTalkSessionControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/two-way-talk/session.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const mseGraceControllerSource = fs.readFileSync(
   new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
   "utf8",
@@ -756,6 +763,65 @@ test("live transport ownership is pulled out of the card shell", () => {
   assert.equal(
     /const beginLiveMountSession = \(entity\) => \{[\s\S]*?beginMountTracking\([\s\S]*?setTimeout\([\s\S]*?onMountWatchdogTimeout\(mountToken\)/.test(
       liveMountControllerSource,
+    ),
+    true,
+  );
+});
+
+test("two-way-talk session lifecycle is owned by its feature controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'from "../features/two-way-talk/session.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "new TwoWayTalkSessionController(this)",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("startGo2RtcTwoWayTalkSession"), false);
+  assert.equal(cardSource.includes("startHaDirectTwoWayTalkSession"), false);
+  assert.equal(
+    /_startTwoWayTalkSession\(\) \{\s*await getTwoWayTalkSessionController\(this\)\.startSession\(\);\s*\}/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_stopTwoWayTalkSession\(\{ restoreLive = true \} = \{\}\) \{\s*await getTwoWayTalkSessionController\(this\)\.stopSession\(\{ restoreLive \}\);\s*\}/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    twoWayTalkSessionControllerSource.includes(
+      "export class TwoWayTalkSessionController",
+    ),
+    true,
+  );
+  assert.equal(
+    twoWayTalkSessionControllerSource.includes(
+      "startGo2RtcTwoWayTalkSession",
+    ),
+    true,
+  );
+  assert.equal(
+    twoWayTalkSessionControllerSource.includes(
+      "startHaDirectTwoWayTalkSession",
+    ),
+    true,
+  );
+  assert.equal(
+    twoWayTalkSessionControllerSource.includes(
+      "host._go2rtcTwoWayTalkBackchannel.connect",
+    ),
+    true,
+  );
+  assert.equal(
+    twoWayTalkSessionControllerSource.includes(
+      "host._haDirectTwoWayTalkBackchannel.connect",
     ),
     true,
   );

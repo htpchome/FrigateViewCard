@@ -222,12 +222,11 @@ import {
 } from "../features/ptz/composition.js";
 import {
   releaseTwoWayTalkTouchFocus,
-  shouldRenderTwoWayTalkButton,
 } from "../features/two-way-talk/index.js";
 import {
-  startGo2RtcTwoWayTalkSession,
-  startHaDirectTwoWayTalkSession,
-} from "../features/two-way-talk/session.js";
+  getTwoWayTalkSessionController,
+  TwoWayTalkSessionController,
+} from "../features/two-way-talk/session.ctrl.js";
 import {
   buildTwoWayTalkSoundwaveMarkup,
   TwoWayTalkSoundwaveController,
@@ -310,6 +309,8 @@ export class FrigateViewCard extends HTMLElement {
     );
     this._localization = createLocalizationController();
     this._localizedDateController = new LocalizedDateController(this);
+    this._twoWayTalkSessionController =
+      new TwoWayTalkSessionController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -3591,19 +3592,9 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _shouldRenderTwoWayTalkButtonForActiveCamera() {
-    if (this._viewMode === "grid") return false;
-    if (
-      this._activeGroupMemberOverride &&
-      this._activeGroupMemberOverride !== this._activeCam?.entity
-    ) {
-      return false;
-    }
-    return shouldRenderTwoWayTalkButton({
-      camera: this._activeCam,
-      pageId: normalizePageRoute(this._pageId),
-      PAGE_IDS,
-      activeStreamType: this._activeStreamType,
-    });
+    return getTwoWayTalkSessionController(
+      this,
+    ).shouldRenderButtonForActiveCamera();
   }
 
   _buildTwoWayTalkInfoButtonMarkup() {
@@ -3745,25 +3736,17 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _activeCameraTwoWayTalkEnabled() {
-    return (
-      (!this._activeGroupMemberOverride ||
-        this._activeGroupMemberOverride === this._activeCam?.entity) &&
-      this._activeCam?.two_way_talk === true
-    );
+    return getTwoWayTalkSessionController(this).activeCameraEnabled();
   }
 
   _twoWayTalkActiveForCurrentCamera() {
-    return (
-      !!this._twoWayTalkSession &&
-      this._twoWayTalkEntity === String(this._activeCam?.entity || "").trim()
-    );
+    return getTwoWayTalkSessionController(this).activeForCurrentCamera();
   }
 
   _twoWayTalkMicrophoneMutedForCurrentCamera() {
-    return (
-      this._twoWayTalkActiveForCurrentCamera() &&
-      this._twoWayTalkSession?.microphoneMuted === true
-    );
+    return getTwoWayTalkSessionController(
+      this,
+    ).microphoneMutedForCurrentCamera();
   }
 
   _resolveLiveMuteControlMuted() {
@@ -3771,13 +3754,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _syncTwoWayTalkRuntimeState() {
-    if (!this._twoWayTalkSession && this._twoWayTalkStarting !== true) return;
-    if (
-      !this._shouldRenderTwoWayTalkButtonForActiveCamera() ||
-      !this._activeCameraTwoWayTalkEnabled()
-    ) {
-      void this._stopTwoWayTalkSession();
-    }
+    getTwoWayTalkSessionController(this).syncRuntimeState();
   }
 
   _syncTwoWayTalkActionSlot() {
@@ -3878,233 +3855,35 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _toggleTwoWayTalkSession() {
-    if (this._twoWayTalkStarting) {
-      this._cancelTwoWayTalkStart();
-      return;
-    }
-    if (this._twoWayTalkActiveForCurrentCamera()) {
-      await this._stopTwoWayTalkSession();
-      return;
-    }
-    await this._startTwoWayTalkSession();
+    await getTwoWayTalkSessionController(this).toggleSession();
   }
 
   _toggleTwoWayTalkMicrophoneMute() {
-    if (!this._twoWayTalkActiveForCurrentCamera()) return;
-    const nextMuted = !this._twoWayTalkMicrophoneMutedForCurrentCamera();
-    this._twoWayTalkSession?.setMicrophoneMuted?.(nextMuted);
-    this._syncTwoWayTalkButton();
+    getTwoWayTalkSessionController(this).toggleMicrophoneMute();
   }
 
   _setTwoWayTalkLiveAudioActive(active) {
-    this._applyLiveMuteChange(!active, { source: "two-way-talk" });
+    getTwoWayTalkSessionController(this).setLiveAudioActive(active);
   }
 
   _clearTwoWayTalkResultBubble() {
-    if (this._twoWayTalkResultTimer) {
-      clearTimeout(this._twoWayTalkResultTimer);
-      this._twoWayTalkResultTimer = null;
-    }
-    this._twoWayTalkResultBubble?.remove?.();
-    this._twoWayTalkResultBubble = null;
+    getTwoWayTalkSessionController(this).clearResultBubble();
   }
 
   _showTwoWayTalkResultBubble(success) {
-    const surface = this._$("#live-stage");
-    if (!surface) return;
-    this._clearTwoWayTalkResultBubble();
-    const bubble = document.createElement("div");
-    bubble.className = `two-way-talk-result-bubble ${
-      success ? "success" : "failure"
-    }`;
-    const key = success
-      ? "runtime.twoWayTalk.connected"
-      : "runtime.twoWayTalk.failed";
-    const fallback = success
-      ? "Two-way talk connected"
-      : "Two-way talk failed to connect";
-    setLocalizedText(bubble, key, this._localization?.t || (() => fallback));
-    surface.appendChild(bubble);
-    this._twoWayTalkResultBubble = bubble;
-    this._twoWayTalkResultTimer = setTimeout(() => {
-      if (this._twoWayTalkResultBubble === bubble) {
-        bubble.remove?.();
-        this._twoWayTalkResultBubble = null;
-      }
-      this._twoWayTalkResultTimer = null;
-    }, success ? 2200 : 3600);
+    getTwoWayTalkSessionController(this).showResultBubble(success);
   }
 
   _cancelTwoWayTalkStart({ syncButton = true } = {}) {
-    const abortController = this._twoWayTalkStartAbortController;
-    if (this._twoWayTalkStarting !== true && !abortController) return false;
-
-    this._twoWayTalkStartSeq = (Number(this._twoWayTalkStartSeq) || 0) + 1;
-    this._twoWayTalkStartAbortController = null;
-    this._twoWayTalkStarting = false;
-    try {
-      abortController?.abort?.();
-    } catch (_) {}
-    if (syncButton) this._syncTwoWayTalkButton();
-    return true;
+    return getTwoWayTalkSessionController(this).cancelStart({ syncButton });
   }
 
   async _startTwoWayTalkSession() {
-    if (!window.isSecureContext) {
-      this._showTwoWayTalkResultBubble(false);
-      return;
-    }
-    const entity = String(this._activeCam?.entity || "").trim();
-    if (!entity || !this._activeCameraTwoWayTalkEnabled()) return;
-    const useGo2Rtc = this._shouldUseGo2RtcForEntity(entity);
-    await this._stopTwoWayTalkSession({ restoreLive: false });
-    if (
-      String(this._activeCam?.entity || "").trim() !== entity ||
-      !this._activeCameraTwoWayTalkEnabled() ||
-      this._shouldUseGo2RtcForEntity(entity) !== useGo2Rtc
-    ) {
-      return;
-    }
-
-    const abortController = new AbortController();
-    const startSeq = (Number(this._twoWayTalkStartSeq) || 0) + 1;
-    const isCurrentStart = () => this._twoWayTalkStartSeq === startSeq;
-    let endedDuringStart = false;
-    this._twoWayTalkStartSeq = startSeq;
-    this._twoWayTalkStartAbortController = abortController;
-    this._twoWayTalkStarting = true;
-    this._syncTwoWayTalkButton();
-    try {
-      const handleEnded = () => {
-        endedDuringStart = true;
-        if (this._twoWayTalkEntity !== entity) return;
-        this._twoWayTalkSoundwaveController?.stop();
-        this._twoWayTalkSession = null;
-        this._twoWayTalkEntity = "";
-        this._setTwoWayTalkLiveAudioActive(false);
-        this._syncTwoWayTalkButton();
-      };
-      const mountMicrophoneStream = async ({
-        localStream,
-        onEnded,
-        abortSignal,
-      }) => {
-        const activeEntity = String(this._activeCam?.entity || "").trim();
-        if (
-          abortSignal?.aborted ||
-          activeEntity !== entity ||
-          this._shouldUseGo2RtcForEntity(entity) !== useGo2Rtc
-        ) {
-          return null;
-        }
-        if (useGo2Rtc) {
-          return await this._go2rtcTwoWayTalkBackchannel.connect({
-            entity,
-            microphoneStream: localStream,
-            onEnded,
-            abortSignal,
-          });
-        }
-        return await this._haDirectTwoWayTalkBackchannel.connect({
-          entity,
-          microphoneStream: localStream,
-          onEnded,
-          abortSignal,
-        });
-      };
-      const session = useGo2Rtc
-        ? await startGo2RtcTwoWayTalkSession({
-            mountMicrophoneStream,
-            onEnded: handleEnded,
-            abortSignal: abortController.signal,
-          })
-        : await startHaDirectTwoWayTalkSession({
-            mountMicrophoneStream,
-            onEnded: handleEnded,
-            abortSignal: abortController.signal,
-          });
-      if (abortController.signal.aborted || !isCurrentStart()) {
-        await session.stop?.();
-        return;
-      }
-      if (
-        endedDuringStart ||
-        String(this._activeCam?.entity || "").trim() !== entity
-      ) {
-        await session.stop?.();
-        throw new Error("Two-way talk context changed during startup");
-      }
-      this._twoWayTalkSession = session;
-      this._twoWayTalkEntity = entity;
-      this._setTwoWayTalkLiveAudioActive(true);
-      this._twoWayTalkSoundwaveController?.startAfterPaint(session);
-      this._showTwoWayTalkResultBubble(true);
-    } catch (error) {
-      if (
-        abortController.signal.aborted ||
-        !isCurrentStart() ||
-        error?.name === "AbortError"
-      ) {
-        return;
-      }
-      console.warn("[Frigate] Two-way talk start failed", error);
-      this._showTwoWayTalkResultBubble(false);
-      if (!useGo2Rtc) {
-        this._toast(
-          "Home Assistant WebRTC could not establish two-way talk. Verify that the camera stream has a working audio backchannel.",
-          { localizationKey: "runtime.twoWayTalk.haConnectionFailed" },
-        );
-      }
-      this._twoWayTalkSoundwaveController?.stop();
-      this._twoWayTalkSession = null;
-      this._twoWayTalkEntity = "";
-      this._setTwoWayTalkLiveAudioActive(false);
-    } finally {
-      if (isCurrentStart()) {
-        this._twoWayTalkStartAbortController = null;
-        this._twoWayTalkStarting = false;
-        this._syncTwoWayTalkButton();
-      }
-    }
+    await getTwoWayTalkSessionController(this).startSession();
   }
 
   async _stopTwoWayTalkSession({ restoreLive = true } = {}) {
-    this._cancelTwoWayTalkStart?.({ syncButton: false });
-    const session = this._twoWayTalkSession;
-    const sessionEntity = this._twoWayTalkEntity;
-    const restoreReplacedLive = session?.restoreLiveOnStop !== false;
-    this._twoWayTalkSoundwaveController?.stop();
-    this._twoWayTalkSession = null;
-    this._twoWayTalkEntity = "";
-    this._setTwoWayTalkLiveAudioActive(false);
-    this._syncTwoWayTalkSoundwaveSurface?.();
-    if (!session) {
-      this._syncTwoWayTalkButton();
-      return;
-    }
-    try {
-      await session.stop?.();
-    } catch (error) {
-      console.warn("[Frigate] Two-way talk stop failed", error);
-    }
-    if (
-      restoreLive &&
-      restoreReplacedLive &&
-      sessionEntity &&
-      String(this._activeCam?.entity || "").trim() === sessionEntity &&
-      this._viewMode !== "grid" &&
-      !this._isPreviewPageActive()
-    ) {
-      try {
-        await this._mountEngine();
-      } catch (error) {
-        console.warn(
-          "[Frigate] Unable to restore live view after two-way talk",
-          error,
-        );
-      }
-    }
-    this._syncTwoWayTalkButton();
+    await getTwoWayTalkSessionController(this).stopSession({ restoreLive });
   }
 
   _initLiveOverlayControls() {

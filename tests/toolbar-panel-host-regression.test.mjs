@@ -34,6 +34,13 @@ const popupCompositionSource = fs.readFileSync(
   new URL("../src/features/popup/composition.js", import.meta.url),
   "utf8",
 );
+const twoWayTalkSessionControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/two-way-talk/session.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 test("tools markup owns filter and calendar panel hosts", () => {
   assert.equal(
@@ -157,27 +164,27 @@ test("active toolbar buttons retain their contrasting icon while hovered", () =>
 
 test("two-way talk start and end paths synchronize the live audio state", () => {
   assert.match(
-    cardSource,
-    /this\._twoWayTalkSession = session;[\s\S]*?this\._setTwoWayTalkLiveAudioActive\(true\);/,
+    twoWayTalkSessionControllerSource,
+    /host\._twoWayTalkSession = session;[\s\S]*?host\._setTwoWayTalkLiveAudioActive\(true\);/,
   );
   assert.match(
-    cardSource,
-    /const handleEnded = \(\) => \{[\s\S]*?this\._setTwoWayTalkLiveAudioActive\(false\);/,
+    twoWayTalkSessionControllerSource,
+    /const handleEnded = \(\) => \{[\s\S]*?host\._setTwoWayTalkLiveAudioActive\(false\);/,
   );
   assert.match(
-    cardSource,
-    /async _stopTwoWayTalkSession\([^)]*\) \{[\s\S]*?this\._setTwoWayTalkLiveAudioActive\(false\);/,
+    twoWayTalkSessionControllerSource,
+    /async stopSession\([^)]*\) \{[\s\S]*?host\._setTwoWayTalkLiveAudioActive\(false\);/,
   );
 });
 
 test("two-way talk reports transient live-stage success and failure states", () => {
   assert.match(
-    cardSource,
-    /this\._twoWayTalkSoundwaveController\?\.startAfterPaint\(session\);[\s\S]*?this\._showTwoWayTalkResultBubble\(true\);/,
+    twoWayTalkSessionControllerSource,
+    /host\._twoWayTalkSoundwaveController\?\.startAfterPaint\(session\);[\s\S]*?host\._showTwoWayTalkResultBubble\(true\);/,
   );
   assert.match(
-    cardSource,
-    /catch \(error\) \{[\s\S]*?this\._showTwoWayTalkResultBubble\(false\);/,
+    twoWayTalkSessionControllerSource,
+    /catch \(error\) \{[\s\S]*?host\._showTwoWayTalkResultBubble\(false\);/,
   );
   assert.match(
     stylesSource,

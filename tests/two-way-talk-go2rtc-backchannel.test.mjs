@@ -237,22 +237,25 @@ test("aborting a pending go2rtc talk connection closes only its signaling peer",
   assert.equal(microphone.getStopCalls(), 0);
 });
 
-test("card routes both talk transports around the live engine mounter", async () => {
+test("session controller routes both talk transports around the live engine mounter", async () => {
   const source = await readFile(
-    new URL("../src/card/FrigateViewCard.js", import.meta.url),
+    new URL(
+      "../src/features/two-way-talk/session.ctrl.js",
+      import.meta.url,
+    ),
     "utf8",
   );
-  const start = source.indexOf("  async _startTwoWayTalkSession() {");
-  const stop = source.indexOf("  async _stopTwoWayTalkSession(", start);
+  const start = source.indexOf("  async startSession() {");
+  const stop = source.indexOf("  async stopSession(", start);
   const methodSource = source.slice(start, stop);
 
   assert.match(
     methodSource,
-    /if \(useGo2Rtc\) \{\s+return await this\._go2rtcTwoWayTalkBackchannel\.connect\(/,
+    /if \(useGo2Rtc\) \{\s+return await host\._go2rtcTwoWayTalkBackchannel\.connect\(/,
   );
   assert.match(
     methodSource,
-    /return await this\._haDirectTwoWayTalkBackchannel\.connect\(/,
+    /return await host\._haDirectTwoWayTalkBackchannel\.connect\(/,
   );
-  assert.doesNotMatch(methodSource, /this\._mountEngine/);
+  assert.doesNotMatch(methodSource, /host\._mountEngine/);
 });
