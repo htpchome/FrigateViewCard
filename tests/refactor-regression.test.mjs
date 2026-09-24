@@ -246,6 +246,10 @@ const liveRotateOverlayControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const liveRecoveryControllerSource = fs.readFileSync(
+  new URL("../src/features/live/recovery.ctrl.js", import.meta.url),
+  "utf8",
+);
 const gridCompositionSource = fs.readFileSync(
   new URL("../src/features/grid/composition.js", import.meta.url),
   "utf8",
@@ -982,6 +986,40 @@ test("rotate overlay presentation is owned by its live feature controller", () =
   assert.equal(cardSource.includes("resolveRotateOverlayUiPlan"), false);
   assert.equal(cardSource.includes("resolveRotateOverlayVideoStyles"), false);
   assert.equal(cardSource.includes("MOBILE_VIEW_ROTATE_COVER_CLASS"), false);
+});
+
+test("live recovery scheduling and stale-media decisions have a feature owner", () => {
+  assert.equal(
+    cardSource.includes('from "../features/live/recovery.ctrl.js";'),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("new LiveRecoveryController(this)"),
+    true,
+  );
+  for (const delegation of [
+    "getLiveRecoveryController(this).cancelScheduledResume()",
+    "getLiveRecoveryController(this).scheduleResume(reason)",
+    "getLiveRecoveryController(this).kickIfStale(",
+    "getLiveRecoveryController(this).resumeIfNeeded(reason)",
+  ]) {
+    assert.equal(cardSource.includes(delegation), true);
+  }
+  for (const ownedMechanic of [
+    "findActiveHaCameraStreamVideo(host._engine)",
+    "resolveLiveKickProbeState({ video })",
+    "resolveLiveKickIfStaleAction({",
+    "shouldForceLiveRemountForReason(reason, {",
+    "resolveLiveResumeAction({",
+    "shouldPreserveLiveRemountReasonWhileWaiting(reason)",
+    "isMseReturnRemountReason(reason)",
+  ]) {
+    assert.equal(liveRecoveryControllerSource.includes(ownedMechanic), true);
+  }
+  assert.equal(cardSource.includes("resolveLiveKickProbeState"), false);
+  assert.equal(cardSource.includes("resolveLiveKickIfStaleAction"), false);
+  assert.equal(cardSource.includes("resolveLiveResumeAction"), false);
+  assert.equal(cardSource.includes("findActiveHaCameraStreamVideo"), false);
 });
 
 test("generic fullscreen behavior is owned by shared media primitives", () => {

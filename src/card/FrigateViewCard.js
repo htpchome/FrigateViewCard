@@ -85,17 +85,10 @@ import {
   haReviewStatusSignature,
   reviewStatusEntityCandidates,
 } from "../integrations/frigate/review-status.js";
-import { findActiveHaCameraStreamVideo } from "../integrations/home-assistant/playback.js";
 import {
   invalidateMountTrackingIfActive,
-  isMseReturnRemountReason,
   resolveCameraSwitchCleanupOptions,
   resolveCameraSwitchTransportEntity,
-  resolveLiveKickIfStaleAction,
-  resolveLiveKickProbeState,
-  resolveLiveResumeAction,
-  shouldForceLiveRemountForReason,
-  shouldPreserveLiveRemountReasonWhileWaiting,
   shouldRetainMountedLiveForEditorTransition,
   shouldResetMseOnQuickReconnect,
 } from "../features/live/mount-lifecycle.js";
@@ -179,6 +172,10 @@ import {
   getLiveRotateOverlayController,
   LiveRotateOverlayController,
 } from "../features/live/rotate-overlay.ctrl.js";
+import {
+  getLiveRecoveryController,
+  LiveRecoveryController,
+} from "../features/live/recovery.ctrl.js";
 import { LiveViewResizeController } from "../features/live/live-view-resize.ctrl.js";
 import { LiveAlertTakeoverController } from "../features/live/alert-takeover.ctrl.js";
 import { LiveFullscreenLifecycleController } from "../features/live/fullscreen-lifecycle.ctrl.js";
@@ -307,6 +304,7 @@ export class FrigateViewCard extends HTMLElement {
     this._liveOverlayPresentationController =
       new LiveOverlayPresentationController(this);
     this._liveRotateOverlayController = new LiveRotateOverlayController(this);
+    this._liveRecoveryController = new LiveRecoveryController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -931,10 +929,7 @@ export class FrigateViewCard extends HTMLElement {
     this._haNavbarController?.disconnect?.();
     this._haDashboardSwipeNavigationController?.disconnect?.();
     this._haPageBackgroundController?.disconnect?.();
-    if (this._resumeLiveT) {
-      clearTimeout(this._resumeLiveT);
-      this._resumeLiveT = null;
-    }
+    getLiveRecoveryController(this).cancelScheduledResume();
     if (this._editorLayoutSyncRaf) {
       cancelAnimationFrame(this._editorLayoutSyncRaf);
       this._editorLayoutSyncRaf = 0;
@@ -983,7 +978,7 @@ export class FrigateViewCard extends HTMLElement {
     this._realtimeHeadPollT = null;
     if (this._warmOtherCamsDelayT) clearTimeout(this._warmOtherCamsDelayT);
     this._warmOtherCamsDelayT = null;
-    if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
+    getLiveRecoveryController(this).cancelScheduledResume();
     if (this._editorPreviewController) {
       try {
         this._editorPreviewController.dispose();
@@ -3749,41 +3744,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _scheduleResumeLive(reason = "") {
-    if (this._isPreviewPageActive()) {
-      this._renderPreviewPage();
-      return;
-    }
-    if (this._viewMode === "grid") {
-      this._scheduleGridRefresh(120);
-      return;
-    }
-    if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
-    const isEditorExitReason =
-      reason === "card-editor-close" ||
-      reason === "watchdog-dialog-close" ||
-      reason === "watchdog-edit-exit" ||
-      reason === "watchdog-dashboard-edit-on" ||
-      reason === "watchdog-dashboard-edit-off" ||
-      reason === "hass-edit-exit";
-    const delay =
-      reason === "card-editor-close" ||
-      reason === "watchdog-dialog-close" ||
-      reason === "watchdog-dashboard-edit-on" ||
-      reason === "watchdog-dashboard-edit-off"
-        ? 40
-        : 140;
-    this._resumeLiveT = setTimeout(() => {
-      this._resumeLiveT = null;
-      this._resumeLiveIfNeeded(reason);
-    }, delay);
-    if (isEditorExitReason && this._viewMode !== "grid") {
-      // Editor exit can race layout/visibility; a late kick recovers missed first mounts.
-      setTimeout(() => this._kickLiveIfStale(true), 900);
-    }
-    if (this._isFirefox() && this._viewMode !== "grid") {
-      // Firefox may need a second kick after layout settles on tab return.
-      setTimeout(() => this._kickLiveIfStale(true), 900);
-    }
+    return getLiveRecoveryController(this).scheduleResume(reason);
   }
   _isMobileTabletViewport() {
     return this._viewportContextController.isMobileTabletViewport();
@@ -3846,113 +3807,15 @@ export class FrigateViewCard extends HTMLElement {
     forceRemount = false,
     forcedType = null,
   ) {
-    if (this._editorLiveHandoffController?.isSuspended?.()) return;
-    const now = Date.now();
-    const engineHost = this._$("#engine");
-    const currentEngineTag = this._engine?.tagName?.toLowerCase?.() || "";
-    const isHaDirectEngine =
-      this._engine?.type === "ha_direct" ||
-      currentEngineTag === "ha-camera-stream" ||
-      currentEngineTag === "ha-hls-player" ||
-      currentEngineTag === "ha-web-rtc-player";
-    const v = isHaDirectEngine
-      ? this._engine?.video || findActiveHaCameraStreamVideo(this._engine)
-      : this._findVideoDeep(engineHost) ||
-        this._findVideoDeep(this._engine) ||
-        this._engine?.video ||
-        null;
-    const probeState = resolveLiveKickProbeState({ video: v });
-
-    const action = resolveLiveKickIfStaleAction({
-      started: this._started,
-      hass: this._hass,
-      config: this._config,
-      previewPageActive: this._isPreviewPageActive(),
-      viewMode: this._viewMode,
-      visible: this._isCardVisible(),
-      popupOpen: this._$("#myPopup")?.classList.contains("is-open"),
-      mountInProgress: this._mountInProgress,
+    return getLiveRecoveryController(this).kickIfStale(
       force,
       forceRemount,
-      streamLoadingVisible: !!(
-        this._$("#stream-loading") && !this._$("#stream-loading").hidden
-      ),
-      lastLiveKick: this._lastLiveKick,
-      nowMs: now,
-      isFirefox: this._isFirefox(),
-      mseConnectAt: this._mseConnectAt,
-      mseLastChunkAt: this._mseLastChunkAt,
-      hasVideo: probeState.hasVideo,
-      videoState: probeState.videoState,
-    });
-
-    if (action.shouldKick) {
-      this._lastLiveKick = action.nextLastLiveKick;
-      this._mountEngine(forcedType);
-    }
+      forcedType,
+    );
   }
 
   _resumeLiveIfNeeded(reason = "") {
-    if (this._editorLiveHandoffController?.isSuspended?.()) return;
-    const liveStreamHint = this._currentLiveStreamHint();
-    const forceRemount = shouldForceLiveRemountForReason(reason, {
-      activeStreamType: liveStreamHint,
-      useGo2Rtc: this._shouldUseGo2RtcForEntity(
-        this._activeGroupMemberOverride || this._activeCam?.entity || "",
-      ),
-    });
-    const action = resolveLiveResumeAction({
-      started: this._started,
-      hass: this._hass,
-      config: this._config,
-      previewPageActive: this._isPreviewPageActive(),
-      visible: this._isCardVisible(),
-      popupOpen: this._$("#myPopup")?.classList.contains("is-open"),
-      mountSeq: this._mountSeq,
-      mountInProgress: this._mountInProgress,
-      mountStartedAt: this._mountStartedAt,
-      mountTargetEntity: this._mountTargetEntity,
-      nowMs: Date.now(),
-    });
-
-    if (action.nextMountState) {
-      this._applyMountTrackingState(action.nextMountState);
-      this._cleanupEngine();
-    }
-
-    if (action.shouldRetry) {
-      // Layout transitions are async. Keep retrying until mount is possible.
-      if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
-      this._resumeLiveT = setTimeout(() => {
-        this._resumeLiveIfNeeded(
-          forceRemount &&
-            shouldPreserveLiveRemountReasonWhileWaiting(reason)
-            ? reason
-            : "wait-ready",
-        );
-      }, action.retryDelayMs);
-      return;
-    }
-
-    if (action.shouldRevealEngineWrap) {
-      const engWrap = this._$("#eng-wrap");
-      if (engWrap) engWrap.style.display = "";
-    }
-    if (action.shouldKickNow) {
-      this._kickLiveIfStale(
-        true,
-        forceRemount,
-        forceRemount &&
-          liveStreamHint === "mse" &&
-          isMseReturnRemountReason(reason)
-          ? "mse"
-          : null,
-      );
-    }
-    // Safety follow-up: some browsers finalize media attachment one frame later.
-    if (action.safetyKickDelayMs > 0) {
-      setTimeout(() => this._kickLiveIfStale(true), action.safetyKickDelayMs);
-    }
+    return getLiveRecoveryController(this).resumeIfNeeded(reason);
   }
   _setupResizeObserver() {
     if (this._ro) this._ro.disconnect();
