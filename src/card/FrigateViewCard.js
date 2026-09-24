@@ -45,18 +45,11 @@ import {
   hassEntityStateSignature,
 } from "../helpers.js";
 import {
-  allowsDashboardPageSwipeNavigation,
-  createNavigationFactory,
-  DEVICE_ROUTE_BUCKETS,
-  getEnabledPageRoutes,
-  isDashboardSwipeNavigationEnabled,
   normalizePageRoute,
   PAGE_IDS,
-  resolveAdjacentPageSwipeRoute,
   resolveDeviceRouteBucket,
-  resolveMobilePreviewDestination,
-  resolvePageSwipeOrder,
 } from "../features/navigation/router.js";
+import { createPageNavigationController } from "../features/navigation/composition.js";
 import { createHomeAssistantDashboardControllers } from "../integrations/home-assistant/dashboard-composition.js";
 import {
   PAGE_SHELL_REGIONS,
@@ -198,10 +191,6 @@ import {
   resolveToolbarModeButtonStates,
 } from "./toolbar.tmpl.js";
 import {
-  buildPageNavButtonsMarkup,
-  buildPageNavMarkup,
-} from "../features/navigation/page-nav.tmpl.js";
-import {
   buildBrowseHeaderRegionMarkup,
   buildBrowseRegionMarkup,
 } from "../features/browse/shell.tmpl.js";
@@ -274,7 +263,6 @@ import {
   SAFARI_FRAME_DOWNLOAD_REVOKE_DELAY_MS,
 } from "../shared/media/frame-capture.js";
 import { initializePreviewControllers } from "../features/preview/composition.js";
-import { PageNavigationController } from "../features/navigation/page-navigation.ctrl.js";
 import { DeepLinkController } from "../features/navigation/deep-link.ctrl.js";
 import { CardStyleContextController } from "../features/card-style/context.ctrl.js";
 import {
@@ -372,29 +360,7 @@ export class FrigateViewCard extends HTMLElement {
       buildCalendarPanelMarkup,
       buildFilterPanelMarkup,
     });
-    this._pageNavigationController = new PageNavigationController(
-      this,
-      {
-        buildPageNavButtonsMarkup,
-        buildPageNavMarkup,
-        allowsDashboardPageSwipeNavigation,
-        createNavigationFactory,
-        DEVICE_ROUTE_BUCKETS,
-        getEnabledPageRoutes,
-        isDashboardSwipeNavigationEnabled,
-        normalizePageRoute,
-        PAGE_IDS,
-        ICONS,
-        resolveAdjacentPageSwipeRoute,
-        resolveMobilePreviewDestination,
-        resolvePageSwipeOrder,
-      },
-      {
-        mapConfiguredLandingPage: (pageId) =>
-          this._editorPreviewController?.resolveLandingPage?.(pageId) ||
-          pageId,
-      },
-    );
+    this._pageNavigationController = createPageNavigationController(this);
     Object.assign(this, createHomeAssistantDashboardControllers(this));
     this._pageShellRegistry = createPageShellRegistry({
       defaultPageId: PAGE_IDS.singleView,

@@ -59,6 +59,10 @@ const previewCompositionSource = fs.readFileSync(
   new URL("../src/features/preview/composition.js", import.meta.url),
   "utf8",
 );
+const navigationCompositionSource = fs.readFileSync(
+  new URL("../src/features/navigation/composition.js", import.meta.url),
+  "utf8",
+);
 const wideViewPageTemplateSource = fs.readFileSync(
   new URL("../src/features/wide-view/page.tmpl.js", import.meta.url),
   "utf8",
@@ -2330,6 +2334,30 @@ test("navigation helpers live under the navigation feature owner", () => {
   );
   assert.equal(
     deepLinkControllerSource.includes("export class DeepLinkController"),
+    true,
+  );
+});
+
+test("Page Navigation controller composition is feature-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { createPageNavigationController } from "../features/navigation/composition.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "this._pageNavigationController = createPageNavigationController(this);",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("new PageNavigationController"), false);
+  assert.equal(
+    navigationCompositionSource.includes("new PageNavigationController"),
+    true,
+  );
+  assert.equal(
+    navigationCompositionSource.includes("mapConfiguredLandingPage"),
     true,
   );
 });
