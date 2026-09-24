@@ -14,8 +14,6 @@ import {
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   SLIDESHOW_ALERT_HOLD_MS,
   SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
-  SLIDESHOW_REVIEW_WATCH_MIN_MS,
-  SLIDESHOW_REVIEW_WATCH_MAX_MS,
   GRID_ALERT_HOLD_MS,
   CARD_VIEW_OVERLAY_TIMING,
   PREVIEW_ALERT_HOLD_MS,
@@ -299,8 +297,7 @@ import {
   createWideViewTimelineControllers,
 } from "../features/wide-view/composition.js";
 import { CardViewPageController } from "../features/card-view/page.ctrl.js";
-import { SlideshowAlertController } from "../features/slideshow/alert.ctrl.js";
-import { SlideshowPageController } from "../features/slideshow/page.ctrl.js";
+import { createSlideshowControllers } from "../features/slideshow/composition.js";
 import {
   slideshowReviewModeForCamera,
   shouldHandleSlideshowReview,
@@ -407,14 +404,7 @@ export class FrigateViewCard extends HTMLElement {
     });
     registerDefaultPageShellProfiles(this._pageShellRegistry, PAGE_IDS);
     this._deepLinkController = new DeepLinkController(this);
-    this._slideshowAlertController = new SlideshowAlertController(this, {
-      DAY,
-      SLIDESHOW_ALERT_HOLD_MS,
-      SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
-      SLIDESHOW_REVIEW_WATCH_MIN_MS,
-      SLIDESHOW_REVIEW_WATCH_MAX_MS,
-    });
-    this._slideshowPageController = new SlideshowPageController(this);
+    Object.assign(this, createSlideshowControllers(this));
     this._previewAlertController = new PreviewAlertController(this, {
       DAY,
       PREVIEW_ALERT_HOLD_MS,

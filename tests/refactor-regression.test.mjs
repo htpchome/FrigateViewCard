@@ -51,6 +51,10 @@ const mobileViewCompositionSource = fs.readFileSync(
   new URL("../src/features/mobile-view/composition.js", import.meta.url),
   "utf8",
 );
+const slideshowCompositionSource = fs.readFileSync(
+  new URL("../src/features/slideshow/composition.js", import.meta.url),
+  "utf8",
+);
 const wideViewPageTemplateSource = fs.readFileSync(
   new URL("../src/features/wide-view/page.tmpl.js", import.meta.url),
   "utf8",
@@ -1539,6 +1543,39 @@ test("Mobile View controller composition is feature-owned", () => {
     mobileViewCompositionSource.includes(
       '"[data-mobile-cam-picker]"',
     ),
+    true,
+  );
+});
+
+test("Slideshow controller composition is feature-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { createSlideshowControllers } from "../features/slideshow/composition.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "Object.assign(this, createSlideshowControllers(this));",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("new SlideshowAlertController"), false);
+  assert.equal(cardSource.includes("new SlideshowPageController"), false);
+  assert.equal(
+    slideshowCompositionSource.includes("new SlideshowAlertController"),
+    true,
+  );
+  assert.equal(
+    slideshowCompositionSource.includes("new SlideshowPageController"),
+    true,
+  );
+  assert.equal(
+    slideshowCompositionSource.includes("SLIDESHOW_REVIEW_WATCH_MIN_MS"),
+    true,
+  );
+  assert.equal(
+    slideshowCompositionSource.includes("SLIDESHOW_REVIEW_WATCH_MAX_MS"),
     true,
   );
 });
