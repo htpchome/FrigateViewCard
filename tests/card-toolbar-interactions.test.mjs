@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { BrowseFavoriteMutationController } from "../src/features/browse/favorite-mutation.ctrl.js";
+
 globalThis.window = globalThis.window || { customCards: [] };
 globalThis.window.customCards = globalThis.window.customCards || [];
 globalThis.document = globalThis.document || {
@@ -457,6 +459,8 @@ const createFavoriteContext = ({ callWS, retained = false }) => {
     _renderList() {},
     _toast: (...args) => notifications.push(args),
   };
+  context._browseFavoriteMutationController =
+    new BrowseFavoriteMutationController(context, { warn: () => {} });
   return { context, notifications };
 };
 
@@ -544,18 +548,11 @@ test("favorite failure rolls back and uses the browse error toast", async () => 
       throw new Error("retain failed");
     },
   });
-  const originalWarn = console.warn;
-  console.warn = () => {};
-
-  try {
-    const retained = await FrigateViewCard.prototype._toggleFav.call(
-      context,
-      "event-1",
-    );
-    assert.equal(retained, false);
-  } finally {
-    console.warn = originalWarn;
-  }
+  const retained = await FrigateViewCard.prototype._toggleFav.call(
+    context,
+    "event-1",
+  );
+  assert.equal(retained, false);
 
   assert.equal(context._events[0].retain_indefinitely, false);
   assert.deepEqual(notifications, [
@@ -573,21 +570,22 @@ test("favorite failure rolls back and uses the browse error toast", async () => 
 test("favorite removal failure keeps its localized error key", async () => {
   const { context, notifications } = createFavoriteContext({
     retained: true,
-    callWS: async () => { throw new Error("retain failed"); },
-  });
-  const originalWarn = console.warn;
-  console.warn = () => {};
-  try {
-    assert.equal(await FrigateViewCard.prototype._toggleFav.call(context, "event-1"), true);
-  } finally {
-    console.warn = originalWarn;
-  }
-  assert.deepEqual(notifications, [[
-    "Could not remove from Favorites",
-    {
-      tone: "error",
-      placement: "browse",
-      localizationKey: "runtime.notifications.favoritesRemoveFailed",
+    callWS: async () => {
+      throw new Error("retain failed");
     },
-  ]]);
+  });
+  assert.equal(
+    await FrigateViewCard.prototype._toggleFav.call(context, "event-1"),
+    true,
+  );
+  assert.deepEqual(notifications, [
+    [
+      "Could not remove from Favorites",
+      {
+        tone: "error",
+        placement: "browse",
+        localizationKey: "runtime.notifications.favoritesRemoveFailed",
+      },
+    ],
+  ]);
 });

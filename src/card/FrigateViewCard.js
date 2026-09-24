@@ -202,10 +202,6 @@ import {
   renderBrowseEventListItem,
   renderBrowseReviewListItem,
 } from "../features/browse/composition.js";
-import {
-  buildFavoriteOptimisticMutation,
-  buildFavoriteRollbackMutation,
-} from "../shared/favorite-mutation.js";
 import { createDateFormatterCache } from "../shared/date-formatter-cache.js";
 import { ListScrollController } from "../features/browse/scroll.ctrl.js";
 import {
@@ -6324,97 +6320,7 @@ export class FrigateViewCard extends HTMLElement {
   }
   // ── favorites (realtime) ──────────────────────────────────
   _toggleFav(id, options = {}) {
-    const ev = this._findEventById(id);
-    if (!ev) return false;
-    const toastPlacement = options.toastPlacement || "browse";
-    const activeEntity = this._activeCam?.entity || "";
-    const eventContext = this._frigateContextForCameraName(ev?.camera);
-    const eventEntity =
-      flattenCameraMembers(this._config?.cameras).find(
-        (camera) => this._camCache?.[camera.entity] === eventContext,
-      )?.entity || activeEntity;
-    const kept = this._camCache?.[eventEntity]?.kept || this._kept;
-    const optimistic = buildFavoriteOptimisticMutation({
-      id,
-      event: ev,
-      events: this._events,
-      camCache: this._camCache,
-      kept,
-      activeEntity: eventEntity,
-    });
-
-    this._events = optimistic.events;
-    this._camCache = optimistic.camCache;
-    if (this._config?.favorites_mixed_cameras !== false) {
-      this._kept = this._allGridKeptEvents().sort(
-        (left, right) =>
-          Number(right?.start_time || 0) - Number(left?.start_time || 0),
-      );
-    } else if (eventEntity === activeEntity) {
-      this._kept = optimistic.kept;
-    }
-    this._renderList();
-    const { clientId } = eventContext || this._cc();
-    return this._hass
-      .callWS({
-        type: "frigate/event/retain",
-        instance_id: clientId,
-        event_id: id,
-        retain: optimistic.nextRetained,
-      })
-      .then(
-        () => {
-          this._toast(
-            optimistic.nextRetained
-              ? "Added to Favorites"
-              : "Removed from Favorites",
-            {
-              tone: optimistic.nextRetained ? "success" : "warning",
-              placement: toastPlacement,
-              localizationKey: optimistic.nextRetained
-                ? "runtime.notifications.favoritesAdded"
-                : "runtime.notifications.favoritesRemoved",
-            },
-          );
-          return optimistic.nextRetained;
-        },
-        (err) => {
-          const rollback = buildFavoriteRollbackMutation({
-            id,
-            event: ev,
-            previousRetained: optimistic.previousRetained,
-            events: this._events,
-            camCache: this._camCache,
-            kept,
-            activeEntity: eventEntity,
-          });
-          this._events = rollback.events;
-          this._camCache = rollback.camCache;
-          if (this._config?.favorites_mixed_cameras !== false) {
-            this._kept = this._allGridKeptEvents().sort(
-              (left, right) =>
-                Number(right?.start_time || 0) - Number(left?.start_time || 0),
-            );
-          } else if (eventEntity === activeEntity) {
-            this._kept = rollback.kept;
-          }
-          this._renderList();
-          console.warn("[Frigate] retain failed", err);
-          this._toast(
-            optimistic.nextRetained
-              ? "Could not add to Favorites"
-              : "Could not remove from Favorites",
-            {
-              tone: "error",
-              placement: toastPlacement,
-              localizationKey: optimistic.nextRetained
-                ? "runtime.notifications.favoritesAddFailed"
-                : "runtime.notifications.favoritesRemoveFailed",
-            },
-          );
-          return optimistic.previousRetained;
-        },
-      );
+    return this._browseFavoriteMutationController.toggle(id, options);
   }
   // ── browse / filter ───────────────────────────────────────
   _applyBrowse() {

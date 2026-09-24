@@ -19,6 +19,7 @@ test("browse composition preserves controller order and markup dependencies", ()
     calendarActivity: { type: "calendar-activity" },
     calendarPanel: { type: "calendar-panel" },
     collection: { type: "collection" },
+    favoriteMutation: { type: "favorite-mutation" },
     filter: { type: "filter" },
     tabData: { type: "tab-data" },
     windowLoader: { type: "window-loader" },
@@ -43,6 +44,10 @@ test("browse composition preserves controller order and markup dependencies", ()
       options.filter = value;
       return controllers.filter;
     },
+    createFavoriteMutationController: (host) => {
+      calls.push(["favorite-mutation", host]);
+      return controllers.favoriteMutation;
+    },
     createTabDataController: (host) => {
       calls.push(["tab-data", host]);
       return controllers.tabData;
@@ -60,6 +65,7 @@ test("browse composition preserves controller order and markup dependencies", ()
     _browseCalendarPanelController: controllers.calendarPanel,
     _browseCollectionController: controllers.collection,
     _browseFilterController: controllers.filter,
+    _browseFavoriteMutationController: controllers.favoriteMutation,
     _browseTabDataController: controllers.tabData,
     _browseWindowLoaderController: controllers.windowLoader,
   });
@@ -68,6 +74,7 @@ test("browse composition preserves controller order and markup dependencies", ()
     ["calendar-panel", card],
     ["collection", card],
     ["filter", card],
+    ["favorite-mutation", card],
     ["tab-data", card],
     ["window-loader", card],
   ]);

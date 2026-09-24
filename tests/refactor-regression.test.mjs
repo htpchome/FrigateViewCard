@@ -220,6 +220,13 @@ const browseItemPresentationControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const browseFavoriteMutationControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/browse/favorite-mutation.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const browseCalendarActivityControllerSource = fs.readFileSync(
   new URL("../src/features/browse/calendar-activity.ctrl.js", import.meta.url),
   "utf8",
@@ -1117,6 +1124,7 @@ test("browse controller composition is browse-owned", () => {
     "BrowseCalendarActivityController",
     "BrowseCalendarPanelController",
     "BrowseCollectionController",
+    "BrowseFavoriteMutationController",
     "BrowseFilterController",
     "BrowseTabDataController",
     "BrowseWindowLoaderController",
@@ -1124,6 +1132,41 @@ test("browse controller composition is browse-owned", () => {
     assert.equal(cardSource.includes(`new ${controllerName}`), false);
     assert.equal(browseCompositionSource.includes(`new ${controllerName}`), true);
   }
+});
+
+test("favorite mutation state and persistence are browse-owned", () => {
+  assert.equal(cardSource.includes("buildFavoriteOptimisticMutation"), false);
+  assert.equal(cardSource.includes("buildFavoriteRollbackMutation"), false);
+  assert.equal(
+    /_toggleFav\(id, options = \{\}\) \{\s*return this\._browseFavoriteMutationController\.toggle\(id, options\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    browseFavoriteMutationControllerSource.includes(
+      "export class BrowseFavoriteMutationController",
+    ),
+    true,
+  );
+  assert.equal(
+    browseFavoriteMutationControllerSource.includes(
+      "export const buildFavoriteOptimisticMutation",
+    ),
+    true,
+  );
+  assert.equal(
+    browseCompositionSource.includes(
+      "new BrowseFavoriteMutationController(card)",
+    ),
+    true,
+  );
+  assert.equal(
+    fs.existsSync(
+      new URL("../src/shared/favorite-mutation.js", import.meta.url),
+    ),
+    false,
+  );
 });
 
 test("browse event and review item presentation is browse-owned", () => {

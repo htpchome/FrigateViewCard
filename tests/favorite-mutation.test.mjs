@@ -2,9 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  BrowseFavoriteMutationController,
   buildFavoriteOptimisticMutation,
   buildFavoriteRollbackMutation,
-} from "../src/shared/favorite-mutation.js";
+} from "../src/features/browse/favorite-mutation.ctrl.js";
 
 test("buildFavoriteOptimisticMutation retains matching events and prepends kept entry", () => {
   const target = { id: "event-1", retain_indefinitely: false, label: "front" };
@@ -116,4 +117,113 @@ test("buildFavoriteRollbackMutation restores kept entry when unretain fails", ()
   assert.deepEqual(rollback.kept, [
     { id: "event-1", retain_indefinitely: true, label: "front" },
   ]);
+});
+
+const createControllerHarness = ({ reject = false } = {}) => {
+  const calls = [];
+  const event = {
+    id: "event-1",
+    camera: "front",
+    start_time: 100,
+    retain_indefinitely: false,
+  };
+  const context = { cam: "front", clientId: "frigate-client" };
+  const host = {
+    _activeCam: { entity: "camera.front" },
+    _allGridKeptEvents: () => host._camCache["camera.front"].kept,
+    _camCache: {
+      "camera.front": {
+        ...context,
+        events: [event],
+        kept: [],
+      },
+    },
+    _cc: () => context,
+    _config: {
+      cameras: [{ entity: "camera.front" }],
+      favorites_mixed_cameras: true,
+    },
+    _events: [event],
+    _findEventById: (id) => (id === event.id ? event : null),
+    _frigateContextForCameraName: () => context,
+    _hass: {
+      callWS: async (message) => {
+        calls.push(["call-ws", message]);
+        if (reject) throw new Error("retain failed");
+        return true;
+      },
+    },
+    _kept: [],
+    _renderList: () => calls.push(["render-list"]),
+    _toast: (...args) => calls.push(["toast", ...args]),
+  };
+  const controller = new BrowseFavoriteMutationController(host, {
+    warn: (...args) => calls.push(["warn", ...args]),
+  });
+  return { calls, controller, event, host };
+};
+
+test("Browse favorite mutation controller applies and confirms optimistic retention", async () => {
+  const { calls, controller, host } = createControllerHarness();
+
+  assert.equal(
+    await controller.toggle("event-1", { toastPlacement: "popup" }),
+    true,
+  );
+  assert.equal(host._events[0].retain_indefinitely, true);
+  assert.equal(host._kept[0].id, "event-1");
+  assert.deepEqual(calls, [
+    ["render-list"],
+    [
+      "call-ws",
+      {
+        type: "frigate/event/retain",
+        instance_id: "frigate-client",
+        event_id: "event-1",
+        retain: true,
+      },
+    ],
+    [
+      "toast",
+      "Added to Favorites",
+      {
+        tone: "success",
+        placement: "popup",
+        localizationKey: "runtime.notifications.favoritesAdded",
+      },
+    ],
+  ]);
+});
+
+test("Browse favorite mutation controller rolls back a failed retention", async () => {
+  const { calls, controller, event, host } = createControllerHarness({
+    reject: true,
+  });
+
+  assert.equal(await controller.toggle("event-1"), false);
+  assert.equal(host._events[0].retain_indefinitely, false);
+  assert.deepEqual(host._kept, []);
+  assert.equal(calls.filter(([type]) => type === "render-list").length, 2);
+  assert.deepEqual(calls.at(-2), [
+    "warn",
+    "[Frigate] retain failed",
+    calls.at(-2)[2],
+  ]);
+  assert.equal(calls.at(-2)[2].message, "retain failed");
+  assert.deepEqual(calls.at(-1), [
+    "toast",
+    "Could not add to Favorites",
+    {
+      tone: "error",
+      placement: "browse",
+      localizationKey: "runtime.notifications.favoritesAddFailed",
+    },
+  ]);
+  assert.equal(event.retain_indefinitely, false);
+});
+
+test("Browse favorite mutation controller ignores unknown events", () => {
+  const { calls, controller } = createControllerHarness();
+  assert.equal(controller.toggle("missing"), false);
+  assert.deepEqual(calls, []);
 });
