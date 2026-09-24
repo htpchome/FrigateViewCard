@@ -219,7 +219,7 @@ import {
   buildCalendarPanelMarkup,
   buildFilterPanelMarkup,
 } from "../features/browse/calendar-filter.tmpl.js";
-import { BrowseCalendarPanelController } from "../features/browse/calendar-panel.ctrl.js";
+import { createBrowseControllers } from "../features/browse/composition.js";
 import {
   buildFavoriteOptimisticMutation,
   buildFavoriteRollbackMutation,
@@ -230,11 +230,6 @@ import {
   MediaOverlayControlsController as LiveOverlayControlsController,
 } from "../shared/media/overlay-controls.ctrl.js";
 import { createPopupControllers } from "../features/popup/composition.js";
-import { BrowseCollectionController } from "../features/browse/collection.ctrl.js";
-import { BrowseCalendarActivityController } from "../features/browse/calendar-activity.ctrl.js";
-import { BrowseFilterController } from "../features/browse/filter-state.js";
-import { BrowseTabDataController } from "../features/browse/tab-data.ctrl.js";
-import { BrowseWindowLoaderController } from "../features/browse/window-loader.ctrl.js";
 import {
   buildRecordingsListMarkup,
   disposeRecordingsDayCache,
@@ -458,20 +453,7 @@ export class FrigateViewCard extends HTMLElement {
       PAGE_IDS,
       DEVICE_PROFILE,
     });
-    this._browseCalendarActivityController =
-      new BrowseCalendarActivityController(this);
-    this._browseCalendarPanelController = new BrowseCalendarPanelController(
-      this,
-      {
-        buildCalendarPanelMarkup,
-      },
-    );
-    this._browseCollectionController = new BrowseCollectionController(this);
-    this._browseFilterController = new BrowseFilterController(this, {
-      buildFilterPanelMarkup,
-    });
-    this._browseTabDataController = new BrowseTabDataController(this);
-    this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
+    Object.assign(this, createBrowseControllers(this));
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
     this._frigateMediaDownloadController = new FrigateMediaDownloadController({

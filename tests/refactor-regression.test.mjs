@@ -174,6 +174,10 @@ const viewportContextControllerSource = fs.readFileSync(
   new URL("../src/features/viewport/context.ctrl.js", import.meta.url),
   "utf8",
 );
+const browseCompositionSource = fs.readFileSync(
+  new URL("../src/features/browse/composition.js", import.meta.url),
+  "utf8",
+);
 const browseCalendarActivityControllerSource = fs.readFileSync(
   new URL("../src/features/browse/calendar-activity.ctrl.js", import.meta.url),
   "utf8",
@@ -1027,19 +1031,33 @@ test("viewport helpers delegate through the viewport context controller", () => 
   );
 });
 
-test("browse calendar activity helpers delegate through the browse calendar activity controller", () => {
+test("browse controller composition is browse-owned", () => {
   assert.equal(
     cardSource.includes(
-      'import { BrowseCalendarActivityController } from "../features/browse/calendar-activity.ctrl.js";',
+      'import { createBrowseControllers } from "../features/browse/composition.js";',
     ),
     true,
   );
   assert.equal(
-    /this\._browseCalendarActivityController\s*=\s*new BrowseCalendarActivityController\(this\);/.test(
-      cardSource,
+    cardSource.includes(
+      "Object.assign(this, createBrowseControllers(this));",
     ),
     true,
   );
+  for (const controllerName of [
+    "BrowseCalendarActivityController",
+    "BrowseCalendarPanelController",
+    "BrowseCollectionController",
+    "BrowseFilterController",
+    "BrowseTabDataController",
+    "BrowseWindowLoaderController",
+  ]) {
+    assert.equal(cardSource.includes(`new ${controllerName}`), false);
+    assert.equal(browseCompositionSource.includes(`new ${controllerName}`), true);
+  }
+});
+
+test("browse calendar activity helpers delegate through the browse calendar activity controller", () => {
   assert.equal(
     /async _loadCalendar\(\) \{\s*await this\._browseCalendarActivityController\.loadCalendar\(\);\s*\}/s.test(
       cardSource,
@@ -1079,18 +1097,6 @@ test("browse calendar activity helpers delegate through the browse calendar acti
 });
 
 test("browse calendar panel helpers delegate through the browse calendar panel controller", () => {
-  assert.equal(
-    cardSource.includes(
-      'import { BrowseCalendarPanelController } from "../features/browse/calendar-panel.ctrl.js";',
-    ),
-    true,
-  );
-  assert.equal(
-    /this\._browseCalendarPanelController\s*=\s*new BrowseCalendarPanelController\(\s*this,\s*\{/.test(
-      cardSource,
-    ),
-    true,
-  );
   assert.equal(
     /_handleSidebarCalendarClick\(target\) \{\s*return this\._browseCalendarPanelController\.handleSidebarCalendarClick\(/s.test(
       cardSource,
@@ -1189,18 +1195,6 @@ test("browse calendar panel helpers delegate through the browse calendar panel c
 
 test("browse collection helpers delegate through the browse collection controller", () => {
   assert.equal(
-    cardSource.includes(
-      'import { BrowseCollectionController } from "../features/browse/collection.ctrl.js";',
-    ),
-    true,
-  );
-  assert.equal(
-    /this\._browseCollectionController\s*=\s*new BrowseCollectionController\(this\);/.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
     /_allGridReviews\(\) \{\s*return this\._browseCollectionController\.allGridReviews\(\);\s*\}/s.test(
       cardSource,
     ),
@@ -1255,18 +1249,6 @@ test("browse collection helpers delegate through the browse collection controlle
 });
 
 test("browse filter helpers delegate through the browse filter controller", () => {
-  assert.equal(
-    cardSource.includes(
-      'import { BrowseFilterController } from "../features/browse/filter-state.js";',
-    ),
-    true,
-  );
-  assert.equal(
-    /this\._browseFilterController\s*=\s*new BrowseFilterController\(\s*this,\s*\{/.test(
-      cardSource,
-    ),
-    true,
-  );
   assert.equal(cardSource.includes("../shared/filter-state.js"), false);
   assert.equal(
     /_handleSidebarFilterClick\(target\) \{\s*return this\._browseFilterController\.handleSidebarFilterClick\(target\);\s*\}/s.test(
@@ -1315,18 +1297,6 @@ test("browse filter helpers delegate through the browse filter controller", () =
 
 test("browse tab data helpers delegate through the browse tab-data controller", () => {
   assert.equal(
-    cardSource.includes(
-      'import { BrowseTabDataController } from "../features/browse/tab-data.ctrl.js";',
-    ),
-    true,
-  );
-  assert.equal(
-    /this\._browseTabDataController\s*=\s*new BrowseTabDataController\(this\);/.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
     /async _loadKept\(\) \{\s*await this\._browseTabDataController\.loadKept\(\);\s*\}/s.test(
       cardSource,
     ),
@@ -1361,18 +1331,6 @@ test("browse tab data helpers delegate through the browse tab-data controller", 
 });
 
 test("browse window loading delegates through the browse window loader controller", () => {
-  assert.equal(
-    cardSource.includes(
-      'import { BrowseWindowLoaderController } from "../features/browse/window-loader.ctrl.js";',
-    ),
-    true,
-  );
-  assert.equal(
-    /this\._browseWindowLoaderController\s*=\s*new BrowseWindowLoaderController\(this\);/.test(
-      cardSource,
-    ),
-    true,
-  );
   assert.equal(cardSource.includes("import { fetchWindowedItems }"), false);
   assert.equal(cardSource.includes("return fetchWindowedItems({"), false);
   assert.equal(cardSource.includes("async _fetchWindowedEvents("), false);
