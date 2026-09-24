@@ -155,6 +155,7 @@ import {
   getLiveMediaPresentationController,
   LiveMediaPresentationController,
 } from "../features/live/media-presentation.ctrl.js";
+import { LiveMediaToolbarController } from "../features/live/media-toolbar.ctrl.js";
 import {
   getLiveOverlayPresentationController,
   LiveOverlayPresentationController,
@@ -300,6 +301,20 @@ export class FrigateViewCard extends HTMLElement {
     this._liveAudioController = new LiveAudioController(this);
     this._liveMediaPresentationController =
       new LiveMediaPresentationController(this);
+    this._liveMediaToolbarController = new LiveMediaToolbarController({
+      onTogglePictureInPicture: () =>
+        this._togglePictureInPicture(this._livePictureInPictureVideo()),
+      onTakeSnapshot: () => this._takeDisplayedSnapshot("live"),
+      onFullscreen: () => {
+        const liveStage = this._$("#live-stage");
+        const fullscreenTarget =
+          this._cardViewPageController?.liveFullscreenTarget?.() || liveStage;
+        this._fullscreen(fullscreenTarget, {
+          preferLive: true,
+          preferElementFullscreen: fullscreenTarget !== liveStage,
+        });
+      },
+    });
     this._liveOverlayPresentationController =
       new LiveOverlayPresentationController(this);
     this._liveRotateOverlayController = new LiveRotateOverlayController(this);
@@ -3811,25 +3826,7 @@ export class FrigateViewCard extends HTMLElement {
       this._toggleSlideshowRotation();
       return true;
     }
-    if (target.closest("#live-pip-btn")) {
-      void this._togglePictureInPicture(this._livePictureInPictureVideo());
-      return true;
-    }
-    if (target.closest("#live-take-snapshot-btn")) {
-      void this._takeDisplayedSnapshot("live");
-      return true;
-    }
-    if (target.closest("#live-fs-btn")) {
-      const liveStage = this._$("#live-stage");
-      const fullscreenTarget =
-        this._cardViewPageController?.liveFullscreenTarget?.() || liveStage;
-      this._fullscreen(fullscreenTarget, {
-        preferLive: true,
-        preferElementFullscreen: fullscreenTarget !== liveStage,
-      });
-      return true;
-    }
-    return false;
+    return this._liveMediaToolbarController.handleClick(target);
   }
   _handleBrowseToolbarClick(target) {
     if (this._handleBrowsePanelToolbarClick(target)) return true;

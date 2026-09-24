@@ -373,6 +373,10 @@ const popupToolbarControllerSource = fs.readFileSync(
   new URL("../src/features/popup/toolbar.ctrl.js", import.meta.url),
   "utf8",
 );
+const liveMediaToolbarControllerSource = fs.readFileSync(
+  new URL("../src/features/live/media-toolbar.ctrl.js", import.meta.url),
+  "utf8",
+);
 const popupRecordingScrubControllerSource = fs.readFileSync(
   new URL(
     "../src/features/popup/recording-scrub.ctrl.js",
@@ -3052,6 +3056,41 @@ test("popup toolbar actions are owned by the popup feature", () => {
   );
   assert.equal(
     popupToolbarControllerSource.includes('"[data-carousel-dir]"'),
+    true,
+  );
+});
+
+test("live media toolbar actions are owned by the live feature", () => {
+  assert.equal(
+    cardSource.includes(
+      "return this._liveMediaToolbarController.handleClick(target);",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes('target.closest("#live-pip-btn")'), false);
+  assert.equal(
+    cardSource.includes('target.closest("#live-take-snapshot-btn")'),
+    false,
+  );
+  assert.equal(cardSource.includes('target.closest("#live-fs-btn")'), false);
+  assert.equal(
+    liveMediaToolbarControllerSource.includes(
+      "export class LiveMediaToolbarController",
+    ),
+    true,
+  );
+  assert.equal(
+    liveMediaToolbarControllerSource.includes('"#live-pip-btn"'),
+    true,
+  );
+  assert.equal(
+    liveMediaToolbarControllerSource.includes(
+      '"#live-take-snapshot-btn"',
+    ),
+    true,
+  );
+  assert.equal(
+    liveMediaToolbarControllerSource.includes('"#live-fs-btn"'),
     true,
   );
 });
