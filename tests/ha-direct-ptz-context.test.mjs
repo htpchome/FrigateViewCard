@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { PtzInteractionController } from "../src/features/ptz/interaction.ctrl.js";
+
 globalThis.window = globalThis.window || { customCards: [] };
 globalThis.window.customCards = globalThis.window.customCards || [];
 globalThis.document = globalThis.document || {
@@ -90,7 +92,12 @@ test("imported PTZ preset buttons execute the named preset and restore UI state"
     setAttribute: (name, value) => attributes.set(name, value),
     removeAttribute: (name) => attributes.delete(name),
   };
-  const context = {
+  const controller = new PtzInteractionController({
+    _activeCam: {
+      entity: "camera.driveway",
+      connection_type: "ha_direct",
+      ptz: { enabled: true },
+    },
     _resolvePtzMotionContext: async () => ({
       camera: {
         entity: "camera.driveway",
@@ -100,13 +107,9 @@ test("imported PTZ preset buttons execute the named preset and restore UI state"
       ptzInfo: { features: ["pt"], presets: ["preset1"] },
     }),
     _executePtzCameraAction: async (request) => calls.push(request),
-  };
+  });
 
-  await FrigateViewCard.prototype._handlePtzPreset.call(
-    context,
-    "preset1",
-    button,
-  );
+  await controller.handlePreset("preset1", button);
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].action, "preset");

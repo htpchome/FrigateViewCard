@@ -229,13 +229,13 @@ import {
   hasCameraPtz,
   hasPtzPanTiltCapability,
   isPtzHomePreset,
-  isPtzDirectionAction,
-  isPtzControlsPadEvent,
   normalizePtzPresetNames,
-  resolvePtzDisplayZoomPlan,
   resolvePtzServicePlan,
 } from "../features/ptz/index.js";
-import { createPtzMotionController } from "../features/ptz/composition.js";
+import {
+  createPtzInteractionController,
+  createPtzMotionController,
+} from "../features/ptz/composition.js";
 import {
   releaseTwoWayTalkTouchFocus,
   shouldRenderTwoWayTalkButton,
@@ -348,6 +348,7 @@ export class FrigateViewCard extends HTMLElement {
     });
     this._linkedLightController = new LinkedLightController(this);
     this._ptzMotionController = createPtzMotionController(this);
+    this._ptzInteractionController = createPtzInteractionController(this);
     Object.assign(this, createWideViewTimelineControllers(this));
     this._cardViewPageController = new CardViewPageController(this, {
       PAGE_IDS,
@@ -974,9 +975,7 @@ export class FrigateViewCard extends HTMLElement {
     this._haNavbarController?.disconnect?.();
     this._haDashboardSwipeNavigationController?.disconnect?.();
     this._haPageBackgroundController?.disconnect?.();
-    void this._ptzMotionController?.dispose?.();
-    this._activePtzButtonAction = "";
-    this._activePtzButtonPointerId = null;
+    void this._ptzInteractionController?.dispose?.();
     this._linkedLightController?.cancelInteractions?.();
     this._clearTwoWayTalkResultBubble?.();
     void this._stopTwoWayTalkSession({ restoreLive: false });
@@ -6924,74 +6923,16 @@ export class FrigateViewCard extends HTMLElement {
     return cache.ptzInfoPromise;
   }
 
-  async _handleCirclePadPtzEvent(event, eventType) {
-    if (!isPtzControlsPadEvent(event)) return;
-    await this._handlePtzAction(event?.detail?.action, eventType);
+  _handleCirclePadPtzEvent(event, eventType) {
+    return this._ptzInteractionController.handleCirclePadEvent(event, eventType);
   }
 
-  async _handlePtzAction(action, eventType) {
-    const displayZoomPlan = resolvePtzDisplayZoomPlan({
-      camera: this._activeCam,
-      action,
-      eventType,
-    });
-    if (displayZoomPlan) {
-      if (displayZoomPlan.delta) {
-        this._attachMainLiveVideoZoom(this._engine);
-        this._liveVideoZoomController?.zoomBy?.(displayZoomPlan.delta);
-      }
-      return;
-    }
-
-    if (isPtzDirectionAction(action)) {
-      if (eventType === "press") {
-        await this._ptzMotionController?.start?.(action);
-      } else if (eventType === "release") {
-        await this._stopPtzMotion("control-release");
-      }
-      return;
-    }
-
-    const context = await this._resolvePtzMotionContext();
-    if (!context) return;
-    try {
-      await this._executePtzCameraAction({
-        ...context,
-        action,
-        eventType,
-      });
-    } catch (error) {
-      console.warn("[Frigate] PTZ action failed", { action, eventType }, error);
-    }
+  _handlePtzAction(action, eventType) {
+    return this._ptzInteractionController.handleAction(action, eventType);
   }
 
-  async _handlePtzPreset(presetName, button = null) {
-    const preset = String(presetName || "").trim();
-    if (!preset) return;
-
-    if (button) {
-      button.disabled = true;
-      button.classList?.add?.("is-activating");
-      button.setAttribute?.("aria-busy", "true");
-    }
-    try {
-      const context = await this._resolvePtzMotionContext();
-      if (!context) return;
-      await this._executePtzCameraAction({
-        ...context,
-        action: "preset",
-        eventType: "press",
-        argument: preset,
-      });
-    } catch (error) {
-      console.warn("[Frigate] PTZ preset failed", { preset }, error);
-    } finally {
-      if (button && button.isConnected !== false) {
-        button.disabled = false;
-        button.classList?.remove?.("is-activating");
-        button.removeAttribute?.("aria-busy");
-      }
-    }
+  _handlePtzPreset(presetName, button = null) {
+    return this._ptzInteractionController.handlePreset(presetName, button);
   }
 
   async _resolvePtzMotionContext() {
@@ -7030,44 +6971,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _stopPtzMotion(reason = "release") {
-    this._activePtzButtonAction = "";
-    this._activePtzButtonPointerId = null;
-    return this._ptzMotionController?.stop?.(reason) || Promise.resolve();
+    return this._ptzInteractionController.stopMotion(reason);
   }
 
-  async _handlePtzControlPointerDown(event) {
-    const button = event.target?.closest?.("[data-ptz-control]");
-    if (!(button instanceof HTMLButtonElement) || button.disabled) return;
-
-    const action = String(button.dataset.ptzControl || "").trim();
-    if (!action) return;
-
-    event.preventDefault();
-    this._activePtzButtonAction = action;
-    this._activePtzButtonPointerId =
-      typeof event.pointerId === "number" ? event.pointerId : null;
-
-    try {
-      button.setPointerCapture?.(event.pointerId);
-    } catch (_) {}
-
-    await this._handlePtzAction(action, "press");
+  _handlePtzControlPointerDown(event) {
+    return this._ptzInteractionController.handleControlPointerDown(event);
   }
 
-  async _handlePtzControlPointerStop(event) {
-    if (!this._activePtzButtonAction) return;
-    if (
-      typeof event.pointerId === "number" &&
-      this._activePtzButtonPointerId != null &&
-      event.pointerId !== this._activePtzButtonPointerId
-    ) {
-      return;
-    }
-
-    const action = this._activePtzButtonAction;
-    this._activePtzButtonAction = "";
-    this._activePtzButtonPointerId = null;
-    await this._handlePtzAction(action, "release");
+  _handlePtzControlPointerStop(event) {
+    return this._ptzInteractionController.handleControlPointerStop(event);
   }
 
   _reviewListItemHTML(

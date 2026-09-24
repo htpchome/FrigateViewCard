@@ -33,6 +33,10 @@ const previewPageSource = fs.readFileSync(
   new URL("../src/features/preview/page.ctrl.js", import.meta.url),
   "utf8",
 );
+const ptzInteractionSource = fs.readFileSync(
+  new URL("../src/features/ptz/interaction.ctrl.js", import.meta.url),
+  "utf8",
+);
 
 test("media zoom is attached through committed main-live and popup lifecycles", () => {
   assert.equal(
@@ -113,11 +117,14 @@ test("media zoom is attached through committed main-live and popup lifecycles", 
 });
 
 test("PTZ zoom actions are routed to the existing main-live zoom controller", () => {
-  assert.equal(cardSource.includes("resolvePtzDisplayZoomPlan"), true);
+  assert.equal(ptzInteractionSource.includes("resolvePtzDisplayZoomPlan"), true);
   assert.equal(
-    cardSource.includes(
+    ptzInteractionSource.includes(
       "this._liveVideoZoomController?.zoomBy?.(displayZoomPlan.delta)",
-    ),
+    ) ||
+      ptzInteractionSource.includes(
+        "this._host?._liveVideoZoomController?.zoomBy?.(displayZoomPlan.delta)",
+      ),
     true,
   );
 });

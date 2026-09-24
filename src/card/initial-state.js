@@ -50,8 +50,6 @@ export const createInitialCardRuntimeState = ({ singleViewPageId }) => ({
   _streamMuted: true,
   _activeStreamType: "--",
   _lastLiveStreamHint: "",
-  _activePtzButtonAction: "",
-  _activePtzButtonPointerId: null,
 
   _slideshowActive: false,
   _slideshowPausedUntil: 0,

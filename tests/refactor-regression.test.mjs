@@ -303,6 +303,10 @@ const ptzCompositionSource = fs.readFileSync(
   new URL("../src/features/ptz/composition.js", import.meta.url),
   "utf8",
 );
+const ptzInteractionControllerSource = fs.readFileSync(
+  new URL("../src/features/ptz/interaction.ctrl.js", import.meta.url),
+  "utf8",
+);
 const editorSource = fs.readFileSync(
   new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
   "utf8",
@@ -2379,9 +2383,8 @@ test("ptz helpers live under the ptz feature owner", () => {
 
 test("PTZ motion controller composition is feature-owned", () => {
   assert.equal(
-    cardSource.includes(
-      'import { createPtzMotionController } from "../features/ptz/composition.js";',
-    ),
+    cardSource.includes("createPtzMotionController,") &&
+      cardSource.includes('from "../features/ptz/composition.js";'),
     true,
   );
   assert.equal(
@@ -2396,6 +2399,36 @@ test("PTZ motion controller composition is feature-owned", () => {
     true,
   );
   assert.equal(ptzCompositionSource.includes("resolvePtzHoldPlan"), true);
+});
+
+test("PTZ interaction state and behavior are feature-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      "this._ptzInteractionController = createPtzInteractionController(this);",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("this._activePtzButtonAction"), false);
+  assert.equal(cardSource.includes("resolvePtzDisplayZoomPlan"), false);
+  assert.equal(cardSource.includes("button.setPointerCapture"), false);
+  assert.equal(
+    ptzInteractionControllerSource.includes(
+      "export class PtzInteractionController",
+    ),
+    true,
+  );
+  assert.equal(
+    ptzInteractionControllerSource.includes("this._activePointer"),
+    true,
+  );
+  assert.equal(
+    ptzInteractionControllerSource.includes("resolvePtzDisplayZoomPlan"),
+    true,
+  );
+  assert.equal(
+    ptzCompositionSource.includes("new PtzInteractionController"),
+    true,
+  );
 });
 
 test("navigation helpers live under the navigation feature owner", () => {
