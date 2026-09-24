@@ -17,6 +17,10 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
+const gridCompositionSource = fs.readFileSync(
+  new URL("../src/features/grid/composition.js", import.meta.url),
+  "utf8",
+);
 const gridPageControllerSource = fs.readFileSync(
   new URL("../src/features/grid/page.ctrl.js", import.meta.url),
   "utf8",
@@ -90,14 +94,18 @@ test("grid mode toolbar and runtime hooks are present", () => {
   assert.equal(source.includes("data-grid-camidx"), true);
   assert.equal(
     cardSource.includes(
-      'import { GridMediaController } from "../features/grid/media.ctrl.js";',
+      'import { createGridControllers } from "../features/grid/composition.js";',
     ),
     true,
   );
   assert.equal(
-    /this\._gridMediaController\s*=\s*new GridMediaController\(this,/.test(
-      cardSource,
+    cardSource.includes(
+      "Object.assign(this, createGridControllers(this));",
     ),
+    true,
+  );
+  assert.equal(
+    gridCompositionSource.includes("new GridMediaController(card, options)"),
     true,
   );
   assert.match(

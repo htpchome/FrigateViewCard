@@ -150,6 +150,10 @@ const liveMountControllerSource = fs.readFileSync(
   new URL("../src/features/live/mount-controller.js", import.meta.url),
   "utf8",
 );
+const gridCompositionSource = fs.readFileSync(
+  new URL("../src/features/grid/composition.js", import.meta.url),
+  "utf8",
+);
 const gridMediaControllerSource = fs.readFileSync(
   new URL("../src/features/grid/media.ctrl.js", import.meta.url),
   "utf8",
@@ -610,16 +614,24 @@ test("live transport ownership is pulled out of the card shell", () => {
   assert.equal(sharedUrlSource.includes("toAbsoluteSignedUrl"), true);
   assert.equal(
     cardSource.includes(
-      'import { GridMediaController } from "../features/grid/media.ctrl.js";',
+      'import { createGridControllers } from "../features/grid/composition.js";',
     ),
     true,
   );
   assert.equal(
-    /this\._gridMediaController\s*=\s*new GridMediaController\(this,/.test(
-      cardSource,
+    cardSource.includes(
+      "Object.assign(this, createGridControllers(this));",
     ),
     true,
   );
+  for (const controllerName of [
+    "GridAlertController",
+    "GridPageController",
+    "GridMediaController",
+  ]) {
+    assert.equal(cardSource.includes(`new ${controllerName}`), false);
+    assert.equal(gridCompositionSource.includes(`new ${controllerName}`), true);
+  }
   assert.equal(cardSource.includes("_mountGridCameraCellMedia("), false);
   assert.equal(cardSource.includes("_mountGridDirectMSECell("), false);
   assert.equal(cardSource.includes("_mountGridEngine("), false);

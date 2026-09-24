@@ -44,7 +44,6 @@ import {
   normalizeCameraConnectionType,
   labelColor,
   mkCamState,
-  camDisplayName,
   configuredCameraEntities,
   hassThemeSignature,
   hassEntityStateSignature,
@@ -186,7 +185,7 @@ import {
 import { LiveViewResizeController } from "../features/live/live-view-resize.ctrl.js";
 import { LiveAlertTakeoverController } from "../features/live/alert-takeover.ctrl.js";
 import { LiveFullscreenLifecycleController } from "../features/live/fullscreen-lifecycle.ctrl.js";
-import { GridMediaController } from "../features/grid/media.ctrl.js";
+import { createGridControllers } from "../features/grid/composition.js";
 import {
   buildMobileViewBackButtonMarkup,
 } from "../features/mobile-view/page.tmpl.js";
@@ -282,8 +281,6 @@ import { PreviewAlertController } from "../features/preview/alert.ctrl.js";
 import { PreviewPageController } from "../features/preview/page.ctrl.js";
 import { PageNavigationController } from "../features/navigation/page-navigation.ctrl.js";
 import { DeepLinkController } from "../features/navigation/deep-link.ctrl.js";
-import { GridAlertController } from "../features/grid/alert.ctrl.js";
-import { GridPageController } from "../features/grid/page.ctrl.js";
 import { CardStyleContextController } from "../features/card-style/context.ctrl.js";
 import {
   EDITOR_PREVIEW_ROUTE_INTENTS,
@@ -356,15 +353,7 @@ export class FrigateViewCard extends HTMLElement {
     this._localization = createLocalizationController();
     this._dateFormatterCache = createDateFormatterCache();
     Object.assign(this, createLiveTransportControllers(this));
-    this._gridAlertController = new GridAlertController(this, {
-      DAY,
-      SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
-    });
-    this._gridPageController = new GridPageController(this);
-    this._gridMediaController = new GridMediaController(this, {
-      buildLabelText: (cam) => cap(camDisplayName(cam)),
-      liveIconSvg: ICONS.live,
-    });
+    Object.assign(this, createGridControllers(this));
     this._mobileViewPageController = new MobileViewPageController(this, {
       PAGE_IDS,
     });
