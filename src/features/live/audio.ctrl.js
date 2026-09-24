@@ -3,10 +3,16 @@ import { normalizePageRoute, PAGE_IDS } from "../navigation/router.js";
 import { buildLiveMuteControlMarkup } from "./view.tmpl.js";
 
 export class LiveAudioController {
-  constructor(host, { icons = ICONS, setTimer = setTimeout } = {}) {
+  constructor(
+    host,
+    {
+      icons = ICONS,
+      setTimer = (callback, delay) => globalThis.setTimeout(callback, delay),
+    } = {},
+  ) {
     this._host = host;
     this._icons = icons;
-    this._setTimer = setTimer;
+    this._setTimer = (callback, delay) => setTimer(callback, delay);
   }
 
   resolveMuted() {

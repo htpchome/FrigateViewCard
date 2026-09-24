@@ -284,6 +284,34 @@ test("loads the runtime and editor modules", async ({ page }) => {
   ).toHaveLength(1);
 });
 
+test("live mute schedules delayed synchronization with the browser timer receiver", async ({
+  page,
+}) => {
+  await page.goto(baseUrl);
+
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    const video = document.createElement("video");
+    card._engine = video;
+    card._streamMuted = false;
+
+    card._setLiveMuted(true);
+
+    return {
+      cardMuted: card._streamMuted,
+      videoMuted: video.muted,
+      videoDefaultMuted: video.defaultMuted,
+    };
+  });
+
+  expect(state).toEqual({
+    cardMuted: true,
+    videoMuted: true,
+    videoDefaultMuted: true,
+  });
+});
+
 test("bundled British English uses regional wording and inherits unchanged English text", async ({ page }) => {
   await page.goto(baseUrl);
   const labels = await page.evaluate(async () => {

@@ -131,6 +131,35 @@ test("live audio synchronizes current and delayed replacement video elements", (
   assert.equal(replacementVideo.playCalls, 3);
 });
 
+test("live audio invokes injected timers without a controller receiver", () => {
+  const receivers = [];
+  const host = {
+    _streamMuted: false,
+    _engine: {
+      tagName: "VIDEO",
+      muted: false,
+      defaultMuted: false,
+    },
+    _findVideoDeep: () => null,
+  };
+  const controller = new LiveAudioController(host, {
+    setTimer(callback, delay) {
+      receivers.push({ receiver: this, callback, delay });
+    },
+  });
+
+  controller.setMuted(true);
+
+  assert.deepEqual(
+    receivers.map(({ receiver, delay }) => ({ receiver, delay })),
+    [
+      { receiver: undefined, delay: 120 },
+      { receiver: undefined, delay: 400 },
+      { receiver: undefined, delay: 900 },
+    ],
+  );
+});
+
 test("live audio preserves the shared mute button class contract", () => {
   const controller = new LiveAudioController({ _streamMuted: true });
 
