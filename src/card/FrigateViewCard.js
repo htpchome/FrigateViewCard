@@ -110,14 +110,7 @@ import {
   resolveCameraAvailabilitySnapshot,
 } from "../features/live/stream.state.js";
 import {
-  resolveRotateOverlayExitPlan,
   resolveFullscreenButtonVisibility,
-  resolveRotateOverlayLiveDismissal,
-  resolveRotateOverlayNativeControlsPlan,
-  resolveRotateOverlayState,
-  resolveRotateOverlayUiPlan,
-  resolveRotateOverlayVideoStyles,
-  resolveRotateOverlayViewportVariables,
 } from "../features/live/rotate-overlay-state.js";
 import {
   buildVideoOptionsForView,
@@ -182,6 +175,10 @@ import {
   getLiveOverlayPresentationController,
   LiveOverlayPresentationController,
 } from "../features/live/overlay-presentation.ctrl.js";
+import {
+  getLiveRotateOverlayController,
+  LiveRotateOverlayController,
+} from "../features/live/rotate-overlay.ctrl.js";
 import { LiveViewResizeController } from "../features/live/live-view-resize.ctrl.js";
 import { LiveAlertTakeoverController } from "../features/live/alert-takeover.ctrl.js";
 import { LiveFullscreenLifecycleController } from "../features/live/fullscreen-lifecycle.ctrl.js";
@@ -267,10 +264,6 @@ import {
 } from "../features/editor-preview/context.ctrl.js";
 import { ViewportContextController } from "../features/viewport/context.ctrl.js";
 import { createMobileViewControllers } from "../features/mobile-view/composition.js";
-import {
-  MOBILE_VIEW_ACTIVE_CLASS,
-  MOBILE_VIEW_ROTATE_COVER_CLASS,
-} from "../features/mobile-view/utils.js";
 import { SingleViewPageController } from "../features/single-view/page.ctrl.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../features/single-view/page.tmpl.js";
 import {
@@ -313,6 +306,7 @@ export class FrigateViewCard extends HTMLElement {
       new LiveMediaPresentationController(this);
     this._liveOverlayPresentationController =
       new LiveOverlayPresentationController(this);
+    this._liveRotateOverlayController = new LiveRotateOverlayController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -1088,14 +1082,7 @@ export class FrigateViewCard extends HTMLElement {
         true,
       );
     }
-    if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
-    this._rotateOverlayRaf = 0;
-    if (this._rotateOverlayExitT) clearTimeout(this._rotateOverlayExitT);
-    this._rotateOverlayExitT = null;
-    this._rotateLiveOverlayDismissed = false;
-    this.classList?.remove?.(MOBILE_VIEW_ROTATE_COVER_CLASS);
-    this._clearRotateOverlayAudioSync();
-    this._clearRotateVideoFullscreenStyle();
+    getLiveRotateOverlayController(this).dispose();
     this._mseGraceController.clearGracePool();
     disposeRecordingsDayCache(this);
     if (this._parentOrigStyle && this.parentElement) {
@@ -1512,43 +1499,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _applyRotateOverlayUiPlan(card, uiPlan) {
-    if (!card || !uiPlan) return;
-    if (uiPlan.removeClasses.length) {
-      card.classList.remove(...uiPlan.removeClasses);
-    }
-    if (uiPlan.addClasses.length) {
-      card.classList.add(...uiPlan.addClasses);
-    }
-    this.classList.toggle(
-      MOBILE_VIEW_ROTATE_COVER_CLASS,
-      uiPlan.retainViewportCover,
-    );
-    this._cardStyleController?.syncBubbleFullscreenEscape?.(
-      uiPlan.retainViewportCover,
-    );
-    this._rotateOverlayActive = uiPlan.active;
-    this._rotateOverlayMode = uiPlan.mode;
-    this._haNavbarController?.sync?.();
-    this._cardViewPageController?.handleRotateOverlayState?.({
-      active: uiPlan.active,
-      mode: uiPlan.mode,
-    });
-    if (uiPlan.disableNativeControls) {
-      this._setLiveNativeControls(false, {
-        applyFullscreenStyle: uiPlan.active && uiPlan.mode === "live",
-      });
-    }
-    this._syncLiveRotateZoomPresentation(card);
-    if (uiPlan.clearLiveControlsVisible) {
-      this._$("#live-stage")?.classList.remove("live-controls-visible");
-    }
-    if (uiPlan.clearLoading) this._setStreamLoading(false);
-    if (uiPlan.enableNativeControls) this._setLiveNativeControls(true);
-    if (uiPlan.syncFullscreenButtons) this._syncFullscreenButtonsVisibility();
-    if (uiPlan.showLiveControls) this._showLiveControlsTemporarily();
-    if (uiPlan.showPopupControls) {
-      this._popupMediaControlsController.showTemporarily();
-    }
+    return getLiveRotateOverlayController(this).applyUiPlan(card, uiPlan);
   }
 
   async _mountEngine(forcedType = null, options = {}) {
@@ -3841,306 +3792,54 @@ export class FrigateViewCard extends HTMLElement {
     return this._viewportContextController.isLandscapeViewport();
   }
   _clearRotateOverlayAudioSync() {
-    if (this._rotateOverlaySyncVideo && this._onRotateOverlayVolumeChange) {
-      try {
-        this._rotateOverlaySyncVideo.removeEventListener(
-          "volumechange",
-          this._onRotateOverlayVolumeChange,
-        );
-      } catch (_) {}
-    }
-    this._rotateOverlaySyncVideo = null;
-    this._onRotateOverlayVolumeChange = null;
+    return getLiveRotateOverlayController(this).clearAudioSync();
   }
   _clearRotateVideoFullscreenStyle() {
-    const v = this._rotateStyledVideo;
-    if (!v) return;
-    try {
-      if (this._rotateStyledVideoCssText) {
-        v.setAttribute("style", this._rotateStyledVideoCssText);
-      } else {
-        v.removeAttribute("style");
-      }
-    } catch (_) {}
-    this._rotateStyledVideo = null;
-    this._rotateStyledVideoCssText = "";
+    return getLiveRotateOverlayController(this).clearVideoFullscreenStyle();
   }
   _applyRotateVideoFullscreenStyle(video) {
-    if (!video) return;
-    if (this._rotateStyledVideo !== video) {
-      this._clearRotateVideoFullscreenStyle();
-      this._rotateStyledVideo = video;
-      this._rotateStyledVideoCssText = video.getAttribute("style") || "";
-    }
-    const card = this._$("#card");
-    const forceMobileViewViewportCover =
-      card?.classList?.contains("mobile-view-active") &&
-      (card.classList.contains("mobile-rotate-live") ||
-        card.classList.contains("mobile-rotate-live-exit"));
-    const videoStyles = resolveRotateOverlayVideoStyles({
-      useStageViewport: forceMobileViewViewportCover,
-      visualViewport: window.visualViewport,
-      innerWidth: window.innerWidth,
-      innerHeight: window.innerHeight,
-    });
-    for (const [property, value] of Object.entries(videoStyles)) {
-      video.style.setProperty(property, value, "important");
-    }
-    if (this._liveVideoZoomController?.video === video) {
-      this._liveVideoZoomController.refresh();
-    }
-    if (this._popupVideoZoomController?.video === video) {
-      this._popupVideoZoomController.refresh();
-    }
-    video.setAttribute("playsinline", "");
-    video.setAttribute("webkit-playsinline", "true");
+    return getLiveRotateOverlayController(this).applyVideoFullscreenStyle(video);
   }
   _bindRotateOverlayAudioSync(video) {
-    if (!video) return;
-    if (this._rotateOverlaySyncVideo === video) return;
-    this._clearRotateOverlayAudioSync();
-    this._rotateOverlaySyncVideo = video;
-    this._onRotateOverlayVolumeChange = () => {
-      const mutedNow = !!video.muted;
-      if (mutedNow === this._streamMuted) return;
-      this._applyLiveMuteChange(mutedNow, { source: "native-controls" });
-    };
-    video.addEventListener("volumechange", this._onRotateOverlayVolumeChange);
+    return getLiveRotateOverlayController(this).bindAudioSync(video);
   }
   _setLiveNativeControls(enabled, { applyFullscreenStyle = enabled } = {}) {
-    const controlsPlan = resolveRotateOverlayNativeControlsPlan({
-      enabled,
+    return getLiveRotateOverlayController(this).setNativeControls(enabled, {
       applyFullscreenStyle,
-      rotateOverlayActive: this._rotateOverlayActive,
-      rotateOverlayMode: this._rotateOverlayMode,
     });
-    const suppressNativeControlsForLiveRotate =
-      enabled && !controlsPlan.expectedActive;
-    const expected = controlsPlan.expectedActive;
-    const apply = () => {
-      if (expected && !this._rotateOverlayActive) return;
-      if (
-        suppressNativeControlsForLiveRotate &&
-        (!this._rotateOverlayActive || this._rotateOverlayMode !== "live")
-      ) {
-        return;
-      }
-      const host = this._$("#engine");
-      const v =
-        this._findVideoDeep(host) ||
-        this._findVideoDeep(this._engine) ||
-        this._engine?.video ||
-        null;
-      if (!v) return;
-      v.controls = expected;
-      if (!expected) v.removeAttribute("controls");
-      v.setAttribute("playsinline", "");
-      v.setAttribute("webkit-playsinline", "true");
-      if (controlsPlan.applyFullscreenStyle)
-        this._applyRotateVideoFullscreenStyle(v);
-      else this._clearRotateVideoFullscreenStyle();
-      if (controlsPlan.bindAudioSync) this._bindRotateOverlayAudioSync(v);
-    };
-    if (controlsPlan.clearAudioSyncFirst) {
-      this._clearRotateOverlayAudioSync();
-    }
-    if (controlsPlan.clearFullscreenStyleFirst) {
-      this._clearRotateVideoFullscreenStyle();
-    }
-    apply();
-    controlsPlan.retryDelaysMs.forEach((delay) => setTimeout(apply, delay));
   }
   _scheduleRotateOverlayUpdate() {
-    if (
-      !DEVICE_PROFILE.hasTouch &&
-      !this._rotateOverlayActive &&
-      !this._rotateOverlayExitT
-    ) {
-      return;
-    }
-    if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
-    this._rotateOverlayRaf = requestAnimationFrame(() => {
-      this._rotateOverlayRaf = 0;
-      this._syncRotateOverlayViewportState();
-    });
+    return getLiveRotateOverlayController(this).scheduleUpdate();
   }
   _syncRotateOverlayViewportState() {
-    if (
-      !DEVICE_PROFILE.hasTouch &&
-      !this._rotateOverlayActive &&
-      !this._rotateOverlayExitT
-    ) {
-      return;
-    }
-    const viewportVars = resolveRotateOverlayViewportVariables({
-      visualViewport: window.visualViewport,
-      innerWidth: window.innerWidth,
-      innerHeight: window.innerHeight,
-    });
-    this.style.setProperty("--rotate-vw", viewportVars.widthPx);
-    this.style.setProperty("--rotate-vh", viewportVars.heightPx);
-    this.style.setProperty("--rotate-ox", viewportVars.offsetLeftPx);
-    this.style.setProperty("--rotate-oy", viewportVars.offsetTopPx);
-    this._updateRotateOverlayState();
+    return getLiveRotateOverlayController(this).syncViewportState();
   }
   _setRotateLiveTransitionRect(prefix, rect) {
-    if (!rect || rect.width <= 0 || rect.height <= 0) return false;
-    this.style.setProperty(`--rotate-live-${prefix}-x`, `${rect.left}px`);
-    this.style.setProperty(`--rotate-live-${prefix}-y`, `${rect.top}px`);
-    this.style.setProperty(`--rotate-live-${prefix}-w`, `${rect.width}px`);
-    this.style.setProperty(`--rotate-live-${prefix}-h`, `${rect.height}px`);
-    return true;
+    return getLiveRotateOverlayController(this).setLiveTransitionRect(
+      prefix,
+      rect,
+    );
   }
   _captureRotateLiveEntryRect() {
-    return this._setRotateLiveTransitionRect(
-      "from",
-      this._$("#live-stage")?.getBoundingClientRect?.(),
-    );
+    return getLiveRotateOverlayController(this).captureLiveEntryRect();
   }
   _captureRotateLiveExitRect(card) {
-    const stage = this._$("#live-stage");
-    if (!card || !stage) return false;
-    const hadLiveClass = card.classList.contains("mobile-rotate-live");
-    const hadExitClass = card.classList.contains("mobile-rotate-live-exit");
-    const hadViewportCover = this.classList.contains(
-      MOBILE_VIEW_ROTATE_COVER_CLASS,
-    );
-
-    card.classList.remove("mobile-rotate-live", "mobile-rotate-live-exit");
-    this.classList.remove(MOBILE_VIEW_ROTATE_COVER_CLASS);
-    const targetRect = stage.getBoundingClientRect();
-    if (hadViewportCover) this.classList.add(MOBILE_VIEW_ROTATE_COVER_CLASS);
-    if (hadLiveClass) card.classList.add("mobile-rotate-live");
-    if (hadExitClass) card.classList.add("mobile-rotate-live-exit");
-
-    return this._setRotateLiveTransitionRect("to", targetRect);
+    return getLiveRotateOverlayController(this).captureLiveExitRect(card);
   }
   _scheduleRotateOverlayExitCleanup(exitPlan) {
-    this._rotateOverlayExitT = setTimeout(() => {
-      const c = this._$("#card");
-      if (c && exitPlan.removeClasses.length) {
-        c.classList.remove(...exitPlan.removeClasses);
-      }
-      this._syncLiveRotateZoomPresentation(c);
-      if (exitPlan.releaseViewportCover) {
-        this.classList.remove(MOBILE_VIEW_ROTATE_COVER_CLASS);
-        this._cardStyleController?.releaseBubbleFullscreenEscape?.();
-        this._haNavbarController?.sync?.();
-      }
-      this._rotateOverlayExitT = null;
-      if (this._resumeLiveT) return;
-      if (exitPlan.syncFullscreenButtons) {
-        this._syncFullscreenButtonsVisibility();
-      }
-    }, exitPlan.delayMs);
+    return getLiveRotateOverlayController(this).scheduleExitCleanup(exitPlan);
   }
   _isRotateToFullscreenEnabled() {
-    return (
-      this._config?.mobile_view_rotate_to_fullscreen === true &&
-      this._isLikelyPhoneClient() &&
-      !this._isPreviewContext() &&
-      !this._isDashboardEditMode() &&
-      !this._isCardEditorDialogOpen()
-    );
+    return getLiveRotateOverlayController(this).isEnabled();
   }
   _isRotateOverlayViewportCoverActive() {
-    return this.classList.contains(MOBILE_VIEW_ROTATE_COVER_CLASS);
+    return getLiveRotateOverlayController(this).isViewportCoverActive();
   }
   _updateRotateOverlayState() {
-    const card = this._$("#card");
-    if (!card) return;
-    const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
-    const viewer = this._$("#viewer");
-    const popupMediaVisible =
-      !!popupOpen &&
-      !!viewer &&
-      viewer.style.display !== "none" &&
-      viewer.childElementCount > 0;
-    const fullscreenActive = Boolean(
-      document.fullscreenElement ||
-        document.webkitFullscreenElement ||
-        this._liveFullscreenLifecycleController?.active,
-    );
-    const isLandscapeViewport = this._isLandscapeViewport();
-    this._rotateLiveOverlayDismissed = resolveRotateOverlayLiveDismissal({
-      dismissed: this._rotateLiveOverlayDismissed,
-      isLandscapeViewport,
-    });
-    const rotateState = resolveRotateOverlayState({
-      rotateEnabled: this._isRotateToFullscreenEnabled(),
-      isMobileTabletViewport: this._isMobileTabletViewport(),
-      isLandscapeViewport,
-      popupOpen,
-      popupMediaVisible,
-      fullscreenActive,
-      liveDismissed: this._rotateLiveOverlayDismissed,
-      currentMode: this._rotateOverlayMode,
-      isActive: this._rotateOverlayActive,
-      isExitPending: Boolean(this._rotateOverlayExitT),
-    });
-
-    if (rotateState.action === "continue-exit") {
-      clearTimeout(this._rotateOverlayExitT);
-      this._rotateOverlayExitT = null;
-      this._scheduleRotateOverlayExitCleanup(
-        resolveRotateOverlayExitPlan(rotateState),
-      );
-      return;
-    }
-
-    if (this._rotateOverlayExitT) {
-      clearTimeout(this._rotateOverlayExitT);
-      this._rotateOverlayExitT = null;
-    }
-
-    const mobileViewActivationAlreadyApplied =
-      card.classList.contains(MOBILE_VIEW_ACTIVE_CLASS) &&
-      ((rotateState.action === "activate-live" &&
-        this._rotateOverlayActive &&
-        this._rotateOverlayMode === "live" &&
-        card.classList.contains("mobile-rotate-live")) ||
-        (rotateState.action === "activate-popup" &&
-          this._rotateOverlayActive &&
-          this._rotateOverlayMode === "popup" &&
-          card.classList.contains("mobile-rotate-popup")));
-    if (mobileViewActivationAlreadyApplied) return;
-
-    if (rotateState.action === "activate-live") {
-      this._captureRotateLiveEntryRect();
-    } else if (
-      rotateState.action === "deactivate" &&
-      rotateState.exitMode === "live"
-    ) {
-      this._captureRotateLiveExitRect(card);
-    }
-
-    const uiPlan = resolveRotateOverlayUiPlan(rotateState);
-    this._applyRotateOverlayUiPlan(card, uiPlan);
-    const exitPlan = resolveRotateOverlayExitPlan({
-      action: rotateState.action,
-    });
-
-    if (rotateState.action === "activate-live") {
-      return;
-    }
-
-    if (rotateState.action === "activate-popup") {
-      return;
-    }
-
-    if (rotateState.action === "idle") {
-      return;
-    }
-
-    this._scheduleRotateOverlayExitCleanup(exitPlan);
+    return getLiveRotateOverlayController(this).updateState();
   }
   _dismissRotateOverlay() {
-    if (!this._rotateOverlayActive || this._rotateOverlayMode !== "live") {
-      return false;
-    }
-    this._rotateLiveOverlayDismissed = true;
-    this._updateRotateOverlayState();
-    return true;
+    return getLiveRotateOverlayController(this).dismiss();
   }
   _kickLiveIfStale(
     force = false,

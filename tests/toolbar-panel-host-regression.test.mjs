@@ -45,6 +45,13 @@ const liveOverlayPresentationSource = fs.readFileSync(
   ),
   "utf8",
 );
+const liveRotateOverlayControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/rotate-overlay.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const twoWayTalkSessionControllerSource = fs.readFileSync(
   new URL(
     "../src/features/two-way-talk/session.ctrl.js",
@@ -345,24 +352,28 @@ test("mobile rotate overlay promotes the card host above Home Assistant chrome",
     /:host\(\.mobile-view-rotate-cover\)[\s\S]*?position: fixed !important;[\s\S]*?width: var\(--rotate-vw, 100vw\) !important;[\s\S]*?height: var\(--rotate-vh, 100dvh\) !important;[\s\S]*?z-index: 3000 !important;/,
   );
   assert.equal(
-    cardSource.includes("MOBILE_VIEW_ROTATE_COVER_CLASS"),
+    liveRotateOverlayControllerSource.includes(
+      "MOBILE_VIEW_ROTATE_COVER_CLASS",
+    ),
     true,
   );
   assert.equal(
-    cardSource.includes("uiPlan.retainViewportCover"),
+    liveRotateOverlayControllerSource.includes("uiPlan.retainViewportCover"),
     true,
   );
   assert.equal(
-    cardSource.includes("exitPlan.releaseViewportCover"),
+    liveRotateOverlayControllerSource.includes(
+      "exitPlan.releaseViewportCover",
+    ),
     true,
   );
   assert.match(
-    cardSource,
+    liveRotateOverlayControllerSource,
     /const forceMobileViewViewportCover =\s*card\?\.classList\?\.contains\("mobile-view-active"\)[\s\S]*?useStageViewport: forceMobileViewViewportCover/,
   );
   assert.doesNotMatch(
-    cardSource,
-    /const useStageViewport =\s*this\.classList\?\.contains\?\.\(MOBILE_VIEW_ROTATE_COVER_CLASS\)/,
+    liveRotateOverlayControllerSource,
+    /const useStageViewport =\s*host\.classList\?\.contains\?\.\(MOBILE_VIEW_ROTATE_COVER_CLASS\)/,
   );
   assert.doesNotMatch(mobileViewStylesSource, /214748\d+/);
 });
@@ -382,11 +393,15 @@ test("mobile rotation does not expose the cached fallback snapshot", () => {
 
 test("live rotate transition flies between the card and viewport bounds", () => {
   assert.equal(
-    cardSource.includes("_captureRotateLiveEntryRect()"),
+    liveRotateOverlayControllerSource.includes(
+      "host._captureRotateLiveEntryRect()",
+    ),
     true,
   );
   assert.equal(
-    cardSource.includes("_captureRotateLiveExitRect(card)"),
+    liveRotateOverlayControllerSource.includes(
+      "host._captureRotateLiveExitRect(card)",
+    ),
     true,
   );
   assert.match(

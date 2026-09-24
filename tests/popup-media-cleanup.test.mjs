@@ -49,6 +49,9 @@ const { ICONS } = await import("../src/icons.js");
 const { PopupCarouselController } = await import(
   "../src/features/popup/carousel.ctrl.js"
 );
+const { LiveRotateOverlayController } = await import(
+  "../src/features/live/rotate-overlay.ctrl.js"
+);
 
 test("_teardownDisconnected delegates popup cleanup to its lifecycle owner", () => {
   const clearTimeoutCalls = [];
@@ -100,12 +103,6 @@ test("_teardownDisconnected delegates popup cleanup to its lifecycle owner", () 
           calls.push(["disconnectToolbarDivider"]);
         },
       },
-      _clearRotateOverlayAudioSync() {
-        calls.push(["clearRotateOverlayAudioSync"]);
-      },
-      _clearRotateVideoFullscreenStyle() {
-        calls.push(["clearRotateVideoFullscreenStyle"]);
-      },
       _setSectionsRowGap(value) {
         calls.push(["setSectionsRowGap", value]);
       },
@@ -116,6 +113,9 @@ test("_teardownDisconnected delegates popup cleanup to its lifecycle owner", () 
         calls.push(["clearLiveEngineSlot"]);
       },
     };
+    ctx._liveRotateOverlayController = new LiveRotateOverlayController(ctx);
+    ctx._liveRotateOverlayController.dispose = () =>
+      calls.push(["disposeRotateOverlay"]);
 
     FrigateViewCard.prototype._teardownDisconnected.call(ctx);
 
@@ -129,8 +129,7 @@ test("_teardownDisconnected delegates popup cleanup to its lifecycle owner", () 
       ["clearPictureInPicture", "live"],
       ["disposePopupLifecycle"],
       ["disposePopupRecordingScrub"],
-      ["clearRotateOverlayAudioSync"],
-      ["clearRotateVideoFullscreenStyle"],
+      ["disposeRotateOverlay"],
       ["clearGracePool"],
       ["setSectionsRowGap", false],
       ["cleanupEngine"],

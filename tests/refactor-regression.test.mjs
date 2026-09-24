@@ -239,6 +239,13 @@ const liveOverlayPresentationControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const liveRotateOverlayControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/rotate-overlay.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const gridCompositionSource = fs.readFileSync(
   new URL("../src/features/grid/composition.js", import.meta.url),
   "utf8",
@@ -927,6 +934,54 @@ test("live overlay presentation is owned by its feature controller", () => {
   assert.equal(cardSource.includes("CARD_VIEW_OVERLAYS_IDLE_CLASS"), false);
   assert.equal(cardSource.includes("CARD_VIEW_OVERLAY_TIMING"), false);
   assert.equal(cardSource.includes("LiveOverlayControlsController"), false);
+});
+
+test("rotate overlay presentation is owned by its live feature controller", () => {
+  assert.equal(
+    cardSource.includes('from "../features/live/rotate-overlay.ctrl.js";'),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("new LiveRotateOverlayController(this)"),
+    true,
+  );
+  for (const delegation of [
+    "getLiveRotateOverlayController(this).applyUiPlan(card, uiPlan)",
+    "getLiveRotateOverlayController(this).clearAudioSync()",
+    "getLiveRotateOverlayController(this).clearVideoFullscreenStyle()",
+    "getLiveRotateOverlayController(this).applyVideoFullscreenStyle(video)",
+    "getLiveRotateOverlayController(this).bindAudioSync(video)",
+    "getLiveRotateOverlayController(this).scheduleUpdate()",
+    "getLiveRotateOverlayController(this).syncViewportState()",
+    "getLiveRotateOverlayController(this).captureLiveEntryRect()",
+    "getLiveRotateOverlayController(this).captureLiveExitRect(card)",
+    "getLiveRotateOverlayController(this).scheduleExitCleanup(exitPlan)",
+    "getLiveRotateOverlayController(this).isEnabled()",
+    "getLiveRotateOverlayController(this).isViewportCoverActive()",
+    "getLiveRotateOverlayController(this).updateState()",
+    "getLiveRotateOverlayController(this).dismiss()",
+  ]) {
+    assert.equal(cardSource.includes(delegation), true);
+  }
+  for (const ownedMechanic of [
+    "resolveRotateOverlayNativeControlsPlan({",
+    "resolveRotateOverlayViewportVariables({",
+    "resolveRotateOverlayVideoStyles({",
+    "resolveRotateOverlayLiveDismissal({",
+    "resolveRotateOverlayState({",
+    "resolveRotateOverlayUiPlan(rotateState)",
+    "resolveRotateOverlayExitPlan({",
+    "MOBILE_VIEW_ROTATE_COVER_CLASS",
+  ]) {
+    assert.equal(
+      liveRotateOverlayControllerSource.includes(ownedMechanic),
+      true,
+    );
+  }
+  assert.equal(cardSource.includes("resolveRotateOverlayState"), false);
+  assert.equal(cardSource.includes("resolveRotateOverlayUiPlan"), false);
+  assert.equal(cardSource.includes("resolveRotateOverlayVideoStyles"), false);
+  assert.equal(cardSource.includes("MOBILE_VIEW_ROTATE_COVER_CLASS"), false);
 });
 
 test("generic fullscreen behavior is owned by shared media primitives", () => {
