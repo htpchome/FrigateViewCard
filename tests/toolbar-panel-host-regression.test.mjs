@@ -34,6 +34,10 @@ const popupCompositionSource = fs.readFileSync(
   new URL("../src/features/popup/composition.js", import.meta.url),
   "utf8",
 );
+const popupToolbarControllerSource = fs.readFileSync(
+  new URL("../src/features/popup/toolbar.ctrl.js", import.meta.url),
+  "utf8",
+);
 const liveAudioControllerSource = fs.readFileSync(
   new URL("../src/features/live/audio.ctrl.js", import.meta.url),
   "utf8",
@@ -267,10 +271,13 @@ test("live controls keep a shared overlay with a mobile inline mute exception", 
     true,
   );
   assert.equal(
-    cardSource.includes('#mute-btn, #mobile-view-mute-btn'),
+    popupToolbarControllerSource.includes('#mute-btn, #mobile-view-mute-btn'),
     true,
   );
-  assert.equal(cardSource.includes("#two-way-talk-mute-btn"), true);
+  assert.equal(
+    popupToolbarControllerSource.includes("#two-way-talk-mute-btn"),
+    true,
+  );
   assert.equal(
     cardSource.includes("#two-way-talk-microphone-mute-btn"),
     true,
@@ -444,7 +451,13 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
     true,
   );
   assert.equal(
-    cardSource.includes("this._playbackTargetController.prompt("),
+    popupCompositionSource.includes("card._playbackTargetController.prompt("),
+    true,
+  );
+  assert.equal(
+    popupToolbarControllerSource.includes(
+      "this._onPromptAirPlay(displayedVideo)",
+    ),
     true,
   );
   assert.equal(
@@ -453,7 +466,7 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
     ),
     true,
   );
-  assert.equal(cardSource.includes("displayedVideo:"), true);
+  assert.equal(popupCompositionSource.includes("displayedVideo,"), true);
   assert.equal(cardSource.includes("button.hidden = !supported"), true);
   assert.equal(cardSource.includes("#live-airplay-btn"), false);
   assert.equal(

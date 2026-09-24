@@ -5,6 +5,7 @@ import {
   buildVideoOptionsForView,
   createVideoElement,
 } from "../../shared/media/video-factory.js";
+import { PLAYBACK_TARGET_AIRPLAY } from "../../shared/media/playback-target.js";
 import {
   buildRecordingPlaybackPlan,
   formatRecordingScrubTime,
@@ -18,6 +19,7 @@ import { PopupLifecycleController } from "./lifecycle.ctrl.js";
 import { PopupMediaControlsSurfaceController } from "./media.ctrl.js";
 import { PopupMediaLoaderController } from "./media-loader.ctrl.js";
 import { PopupRecordingScrubController } from "./recording-scrub.ctrl.js";
+import { PopupToolbarController } from "./toolbar.ctrl.js";
 
 const DEFAULT_FACTORIES = Object.freeze({
   createCarouselController: (options) =>
@@ -31,6 +33,7 @@ const DEFAULT_FACTORIES = Object.freeze({
     new PopupMediaLoaderController(card, options),
   createRecordingScrubController: (options) =>
     new PopupRecordingScrubController(options),
+  createToolbarController: (options) => new PopupToolbarController(options),
 });
 
 export const createPopupControllers = (
@@ -219,6 +222,27 @@ export const createPopupControllers = (
         card._syncFullscreenButtonsVisibility(),
     });
 
+  const popupToolbarController = resolvedFactories.createToolbarController({
+    query: (selector) => card._$(selector),
+    getMediaVideo: () => popupMediaControlsController.video(),
+    findVideoDeep: (root) => card._findVideoDeep(root),
+    handleMediaControlClick: (target) =>
+      popupMediaControlsController.handleClick(target),
+    onTakeSnapshot: () => card._takeDisplayedSnapshot("popup"),
+    onTogglePictureInPicture: (video) =>
+      card._togglePictureInPicture(video, { popup: true }),
+    onPromptAirPlay: (displayedVideo) =>
+      card._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
+        scope: "popup",
+        displayedVideo,
+      }),
+    onToggleMute: () => card._toggleMute(),
+    onFullscreen: (target) => card._fullscreen(target),
+    onCarouselNavigate: (direction) =>
+      popupCarouselController.scroll(direction),
+    onShowControls: () => popupMediaControlsController.showTemporarily(),
+  });
+
   popupLifecycleController = resolvedFactories.createLifecycleController({
     query: (selector) => card._$(selector),
     isFirefox: () => card._isFirefox(),
@@ -258,6 +282,7 @@ export const createPopupControllers = (
     _popupInfoController: popupInfoController,
     _popupCarouselController: popupCarouselController,
     _popupMediaControlsController: popupMediaControlsController,
+    _popupToolbarController: popupToolbarController,
     _popupLifecycleController: popupLifecycleController,
     _popupMediaLoaderController: popupMediaLoaderController,
   };

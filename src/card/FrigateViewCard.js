@@ -127,10 +127,7 @@ import {
   resolveVideoPictureInPictureSupport,
   toggleVideoPictureInPicture,
 } from "../shared/media/picture-in-picture.js";
-import {
-  BrowserPlaybackTargetController,
-  PLAYBACK_TARGET_AIRPLAY,
-} from "../shared/media/playback-target.js";
+import { BrowserPlaybackTargetController } from "../shared/media/playback-target.js";
 import { buildFrigateReceiverMediaPath } from "../integrations/frigate/receiver-media.js";
 import { resolveAbsoluteReceiverSourceUrl } from "../integrations/home-assistant/receiver-source.js";
 import {
@@ -3881,54 +3878,7 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handlePopupMediaToolbarClick(target) {
-    if (target.closest("#popup-take-snapshot-btn")) {
-      void this._takeDisplayedSnapshot("popup");
-      return true;
-    }
-    if (target.closest("#popup-pip-btn")) {
-      void this._togglePictureInPicture(
-        this._popupMediaControlsController.video(),
-        { popup: true },
-      );
-      this._popupMediaControlsController.showTemporarily();
-      return true;
-    }
-    if (
-      target.closest(
-        "#popup-airplay-btn, #popup-media-airplay, #popup-mobile-airplay-btn",
-      )
-    ) {
-      void this._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
-        scope: "popup",
-        displayedVideo:
-          this._popupMediaControlsController.video() ||
-          this._findVideoDeep(this._$("#viewer")),
-      });
-      this._popupMediaControlsController.showTemporarily();
-      return true;
-    }
-    if (
-      target.closest(
-        "#mute-btn, #mobile-view-mute-btn, #two-way-talk-mute-btn",
-      )
-    ) {
-      this._toggleMute();
-      return true;
-    }
-    if (this._popupMediaControlsController.handleClick(target)) return true;
-    if (target.closest("#popup-media-fs, #popup-mobile-fs-btn")) {
-      const viewer = this._$("#viewer");
-      this._fullscreen(viewer?.closest?.(".popup-body") || viewer);
-      this._popupMediaControlsController.showTemporarily();
-      return true;
-    }
-    const carouselNav = target.closest("[data-carousel-dir]");
-    if (carouselNav) {
-      const dir = Number(carouselNav.dataset.carouselDir || 0);
-      if (dir) this._popupCarouselController.scroll(dir);
-      return true;
-    }
-    return false;
+    return this._popupToolbarController.handleClick(target);
   }
   _handleSidebarClick(event, target) {
     if (this._handleWideViewSidebarClick(event, target)) return true;

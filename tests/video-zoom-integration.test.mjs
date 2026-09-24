@@ -28,6 +28,10 @@ const popupLoaderSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupCompositionSource = fs.readFileSync(
+  new URL("../src/features/popup/composition.js", import.meta.url),
+  "utf8",
+);
 const popupResizeSource = fs.readFileSync(
   new URL("../src/features/popup/view-resize.ctrl.js", import.meta.url),
   "utf8",
@@ -162,7 +166,10 @@ test("displayed-frame snapshots consume the matching live and popup zoom state",
     true,
   );
   assert.equal(cardSource.includes('this._takeDisplayedSnapshot("live")'), true);
-  assert.equal(cardSource.includes('this._takeDisplayedSnapshot("popup")'), true);
+  assert.equal(
+    popupCompositionSource.includes('card._takeDisplayedSnapshot("popup")'),
+    true,
+  );
 });
 
 test("grid and preview media do not attach video zoom", () => {

@@ -10,6 +10,7 @@ const createHarness = () => {
     carousel: {
       clear: () => calls.push(["carousel-clear"]),
       dispose: () => calls.push(["carousel-dispose"]),
+      scroll: (direction) => calls.push(["carousel-scroll", direction]),
     },
     info: {
       hide: () => calls.push(["info-hide"]),
@@ -33,9 +34,18 @@ const createHarness = () => {
     },
     mediaControls: {
       dispose: () => calls.push(["controls-dispose"]),
+      handleClick: (target) => {
+        calls.push(["controls-click", target]);
+        return true;
+      },
+      showTemporarily: () => calls.push(["controls-show"]),
+      video: () => "popup-video",
     },
     recordingScrub: {
       teardown: () => calls.push(["scrub-teardown"]),
+    },
+    toolbar: {
+      handleClick: (target) => calls.push(["toolbar-click", target]),
     },
   };
   const factories = {
@@ -63,6 +73,10 @@ const createHarness = () => {
       options.recordingScrub = value;
       return controllers.recordingScrub;
     },
+    createToolbarController: (value) => {
+      options.toolbar = value;
+      return controllers.toolbar;
+    },
   };
   const card = {
     _allDisplayEvents: () => ["display-event"],
@@ -79,6 +93,11 @@ const createHarness = () => {
     _clearPopupVideoZoom: () => calls.push(["clear-zoom"]),
     _dateTimeLabel: (value) => `date-time:${value}`,
     _findEventById: (id) => ({ id }),
+    _findVideoDeep: (root) => {
+      calls.push(["find-video", root]);
+      return "deep-video";
+    },
+    _fullscreen: (target) => calls.push(["fullscreen", target]),
     _frigateContextForCameraName: (camera) => ({ cam: camera }),
     _frigateMediaDownloadController: {
       downloadEvent: (...args) => calls.push(["download-event", ...args]),
@@ -99,6 +118,7 @@ const createHarness = () => {
     _monthDay: (value) => `month-day:${value}`,
     _pauseSlideshowForPopup: () => calls.push(["pause-slideshow"]),
     _playbackTargetController: {
+      prompt: (...args) => calls.push(["prompt-target", ...args]),
       release: (scope) => calls.push(["release-target", scope]),
     },
     _playSeq: 7,
@@ -117,8 +137,11 @@ const createHarness = () => {
     _syncFullscreenButtonsVisibility: () => calls.push(["sync-fullscreen"]),
     _syncPictureInPictureButtons: () => calls.push(["sync-pip"]),
     _syncPlaybackTargetButtons: () => calls.push(["sync-targets"]),
+    _takeDisplayedSnapshot: (scope) => calls.push(["take-snapshot", scope]),
     _time: (value) => `time:${value}`,
     _toggleFav: (...args) => calls.push(["favorite", ...args]),
+    _toggleMute: () => calls.push(["toggle-mute"]),
+    _togglePictureInPicture: (...args) => calls.push(["toggle-pip", ...args]),
     _usePopupCustomControls: (type) => type === "clip",
     _weekday: (value) => `weekday:${value}`,
     _$: (selector) => `node:${selector}`,
@@ -139,6 +162,7 @@ test("popup composition creates the complete controller set and preserves cross-
     _popupInfoController: controllers.info,
     _popupCarouselController: controllers.carousel,
     _popupMediaControlsController: controllers.mediaControls,
+    _popupToolbarController: controllers.toolbar,
     _popupLifecycleController: controllers.lifecycle,
     _popupMediaLoaderController: controllers.loader,
   });
@@ -186,6 +210,17 @@ test("popup composition creates the complete controller set and preserves cross-
     12,
   );
 
+  assert.equal(options.toolbar.getMediaVideo(), "popup-video");
+  assert.equal(options.toolbar.findVideoDeep("viewer"), "deep-video");
+  assert.equal(options.toolbar.handleMediaControlClick("media-target"), true);
+  options.toolbar.onTakeSnapshot();
+  options.toolbar.onTogglePictureInPicture("video");
+  options.toolbar.onPromptAirPlay("airplay-video");
+  options.toolbar.onToggleMute();
+  options.toolbar.onFullscreen("popup-body");
+  options.toolbar.onCarouselNavigate(-1);
+  options.toolbar.onShowControls();
+
   options.lifecycle.onDisposeCarousel();
   options.lifecycle.onClearCarousel();
   options.lifecycle.onDisposeMediaControls();
@@ -212,6 +247,19 @@ test("popup composition creates the complete controller set and preserves cross-
     ["sync-targets"],
     ["sync-pip"],
     ["sync-fullscreen"],
+    ["find-video", "viewer"],
+    ["controls-click", "media-target"],
+    ["take-snapshot", "popup"],
+    ["toggle-pip", "video", { popup: true }],
+    [
+      "prompt-target",
+      "airplay",
+      { scope: "popup", displayedVideo: "airplay-video" },
+    ],
+    ["toggle-mute"],
+    ["fullscreen", "popup-body"],
+    ["carousel-scroll", -1],
+    ["controls-show"],
     ["carousel-dispose"],
     ["carousel-clear"],
     ["controls-dispose"],

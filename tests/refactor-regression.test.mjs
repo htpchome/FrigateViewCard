@@ -369,6 +369,10 @@ const popupMediaControlsControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupToolbarControllerSource = fs.readFileSync(
+  new URL("../src/features/popup/toolbar.ctrl.js", import.meta.url),
+  "utf8",
+);
 const popupRecordingScrubControllerSource = fs.readFileSync(
   new URL(
     "../src/features/popup/recording-scrub.ctrl.js",
@@ -2985,9 +2989,11 @@ test("popup media controls and visibility are owned by the popup feature", () =>
     cardSource.includes("setKeyboardPlaybackActive?.("),
     false,
   );
-  assert.match(
-    cardSource,
-    /this\._fullscreen\(viewer\?\.closest\?\.\("\.popup-body"\) \|\| viewer\);/,
+  assert.equal(
+    cardSource.includes(
+      'this._fullscreen(viewer?.closest?.(".popup-body") || viewer);',
+    ),
+    false,
   );
   assert.equal(
     popupMediaLoaderControllerSource.includes(
@@ -2999,6 +3005,53 @@ test("popup media controls and visibility are owned by the popup feature", () =>
     popupMediaLoaderControllerSource.includes(
       "this._mediaControlsController?.resetWithoutVideo(",
     ),
+    true,
+  );
+});
+
+test("popup toolbar actions are owned by the popup feature", () => {
+  assert.equal(
+    popupCompositionSource.includes('from "./toolbar.ctrl.js"'),
+    true,
+  );
+  assert.equal(
+    popupCompositionSource.includes("new PopupToolbarController(options)"),
+    true,
+  );
+  assert.equal(
+    popupCompositionSource.includes(
+      "_popupToolbarController: popupToolbarController",
+    ),
+    true,
+  );
+  assert.match(
+    cardSource,
+    /_handlePopupMediaToolbarClick\(target\) \{\s*return this\._popupToolbarController\.handleClick\(target\);\s*\}/,
+  );
+  assert.equal(
+    cardSource.includes('target.closest("#popup-take-snapshot-btn")'),
+    false,
+  );
+  assert.equal(
+    cardSource.includes('target.closest("#popup-pip-btn")'),
+    false,
+  );
+  assert.equal(
+    popupToolbarControllerSource.includes("export class PopupToolbarController"),
+    true,
+  );
+  assert.equal(
+    popupToolbarControllerSource.includes('"#popup-take-snapshot-btn"'),
+    true,
+  );
+  assert.equal(
+    popupToolbarControllerSource.includes(
+      '"#popup-media-fs, #popup-mobile-fs-btn"',
+    ),
+    true,
+  );
+  assert.equal(
+    popupToolbarControllerSource.includes('"[data-carousel-dir]"'),
     true,
   );
 });
