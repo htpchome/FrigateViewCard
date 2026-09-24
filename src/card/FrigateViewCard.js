@@ -231,10 +231,9 @@ import {
   isPtzControlsPadEvent,
   normalizePtzPresetNames,
   resolvePtzDisplayZoomPlan,
-  resolvePtzHoldPlan,
   resolvePtzServicePlan,
 } from "../features/ptz/index.js";
-import { PtzMotionController } from "../features/ptz/motion.ctrl.js";
+import { createPtzMotionController } from "../features/ptz/composition.js";
 import {
   releaseTwoWayTalkTouchFocus,
   shouldRenderTwoWayTalkButton,
@@ -346,14 +345,7 @@ export class FrigateViewCard extends HTMLElement {
       icons: ICONS,
     });
     this._linkedLightController = new LinkedLightController(this);
-    this._ptzMotionController = new PtzMotionController({
-      resolveContext: () => this._resolvePtzMotionContext(),
-      resolveHoldPlan: (context) => resolvePtzHoldPlan(context),
-      executeAction: (context) => this._executePtzCameraAction(context),
-      onError: (error, context) => {
-        console.warn("[Frigate] PTZ motion failed", context, error);
-      },
-    });
+    this._ptzMotionController = createPtzMotionController(this);
     Object.assign(this, createWideViewTimelineControllers(this));
     this._cardViewPageController = new CardViewPageController(this, {
       PAGE_IDS,

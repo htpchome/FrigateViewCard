@@ -288,6 +288,10 @@ const ptzFeatureSource = fs.readFileSync(
   new URL("../src/features/ptz/index.js", import.meta.url),
   "utf8",
 );
+const ptzCompositionSource = fs.readFileSync(
+  new URL("../src/features/ptz/composition.js", import.meta.url),
+  "utf8",
+);
 const editorSource = fs.readFileSync(
   new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
   "utf8",
@@ -2314,6 +2318,27 @@ test("ptz helpers live under the ptz feature owner", () => {
     true,
   );
   assert.equal(ptzFeatureSource.includes("hasPtzZoomCapability"), false);
+});
+
+test("PTZ motion controller composition is feature-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { createPtzMotionController } from "../features/ptz/composition.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "this._ptzMotionController = createPtzMotionController(this);",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("new PtzMotionController"), false);
+  assert.equal(
+    ptzCompositionSource.includes("new PtzMotionController"),
+    true,
+  );
+  assert.equal(ptzCompositionSource.includes("resolvePtzHoldPlan"), true);
 });
 
 test("navigation helpers live under the navigation feature owner", () => {
