@@ -212,6 +212,10 @@ const cardStyleContextControllerSource = fs.readFileSync(
   new URL("../src/features/card-style/context.ctrl.js", import.meta.url),
   "utf8",
 );
+const localizedDateControllerSource = fs.readFileSync(
+  new URL("../src/features/localization/date.ctrl.js", import.meta.url),
+  "utf8",
+);
 const viewportContextControllerSource = fs.readFileSync(
   new URL("../src/features/viewport/context.ctrl.js", import.meta.url),
   "utf8",
@@ -2501,6 +2505,55 @@ test("Frigate media context and URL resolution are integration-owned", () => {
     ),
     true,
   );
+});
+
+test("localized date and HA timezone coordination are localization-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { LocalizedDateController } from "../features/localization/date.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "this._localizedDateController = new LocalizedDateController(this);",
+    ),
+    true,
+  );
+  for (const removedImport of [
+    "formatLocalizedMonthDay",
+    "formatLocalizedTime",
+    "applyLocalizedDates } from",
+    "createDateFormatterCache",
+  ]) {
+    assert.equal(cardSource.includes(removedImport), false);
+  }
+  assert.equal(cardSource.includes("_resolvedBrowserTimeZone"), false);
+  assert.equal(cardSource.includes("_dateFormatterCache"), false);
+  assert.equal(
+    localizedDateControllerSource.includes(
+      "export class LocalizedDateController",
+    ),
+    true,
+  );
+  assert.equal(
+    localizedDateControllerSource.includes("createDateFormatterCache"),
+    true,
+  );
+  assert.equal(
+    localizedDateControllerSource.includes("applyLocalizedDates"),
+    true,
+  );
+  for (const delegate of [
+    "timezone()",
+    "timezoneDateTimeToEpochSeconds(",
+    "timezoneParts(",
+    "dateTimeLabel(",
+    "applyLocalizedDates()",
+    "calendarMonthLabel(",
+  ]) {
+    assert.equal(localizedDateControllerSource.includes(delegate), true);
+  }
 });
 
 test("Frigate PTZ information requests are integration-owned", () => {

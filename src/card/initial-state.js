@@ -15,7 +15,6 @@ export const createInitialCardRuntimeState = ({ singleViewPageId }) => ({
   _activeGroupMemberOverride: "",
   _preservingLiveShell: false,
   _camCache: {},
-  _resolvedBrowserTimeZone: null,
 
   _viewMode: "single",
   _eventsMode: "camera",

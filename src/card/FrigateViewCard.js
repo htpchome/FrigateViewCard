@@ -24,11 +24,7 @@ import {
 import { ICONS } from "../icons.js";
 import { STYLES } from "../styles.js";
 import { createLocalizationController } from "../features/localization/localization.ctrl.js";
-import {
-  formatLocalizedMonthDay,
-  formatLocalizedTime,
-} from "../features/localization/date-format.js";
-import { applyLocalizedDates } from "../features/localization/date-dom.js";
+import { LocalizedDateController } from "../features/localization/date.ctrl.js";
 import { applyLocalizedText, setLocalizedText } from "../features/localization/localized-dom.js";
 import { escapeHtmlAttribute } from "../shared/html.js";
 // Registers <circle-pad-control-2>; keep this import for its module side effect.
@@ -199,7 +195,6 @@ import {
   renderBrowseEventListItem,
   renderBrowseReviewListItem,
 } from "../features/browse/composition.js";
-import { createDateFormatterCache } from "../shared/date-formatter-cache.js";
 import { ListScrollController } from "../features/browse/scroll.ctrl.js";
 import {
   MediaOverlayControlsController as LiveOverlayControlsController,
@@ -314,7 +309,7 @@ export class FrigateViewCard extends HTMLElement {
       }),
     );
     this._localization = createLocalizationController();
-    this._dateFormatterCache = createDateFormatterCache();
+    this._localizedDateController = new LocalizedDateController(this);
     Object.assign(this, createLiveTransportControllers(this));
     Object.assign(this, createGridControllers(this));
     Object.assign(this, createMobileViewControllers(this));
@@ -2991,79 +2986,31 @@ export class FrigateViewCard extends HTMLElement {
     await this._browseCalendarActivityController.prefetchCalendarActivityForActiveCamera();
   }
   _tz() {
-    const configuredTimeZone = this._hass?.config?.time_zone;
-    if (configuredTimeZone) return configuredTimeZone;
-    if (!this._resolvedBrowserTimeZone) {
-      this._resolvedBrowserTimeZone =
-        Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-    }
-    return this._resolvedBrowserTimeZone;
+    return this._localizedDateController.timezone();
   }
   _dateFormatter(name, locales, options, timeZone = this._tz()) {
-    const resolvedTimeZone = String(timeZone || "UTC");
-    return this._dateFormatterCache.get(
-      JSON.stringify([name, resolvedTimeZone, locales, options]),
+    return this._localizedDateController.formatter(
+      name,
       locales,
-      { ...options, timeZone: resolvedTimeZone },
+      options,
+      timeZone,
     );
   }
   _tzOffsetMinutesAt(epochMs, tz = this._tz()) {
-    const dtf = this._dateFormatter(
-      "wall-clock",
-      "en-US",
-      {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hourCycle: "h23",
-      },
-      tz,
-    );
-    const parts = dtf.formatToParts(new Date(epochMs));
-    const pick = (type) =>
-      Number(parts.find((p) => p.type === type)?.value || 0);
-    const y = pick("year");
-    const m = pick("month");
-    const d = pick("day");
-    const hh = pick("hour");
-    const mm = pick("minute");
-    const ss = pick("second");
-    const asUtcMs = Date.UTC(y, m - 1, d, hh, mm, ss);
-    return (asUtcMs - epochMs) / 60000;
+    return this._localizedDateController.timezoneOffsetMinutesAt(epochMs, tz);
   }
   _tzDateTimeToEpochSeconds(y, mo, d, hh = 0, mm = 0, ss = 0) {
-    // Convert a wall-clock datetime in HA timezone to Unix seconds.
-    let epochMs = Date.UTC(y, mo - 1, d, hh, mm, ss);
-    for (let i = 0; i < 3; i++) {
-      const offMin = this._tzOffsetMinutesAt(epochMs);
-      epochMs = Date.UTC(y, mo - 1, d, hh, mm, ss) - offMin * 60000;
-    }
-    return Math.floor(epochMs / 1000);
+    return this._localizedDateController.timezoneDateTimeToEpochSeconds(
+      y,
+      mo,
+      d,
+      hh,
+      mm,
+      ss,
+    );
   }
   _tzParts(tsSec) {
-    const dtf = this._dateFormatter("wall-clock", "en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hourCycle: "h23",
-    });
-    const parts = dtf.formatToParts(new Date(tsSec * 1000));
-    const pick = (type) =>
-      Number(parts.find((p) => p.type === type)?.value || 0);
-    return {
-      year: pick("year"),
-      month: pick("month"),
-      day: pick("day"),
-      hour: pick("hour"),
-      minute: pick("minute"),
-      second: pick("second"),
-    };
+    return this._localizedDateController.timezoneParts(tsSec);
   }
   async _subscribe() {
     if (!this._hass?.connection) return;
@@ -6534,78 +6481,28 @@ export class FrigateViewCard extends HTMLElement {
     this._activeStandardPageController().renderLegend();
   }
   _time(ts) {
-    return formatLocalizedTime(ts, {
-      locale: this._localization.resolvedLanguage,
-      timeFormat: this._hass?.locale?.time_format,
-      formatter: (name, locale, options) =>
-        this._dateFormatter(name, locale, options),
-    });
+    return this._localizedDateController.time(ts);
   }
   _weekday(ts) {
-    const locale = this._localization.resolvedLanguage;
-    return this._dateFormatter("weekday", locale, {
-      weekday: "short",
-    }).format(new Date(ts * 1000));
+    return this._localizedDateController.weekday(ts);
   }
   _monthDay(ts, { ordinal = false, numeric = false } = {}) {
-    return formatLocalizedMonthDay(ts, {
-      locale: this._localization.resolvedLanguage,
-      numeric,
-      ordinal,
-      formatter: (name, locale, options) =>
-        this._dateFormatter(name, locale, options),
-      ordinalize: (day) => this._ordinal(day),
-    });
+    return this._localizedDateController.monthDay(ts, { ordinal, numeric });
   }
   _ordinal(n) {
-    const mod100 = n % 100;
-    if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
-    const mod10 = n % 10;
-    if (mod10 === 1) return `${n}st`;
-    if (mod10 === 2) return `${n}nd`;
-    if (mod10 === 3) return `${n}rd`;
-    return `${n}th`;
+    return this._localizedDateController.ordinal(n);
   }
   _dateTimeLabel(ts) {
-    return this._localization.t("runtime.date.dateTime", {
-      weekday: this._weekday(ts),
-      date: this._monthDay(ts),
-      time: this._time(ts),
-    });
+    return this._localizedDateController.dateTimeLabel(ts);
   }
   _weekdayDate(ts, key = "weekdayDate") {
-    return this._localization.t(`runtime.date.${key}`, {
-      weekday: this._weekday(ts),
-      date: this._monthDay(ts, { ordinal: key !== "weekdayDate" }),
-    });
+    return this._localizedDateController.weekdayDate(ts, key);
   }
   _fullDate(ts) {
-    if (!ts) return "-";
-    const locale = this._localization.resolvedLanguage;
-    return this._dateFormatter("popup-card-view-date", locale, {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date(ts * 1000));
+    return this._localizedDateController.fullDate(ts);
   }
   _applyLocalizedDates() {
-    applyLocalizedDates(this.shadowRoot, {
-      time: (ts) => this._time(ts),
-      compactTime: (ts) => this._time(ts).replace(/\s+(am|pm)$/i, "$1"),
-      weekdayDate: (ts) => this._weekdayDate(ts),
-      weekdayDateDot: (ts) => this._weekdayDate(ts, "weekdayDateDot"),
-      weekdayDateHyphen: (ts) => this._weekdayDate(ts, "weekdayDateHyphen"),
-      shortDate: (ts) => this._monthDay(ts, { numeric: true }),
-      fullDate: (ts) => this._fullDate(ts),
-      dateTime: (ts) => this._dateTimeLabel(ts),
-      popupOverlay: (ts, element) =>
-        this._localization.t("runtime.date.popupOverlay", {
-          camera: element.getAttribute("data-fvc-date-camera") || "-",
-          time: this._time(ts).replace(/\s+(am|pm)$/i, "$1"),
-          date: this._fullDate(ts),
-        }),
-    });
+    this._localizedDateController.applyLocalizedDates();
   }
   _listHeadingLabel(ts = null) {
     return this._activeStandardPageController().listHeadingLabel(ts);
@@ -6619,22 +6516,13 @@ export class FrigateViewCard extends HTMLElement {
     this._activeStandardPageController().renderListLabel(ts);
   }
   _dayKey(ts) {
-    const parts = this._dateFormatter("day-key", "en-US", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(new Date(ts * 1000));
-    const pick = (type) => parts.find((p) => p.type === type)?.value || "00";
-    return `${pick("year")}-${pick("month")}-${pick("day")}`;
+    return this._localizedDateController.dayKey(ts);
   }
   _calendarMonthLabel(monthDate, timeZone = this._tz()) {
-    const locale = this._localization.resolvedLanguage;
-    return this._dateFormatter(
-      `calendar-month-${locale}`,
-      locale,
-      { month: "long", year: "numeric" },
+    return this._localizedDateController.calendarMonthLabel(
+      monthDate,
       timeZone,
-    ).format(monthDate);
+    );
   }
   _renderStickyDaySections(items, renderItem) {
     return this._activeStandardPageController().renderStickyDaySections(
