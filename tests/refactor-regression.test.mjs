@@ -187,6 +187,13 @@ const twoWayTalkSessionControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const twoWayTalkControlsTemplateSource = fs.readFileSync(
+  new URL(
+    "../src/features/two-way-talk/controls.tmpl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const mseGraceControllerSource = fs.readFileSync(
   new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
   "utf8",
@@ -822,6 +829,38 @@ test("two-way-talk session lifecycle is owned by its feature controller", () => 
   assert.equal(
     twoWayTalkSessionControllerSource.includes(
       "host._haDirectTwoWayTalkBackchannel.connect",
+    ),
+    true,
+  );
+});
+
+test("two-way-talk labels and markup are owned by its feature template", () => {
+  assert.equal(
+    cardSource.includes(
+      'from "../features/two-way-talk/controls.tmpl.js";',
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("const TWO_WAY_TALK_LABELS"), false);
+  assert.equal(
+    cardSource.includes('<button class="info-row-mic-btn'),
+    false,
+  );
+  assert.equal(
+    twoWayTalkControlsTemplateSource.includes(
+      "export function buildTwoWayTalkControlRowMarkup",
+    ),
+    true,
+  );
+  assert.equal(
+    twoWayTalkControlsTemplateSource.includes(
+      "export function buildTwoWayTalkButtonMarkup",
+    ),
+    true,
+  );
+  assert.equal(
+    twoWayTalkControlsTemplateSource.includes(
+      "export function buildTwoWayTalkMicrophoneMuteButtonMarkup",
     ),
     true,
   );
