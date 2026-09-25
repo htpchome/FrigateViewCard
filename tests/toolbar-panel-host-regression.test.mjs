@@ -249,7 +249,7 @@ test("tabs and tools synchronize independently without layout repair", () => {
   assert.equal(methodSource.includes("_createCalendarPanel"), false);
 });
 
-test("live controls keep a shared overlay with a mobile inline mute exception", () => {
+test("live controls keep a shared overlay including Mobile View mute", () => {
   assert.equal(
     liveOverlayPresentationSource.includes(
       'if (!wrap.classList.contains("live-stage--overlay")) return;',
@@ -273,7 +273,7 @@ test("live controls keep a shared overlay with a mobile inline mute exception", 
     mobileViewStylesSource.includes(
       ".card.mobile-view-active:not(.mobile-rotate-live):not(.mobile-rotate-live-exit) .live-playback-controls > #mute-btn",
     ),
-    true,
+    false,
   );
   assert.equal(
     mobileViewStylesSource.includes(

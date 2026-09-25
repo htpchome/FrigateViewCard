@@ -109,8 +109,11 @@ test("two-way-talk controls compose mobile route markup", () => {
     _pageId: "mobile-view",
     _shouldRenderTwoWayTalkButtonForActiveCamera: () => true,
     _buildTwoWayTalkButtonMarkup: () => '<button id="talk"></button>',
+    _isMobileTabletViewport: () => true,
   };
-  const controller = new TwoWayTalkControlsController(host);
+  const controller = new TwoWayTalkControlsController(host, {
+    deviceProfile: { isDesktop: false },
+  });
 
   assert.match(
     controller.buildMobileButtonMarkup(),
@@ -118,4 +121,27 @@ test("two-way-talk controls compose mobile route markup", () => {
   );
   host._pageId = "single-view";
   assert.equal(controller.buildMobileButtonMarkup(), "");
+});
+
+test("desktop Mobile View composes the shared soundwave control row", () => {
+  const host = {
+    _pageId: "mobile-view",
+    _isCardViewPageActive: () => false,
+    _isMobileTabletViewport: () => false,
+    _shouldRenderTwoWayTalkButtonForActiveCamera: () => true,
+    _buildTwoWayTalkButtonMarkup: () => '<button id="talk"></button>',
+    _buildTwoWayTalkControlRowMarkup: () =>
+      '<div class="two-way-talk-control-row has-inline-mute has-soundwave"><div data-two-way-talk-soundwave></div><button id="two-way-talk-microphone-mute-btn"></button><button id="two-way-talk-btn"></button><button id="two-way-talk-mute-btn"></button></div>',
+  };
+  const controller = new TwoWayTalkControlsController(host, {
+    deviceProfile: { isDesktop: true },
+  });
+
+  const markup = controller.buildMobileButtonMarkup();
+  assert.match(markup, /id="mobile-view-two-way-talk-slot"/);
+  assert.match(markup, /data-two-way-talk-soundwave/);
+  assert.match(markup, /id="two-way-talk-microphone-mute-btn"/);
+  assert.match(markup, /id="two-way-talk-btn"/);
+  assert.match(markup, /id="two-way-talk-mute-btn"/);
+  assert.doesNotMatch(markup, /id="talk"/);
 });

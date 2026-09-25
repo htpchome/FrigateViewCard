@@ -258,6 +258,9 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active .mobile-microphone-row .mobile-view-inline-mute-btn{grid-column:3;}
   .card.mobile-view-active .mobile-microphone-row .mobile-view-two-way-talk-slot[hidden] + .mobile-view-inline-mute-btn,
   .card.mobile-view-active .mobile-microphone-row .mobile-view-inline-mute-btn:only-child{grid-column:2;}
+  .card.mobile-view-active .mobile-microphone-row:has(.two-way-talk-control-row.has-soundwave){grid-template-columns:112px;}
+  .card.mobile-view-active .mobile-microphone-row:has(.two-way-talk-control-row.has-soundwave) > .mobile-view-two-way-talk-slot{grid-column:1;}
+  .card.mobile-view-active .mobile-microphone-row:has(.two-way-talk-control-row.has-soundwave) > :is(.mobile-view-microphone-mute-btn,.mobile-view-inline-mute-btn){display:none !important;}
   .card.mobile-view-active .mobile-video-controls-right-row{grid-area:video-controls-right;}
   .card.mobile-view-active :is(.mobile-video-controls-left-row,.mobile-video-controls-right-row):not([hidden]){justify-self:stretch;justify-content:center;min-width:40px;}
   .card.mobile-view-active.two-way-talk-active :is(.mobile-video-controls-left-row,.mobile-video-controls-right-row){display:none !important;}
@@ -302,10 +305,6 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   }
 
   .card.mobile-view-active .mobile-view-two-way-talk-slot[hidden] {
-    display: none !important;
-  }
-
-  .card.mobile-view-active:not(.mobile-rotate-live):not(.mobile-rotate-live-exit) .live-playback-controls > #mute-btn {
     display: none !important;
   }
 

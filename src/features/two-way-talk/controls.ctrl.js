@@ -46,9 +46,12 @@ export class TwoWayTalkControlsController {
       return "";
     }
     const visible = host._shouldRenderTwoWayTalkButtonForActiveCamera();
+    const buttonMarkup = this.shouldRenderSoundwave()
+      ? host._buildTwoWayTalkControlRowMarkup?.() || ""
+      : host._buildTwoWayTalkButtonMarkup();
     return buildTwoWayTalkMobileSlotMarkup({
       visible,
-      buttonMarkup: host._buildTwoWayTalkButtonMarkup(),
+      buttonMarkup,
     });
   }
 

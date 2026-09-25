@@ -288,6 +288,21 @@ test("mobile view centers the microphone independently of the mute button", () =
     MOBILE_VIEW_PAGE_STYLES,
     /two-way-talk-active :is\(\.mobile-video-controls-left-row,\.mobile-video-controls-right-row\)\{display:none !important;\}/,
   );
+  assert.match(
+    MOBILE_VIEW_PAGE_STYLES,
+    /mobile-microphone-row:has\(\.two-way-talk-control-row\.has-soundwave\)\{grid-template-columns:112px;\}/,
+  );
+  assert.match(
+    MOBILE_VIEW_PAGE_STYLES,
+    /mobile-microphone-row:has\(\.two-way-talk-control-row\.has-soundwave\) > :is\(\.mobile-view-microphone-mute-btn,\.mobile-view-inline-mute-btn\)\{display:none !important;\}/,
+  );
+});
+
+test("mobile view keeps the shared live mute in its video overlay", () => {
+  assert.doesNotMatch(
+    MOBILE_VIEW_PAGE_STYLES,
+    /mobile-view-active[^\n{]*live-playback-controls > #mute-btn[\s\S]*?display:\s*none/,
+  );
 });
 
 test("mobile view centers the camera picker between equal side tracks", () => {
