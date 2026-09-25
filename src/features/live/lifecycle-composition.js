@@ -51,8 +51,8 @@ export const createLiveLifecycleControllers = (
     attachVideoFit: attachContainedVideoFit,
     setActiveStreamType: (type) => card._setActiveStreamType(type),
     setStreamLoading: (loading) => card._setStreamLoading(loading),
-    setStreamFallbackVisible: (visible) =>
-      card._setStreamFallbackVisible(visible),
+    setStreamFallbackVisible: (visible, refreshImage = false) =>
+      card._setStreamFallbackVisible(visible, refreshImage),
     setLiveNativeControls: (enabled) => card._setLiveNativeControls(enabled),
     releaseHaDirectEngine: (engine) =>
       card._haDirectMounter?.release?.(engine),

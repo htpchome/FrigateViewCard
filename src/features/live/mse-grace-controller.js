@@ -429,15 +429,21 @@ export function createMseGraceController({
       engine.activateRecovery?.();
     }
     setEngineMountedMuted?.(getStreamMuted?.());
-    setActiveStreamType?.(engine.streamType);
-    setStreamLoading?.(false);
-    setStreamFallbackVisible?.(false);
+    const validateRetainedHls =
+      engine.streamType === "hls" &&
+      typeof resumeHaDirectEngine === "function";
+    if (validateRetainedHls) {
+      setActiveStreamType?.("snapshot");
+      setStreamLoading?.(true);
+      setStreamFallbackVisible?.(true, true);
+    } else {
+      setActiveStreamType?.(engine.streamType);
+      setStreamLoading?.(false);
+      setStreamFallbackVisible?.(false);
+    }
     if (getRotateOverlayActive?.()) setLiveNativeControls?.(true);
     void video?.play?.().catch?.(() => {});
-    if (
-      engine.streamType === "hls" &&
-      typeof resumeHaDirectEngine === "function"
-    ) {
+    if (validateRetainedHls) {
       let resumeResult = false;
       try {
         resumeResult = resumeHaDirectEngine(engine);
@@ -445,13 +451,21 @@ export function createMseGraceController({
       void Promise.resolve(resumeResult)
         .catch(() => false)
         .then((ready) => {
-          if (ready !== false || getEngine?.() !== engine) return;
+          if (getEngine?.() !== engine) return;
+          if (ready === true) {
+            setActiveStreamType?.("hls");
+            setStreamLoading?.(false);
+            setStreamFallbackVisible?.(false);
+            return;
+          }
           setEngine?.(null, { retainPrevious: true });
           try {
             releaseHaDirectEngine?.(engine);
             mediaNode.remove?.();
           } catch (_) {}
+          setActiveStreamType?.("snapshot");
           setStreamLoading?.(true);
+          setStreamFallbackVisible?.(true);
           scheduleResumeLive?.("ha-direct-retained-hls-stalled");
         });
     }

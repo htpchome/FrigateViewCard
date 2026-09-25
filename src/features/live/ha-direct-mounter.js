@@ -314,9 +314,7 @@ export function createHaDirectMounter({
       let frameId = null;
       let pollT = null;
       let timeoutT = null;
-      let lastTime = null;
-      let advancingSamples = 0;
-      let progressStartTime = null;
+      let decodedFrameBaseline = null;
 
       const cleanupVideo = () => {
         if (!video) return;
@@ -344,38 +342,55 @@ export function createHaDirectMounter({
         !abortController.signal.aborted &&
         !binding.disposed &&
         isCurrentEngine(engine);
-      const resetTimeEvidence = (time) => {
-        lastTime = Number.isFinite(time) ? time : null;
-        advancingSamples = 0;
-        progressStartTime = null;
+      const hasUsableVisualPlayback = () => {
+        if (!video) return false;
+        const playbackRate = Number(video.playbackRate);
+        return (
+          !video.paused &&
+          !video.ended &&
+          !video.seeking &&
+          Number(video.readyState) >= 2 &&
+          Number(video.videoWidth) > 0 &&
+          (!Number.isFinite(playbackRate) || playbackRate > 0)
+        );
+      };
+      const readDecodedFrameCount = () => {
+        if (!video) return null;
+        try {
+          const totalFrames = Number(
+            video.getVideoPlaybackQuality?.()?.totalVideoFrames,
+          );
+          if (Number.isFinite(totalFrames)) return totalFrames;
+        } catch (_) {}
+        const webkitFrames = Number(video.webkitDecodedFrameCount);
+        return Number.isFinite(webkitFrames) ? webkitFrames : null;
       };
       const onTimeUpdate = () => {
         if (!isActive() || !video) return;
-        const time = Number(video.currentTime);
-        if (!Number.isFinite(time)) {
-          resetTimeEvidence(time);
-          return;
-        }
-        if (lastTime == null || time < lastTime) {
-          resetTimeEvidence(time);
-          return;
-        }
-        if (time === lastTime) return;
-        advancingSamples += 1;
-        if (progressStartTime == null) progressStartTime = time;
-        lastTime = time;
+        if (!hasUsableVisualPlayback()) return;
+        // Audio can advance currentTime while WebKit still presents a black
+        // video surface, so retained playback needs decoded-frame evidence.
+        const decodedFrames = readDecodedFrameCount();
+        if (decodedFrames == null) return;
         if (
-          advancingSamples >= HA_DIRECT_TIME_RECOVERY_MIN_ADVANCES &&
-          time - progressStartTime >=
-            HA_DIRECT_TIME_RECOVERY_MIN_PROGRESS_SECONDS
+          decodedFrameBaseline == null ||
+          decodedFrames < decodedFrameBaseline
         ) {
+          decodedFrameBaseline = decodedFrames;
+          return;
+        }
+        if (decodedFrames > decodedFrameBaseline) {
           done(true);
         }
       };
       const onFrame = () => {
         frameId = null;
         if (!isActive()) return;
-        done(true);
+        if (hasUsableVisualPlayback()) {
+          done(true);
+          return;
+        }
+        frameId = video?.requestVideoFrameCallback?.(onFrame) ?? null;
       };
       const bindCurrentVideo = () => {
         if (!isActive()) {
@@ -386,7 +401,7 @@ export function createHaDirectMounter({
         if (!currentVideo || currentVideo === video) return;
         cleanupVideo();
         video = currentVideo;
-        resetTimeEvidence(Number(video.currentTime));
+        decodedFrameBaseline = readDecodedFrameCount();
         video.addEventListener?.("timeupdate", onTimeUpdate);
         if (typeof video.requestVideoFrameCallback === "function") {
           frameId = video.requestVideoFrameCallback(onFrame);

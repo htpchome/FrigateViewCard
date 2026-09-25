@@ -569,6 +569,8 @@ test("stalled retained HA-direct HLS is released and remounted", async () => {
     let engine = hlsEngine;
     let loading = false;
     let releasedEngine = null;
+    const activeTypes = [];
+    const fallbackStates = [];
     const recoveryReasons = [];
     const controller = createMseGraceController({
       graceMs: 100,
@@ -590,11 +592,12 @@ test("stalled retained HA-direct HLS is released and remounted", async () => {
       setEngineMountedMuted: () => {},
       getRotateOverlayActive: () => false,
       attachVideoFit: () => {},
-      setActiveStreamType: () => {},
+      setActiveStreamType: (type) => activeTypes.push(type),
       setStreamLoading: (next) => {
         loading = next;
       },
-      setStreamFallbackVisible: () => {},
+      setStreamFallbackVisible: (visible, refreshImage) =>
+        fallbackStates.push({ visible, refreshImage }),
       setLiveNativeControls: () => {},
       releaseHaDirectEngine: (released) => {
         releasedEngine = released;
@@ -617,6 +620,98 @@ test("stalled retained HA-direct HLS is released and remounted", async () => {
     assert.equal(releasedEngine, hlsEngine);
     assert.equal(hlsEngine.removeCalls, 1);
     assert.equal(loading, true);
+    assert.deepEqual(activeTypes, ["snapshot", "snapshot"]);
+    assert.deepEqual(fallbackStates, [
+      { visible: true, refreshImage: true },
+      { visible: true, refreshImage: undefined },
+    ]);
     assert.deepEqual(recoveryReasons, ["ha-direct-retained-hls-stalled"]);
+  });
+});
+
+test("retained HA-direct HLS keeps a snapshot until video resumes", async () => {
+  await withFakeDocument(async ({ shadowRoot }) => {
+    const video = {
+      style: { cssText: "" },
+      dataset: {},
+      classList: { add() {} },
+      setAttribute() {},
+      removeAttribute() {},
+      play: () => Promise.resolve(),
+    };
+    const hlsEngine = {
+      type: "ha_direct",
+      streamType: "hls",
+      tagName: "HA-HLS-PLAYER",
+      style: { cssText: "" },
+      shadowRoot: { querySelector: () => video },
+      querySelector: () => null,
+    };
+    let engine = hlsEngine;
+    let resolveResume;
+    const resume = new Promise((resolve) => {
+      resolveResume = resolve;
+    });
+    const activeTypes = [];
+    const loadingStates = [];
+    const fallbackStates = [];
+    const controller = createMseGraceController({
+      graceMs: 100,
+      graceMax: 2,
+      getShadowRoot: () => shadowRoot,
+      getScopeKey: () => ({ id: "scope" }),
+      getPendingMountDestroyers: () => [],
+      setPendingMountDestroyers: () => {},
+      getPendingWebRtcTakeoverTimer: () => null,
+      setPendingWebRtcTakeoverTimer: () => {},
+      clearRotateOverlayAudioSync: () => {},
+      clearRotateVideoFullscreenStyle: () => {},
+      getEngine: () => engine,
+      setEngine: (next) => {
+        engine = next;
+      },
+      getActiveStreamType: () => "hls",
+      getStreamMuted: () => true,
+      setEngineMountedMuted: () => {},
+      getRotateOverlayActive: () => false,
+      attachVideoFit: () => {},
+      setActiveStreamType: (type) => activeTypes.push(type),
+      setStreamLoading: (loading) => loadingStates.push(loading),
+      setStreamFallbackVisible: (visible, refreshImage) =>
+        fallbackStates.push({ visible, refreshImage }),
+      setLiveNativeControls: () => {},
+      releaseHaDirectEngine: () => {
+        throw new Error("healthy retained HLS must not be released");
+      },
+      resumeHaDirectEngine: () => resume,
+      scheduleResumeLive: () => {
+        throw new Error("healthy retained HLS must not remount");
+      },
+    });
+    const slot = {
+      innerHTML: "",
+      appendChild(node) {
+        this.child = node;
+      },
+    };
+
+    assert.equal(controller.adoptGraceHaDirectEngine(slot, hlsEngine), true);
+    assert.deepEqual(activeTypes, ["snapshot"]);
+    assert.deepEqual(loadingStates, [true]);
+    assert.deepEqual(fallbackStates, [
+      { visible: true, refreshImage: true },
+    ]);
+
+    resolveResume(true);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.equal(engine, hlsEngine);
+    assert.deepEqual(activeTypes, ["snapshot", "hls"]);
+    assert.deepEqual(loadingStates, [true, false]);
+    assert.deepEqual(fallbackStates, [
+      { visible: true, refreshImage: true },
+      { visible: false, refreshImage: undefined },
+    ]);
   });
 });

@@ -762,6 +762,57 @@ test("ha direct mounter requires fresh HLS progress after grace adoption", async
   });
 });
 
+test("ha direct mounter rejects audio-only retained HLS with stale video dimensions", async () => {
+  await withFakeDocument(async () => {
+    const hass = {
+      states: {
+        "camera.front": { entity_id: "camera.front", attributes: {} },
+      },
+    };
+    let assignedEngine = null;
+    const mounter = createHaDirectMounter({
+      getHass: () => hass,
+      getPreferredStreamType: () => "hls",
+      getStreamMuted: () => true,
+      getRotateOverlayActive: () => false,
+      isCurrentEngine: (engine) => assignedEngine === engine,
+      waitForStreamStart: async () => true,
+      assignCommittedEngine: (engine) => {
+        assignedEngine = engine;
+      },
+      onCommittedMediaReady: () => {},
+      onCommittedStream: () => {},
+      applyResolvedStreamUiState: () => {},
+      setLiveNativeControls: () => {},
+    });
+
+    await mounter.tryMount(
+      { innerHTML: "", appendChild() {} },
+      null,
+      { entity: "camera.front", commit: true },
+    );
+    await flushAsyncWork();
+
+    const video = assignedEngine.video;
+    video.requestVideoFrameCallback = undefined;
+    video.paused = false;
+    video.readyState = 4;
+    video.videoWidth = 1920;
+    video.playbackRate = 1;
+    const resumed = mounter.resumeRetainedEngine(assignedEngine, {
+      timeoutMs: 250,
+    });
+    await flushAsyncWork();
+    for (const time of [0.1, 0.2, 0.3]) {
+      video.currentTime = time;
+      video.dispatch("timeupdate");
+    }
+
+    assert.equal(await resumed, false);
+    mounter.release(assignedEngine);
+  });
+});
+
 function createHlsHarness(waitForStreamStart = async () => true) {
   let current = null;
   const types = [];

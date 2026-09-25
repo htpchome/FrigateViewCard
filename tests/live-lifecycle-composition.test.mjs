@@ -251,6 +251,8 @@ test("live lifecycle composition preserves grace, handoff, and mount wiring", ()
   assert.equal(card._mseConnectAt, 200);
   assert.equal(card._mseLastChunkAt, 225);
   assert.equal(card._mseChunkCount, 1);
+  optionsByFactory.mseGrace.setStreamFallbackVisible(true, true);
+  assert.deepEqual(calls.at(-1), ["fallback", true, true]);
   optionsByFactory.mseGrace.releaseHaDirectEngine("ha-engine");
   optionsByFactory.mseGrace.adoptHaDirectWebRtcEngine("ha-engine");
   assert.deepEqual(calls.slice(-2), [
