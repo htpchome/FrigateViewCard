@@ -64,7 +64,6 @@ export function createHaDirectMounter({
     binding.disposed = true;
     binding.revision += 1;
     binding.cleanupRecovery?.();
-    binding.retainedProbeAbortController?.abort?.();
     binding.abortController.abort();
     binding.fallbackAbortController?.abort?.();
     binding.fallbackEngine?.remove?.();
@@ -114,7 +113,6 @@ export function createHaDirectMounter({
       failureRevision: 0,
       recoveryVideo: null,
       cleanupRecovery: () => {},
-      retainedProbeAbortController: null,
       abortController: new AbortController(),
       reconcile: null,
       onStreams: null,
@@ -286,156 +284,6 @@ export function createHaDirectMounter({
     engine.setRecoveryHandler?.((reason) => scheduleResumeLive?.(reason));
     engine.activateRecovery?.();
     return true;
-  };
-
-  const waitForRetainedHlsProgress = async (
-    engine,
-    timeoutMs = 0,
-  ) => {
-    const binding = mediaBindings.get(engine);
-    if (!binding || binding.disposed || !isCurrentEngine(engine)) return false;
-
-    binding.retainedProbeAbortController?.abort?.();
-    const abortController = new AbortController();
-    binding.retainedProbeAbortController = abortController;
-    await awaitUpdate(engine);
-    if (
-      abortController.signal.aborted ||
-      binding.disposed ||
-      !isCurrentEngine(engine)
-    ) {
-      return false;
-    }
-
-    return await new Promise((resolve) => {
-      let settled = false;
-      let video = null;
-      let frameId = null;
-      let pollT = null;
-      let timeoutT = null;
-      let decodedFrameBaseline = null;
-
-      const cleanupVideo = () => {
-        if (!video) return;
-        video.removeEventListener?.("timeupdate", onTimeUpdate);
-        if (frameId != null) video.cancelVideoFrameCallback?.(frameId);
-        video = null;
-        frameId = null;
-      };
-      const cleanup = () => {
-        if (pollT != null) clearInterval(pollT);
-        if (timeoutT != null) clearTimeout(timeoutT);
-        abortController.signal.removeEventListener?.("abort", onAbort);
-        cleanupVideo();
-        if (binding.retainedProbeAbortController === abortController) {
-          binding.retainedProbeAbortController = null;
-        }
-      };
-      const done = (ready) => {
-        if (settled) return;
-        settled = true;
-        cleanup();
-        resolve(ready === true);
-      };
-      const isActive = () =>
-        !abortController.signal.aborted &&
-        !binding.disposed &&
-        isCurrentEngine(engine);
-      const hasUsableVisualPlayback = () => {
-        if (!video) return false;
-        const playbackRate = Number(video.playbackRate);
-        return (
-          !video.paused &&
-          !video.ended &&
-          !video.seeking &&
-          Number(video.readyState) >= 2 &&
-          Number(video.videoWidth) > 0 &&
-          (!Number.isFinite(playbackRate) || playbackRate > 0)
-        );
-      };
-      const readDecodedFrameCount = () => {
-        if (!video) return null;
-        try {
-          const totalFrames = Number(
-            video.getVideoPlaybackQuality?.()?.totalVideoFrames,
-          );
-          if (Number.isFinite(totalFrames)) return totalFrames;
-        } catch (_) {}
-        const webkitFrames = Number(video.webkitDecodedFrameCount);
-        return Number.isFinite(webkitFrames) ? webkitFrames : null;
-      };
-      const onTimeUpdate = () => {
-        if (!isActive() || !video) return;
-        if (!hasUsableVisualPlayback()) return;
-        // Audio can advance currentTime while WebKit still presents a black
-        // video surface, so retained playback needs decoded-frame evidence.
-        const decodedFrames = readDecodedFrameCount();
-        if (decodedFrames == null) return;
-        if (
-          decodedFrameBaseline == null ||
-          decodedFrames < decodedFrameBaseline
-        ) {
-          decodedFrameBaseline = decodedFrames;
-          return;
-        }
-        if (decodedFrames > decodedFrameBaseline) {
-          done(true);
-        }
-      };
-      const onFrame = () => {
-        frameId = null;
-        if (!isActive()) return;
-        if (hasUsableVisualPlayback()) {
-          done(true);
-          return;
-        }
-        frameId = video?.requestVideoFrameCallback?.(onFrame) ?? null;
-      };
-      const bindCurrentVideo = () => {
-        if (!isActive()) {
-          done(false);
-          return;
-        }
-        const currentVideo = findActiveHaCameraStreamVideo(engine);
-        if (!currentVideo || currentVideo === video) return;
-        cleanupVideo();
-        video = currentVideo;
-        decodedFrameBaseline = readDecodedFrameCount();
-        video.addEventListener?.("timeupdate", onTimeUpdate);
-        if (typeof video.requestVideoFrameCallback === "function") {
-          frameId = video.requestVideoFrameCallback(onFrame);
-        }
-        void video.play?.().catch?.(() => {});
-      };
-      const onAbort = () => done(false);
-
-      abortController.signal.addEventListener("abort", onAbort, {
-        once: true,
-      });
-      bindCurrentVideo();
-      pollT = setInterval(bindCurrentVideo, 100);
-      const requestedTimeoutMs = Number(timeoutMs);
-      if (Number.isFinite(requestedTimeoutMs) && requestedTimeoutMs > 0) {
-        timeoutT = setTimeout(
-          () => done(false),
-          Math.max(250, requestedTimeoutMs),
-        );
-      }
-    });
-  };
-
-  const resumeRetainedEngine = async (engine, options = {}) => {
-    if (
-      engine?.type !== "ha_direct" ||
-      engine?.streamType !== "hls" ||
-      engine?.tagName?.toLowerCase?.() !== "ha-hls-player"
-    ) {
-      return true;
-    }
-    const binding = mediaBindings.get(engine);
-    if (!binding || binding.disposed || !isCurrentEngine(engine)) return false;
-    binding.reconcile?.();
-    return await waitForRetainedHlsProgress(engine, options.timeoutMs);
   };
 
   const tryMount = async (slot, startup = null, options = {}) => {
@@ -681,7 +529,6 @@ export function createHaDirectMounter({
     adoptRetainedWebRtcEngine,
     detachWebRtcForHandoff,
     release,
-    resumeRetainedEngine,
     tryMount,
   };
 }

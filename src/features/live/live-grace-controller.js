@@ -35,8 +35,6 @@ export function createLiveGraceController({
   setLiveNativeControls,
   releaseHaDirectEngine,
   adoptHaDirectWebRtcEngine,
-  resumeHaDirectEngine,
-  refreshLivePresentation,
   scheduleResumeLive,
   resetMseDiagnostics,
   markMseChunk,
@@ -89,23 +87,8 @@ export function createLiveGraceController({
       !terminalWebRtcStates.has(iceState)
     );
   };
-  const isHaDirectHlsEngineReusable = (engine) =>
-    engine?.type === "ha_direct" &&
-    engine?.streamType === "hls" &&
-    engine?.tagName?.toLowerCase?.() === "ha-hls-player";
-  const isHaDirectEngineReusable = (engine) =>
-    isHaDirectWebRtcEngineReusable(engine) ||
-    isHaDirectHlsEngineReusable(engine);
-  const resolveHaDirectMediaNode = (engine) =>
-    engine?.streamType === "hls" ? engine : engine?.video || null;
-  const resolveHaDirectVideo = (engine) =>
-    engine?.streamType === "hls"
-      ? engine?.shadowRoot?.querySelector?.("video") ||
-        engine?.querySelector?.("video") ||
-        null
-      : engine?.video || null;
+  const isHaDirectEngineReusable = isHaDirectWebRtcEngineReusable;
   let mseGraceHost = null;
-  let haDirectGraceHost = null;
 
   const evictGraceMseEntry = (entity) => {
     const key = normalizeGraceEntityKey(entity);
@@ -143,7 +126,10 @@ export function createLiveGraceController({
     haDirectGracePool.delete(key);
     try {
       releaseHaDirectEngine?.(entry.engine);
-      entry.engine?.remove?.();
+    } catch (_) {}
+    const mediaNode = entry.engine?.video || entry.engine;
+    try {
+      mediaNode?.remove?.();
     } catch (_) {}
   };
 
@@ -184,19 +170,6 @@ export function createLiveGraceController({
     mseGraceHost = host;
     return host;
   };
-  const ensureHaDirectGraceHost = () => {
-    if (haDirectGraceHost?.isConnected) return haDirectGraceHost;
-    const host = document.createElement("div");
-    host.setAttribute("aria-hidden", "true");
-    host.style.cssText =
-      "position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:0";
-    const shadowRoot = getShadowRoot?.();
-    const liveStage = shadowRoot?.querySelector?.("#eng-wrap") || shadowRoot;
-    liveStage?.appendChild?.(host);
-    haDirectGraceHost = host;
-    return host;
-  };
-
   const stashMseEngineForGrace = (entity, engine) => {
     const key = normalizeGraceEntityKey(entity);
     if (!key || !engine?.video || !engine?.ws) return false;
@@ -242,24 +215,12 @@ export function createLiveGraceController({
     if (!key) return false;
     engine?.cancelPendingTakeover?.();
     if (!isHaDirectEngineReusable(engine)) return false;
-    const mediaNode = resolveHaDirectMediaNode(engine);
+    const mediaNode = engine.video || null;
     if (!mediaNode) return false;
     evictGraceHaDirectEntry(key);
     engine.deactivateRecovery?.();
-    const video = resolveHaDirectVideo(engine);
-    if (engine.streamType === "hls") {
-      ensureHaDirectGraceHost().appendChild(mediaNode);
-      mediaNode.style.cssText =
-        "position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;background:var(--c-bg-deep)";
-      if (video) {
-        video.muted = true;
-        video.controls = false;
-        void video.play?.().catch?.(() => {});
-      }
-    } else {
-      ensureMseGraceHost().appendChild(mediaNode);
-      prepareEngineVideoForGraceHost(video);
-    }
+    ensureMseGraceHost().appendChild(mediaNode);
+    prepareEngineVideoForGraceHost(mediaNode);
     const entry = createGraceEngineEntry({
       engine,
       graceMs,
@@ -417,85 +378,48 @@ export function createLiveGraceController({
     if (!slot || !isHaDirectEngineReusable(engine)) {
       try {
         releaseHaDirectEngine?.(engine);
-        engine?.remove?.();
+      } catch (_) {}
+      const mediaNode = engine?.video || engine;
+      try {
+        mediaNode?.remove?.();
       } catch (_) {}
       return false;
     }
-    const mediaNode = resolveHaDirectMediaNode(engine);
-    const video = resolveHaDirectVideo(engine);
+    const mediaNode = engine.video || null;
+    const video = engine.video || null;
     if (!mediaNode) return false;
-    if (engine.streamType === "hls") {
-      mediaNode.style.cssText =
-        "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
-    }
-    if (video) {
-      configureVideoElement(
-        video,
-        buildVideoOptionsForView(
-          "live",
-          {
-            muted: getStreamMuted?.(),
-            controls: false,
-          },
-          { scopeKey: getScopeKey?.() },
-        ),
-      );
-    }
+    configureVideoElement(
+      video,
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted: getStreamMuted?.(),
+          controls: false,
+        },
+        { scopeKey: getScopeKey?.() },
+      ),
+    );
     mountNodeIntoSlot(slot, mediaNode);
-    attachVideoFit?.(engine.streamType === "hls" ? engine : video);
+    attachVideoFit?.(video);
     setEngine?.(engine);
-    if (engine.streamType === "webrtc") {
-      const ownershipAdopted = adoptHaDirectWebRtcEngine?.(engine);
-      if (ownershipAdopted === false) {
-        setEngine?.(null, { retainPrevious: true });
-        try {
-          releaseHaDirectEngine?.(engine);
-          mediaNode.remove?.();
-        } catch (_) {}
-        return false;
-      }
-      if (ownershipAdopted !== true) engine.activateRecovery?.();
-    } else {
-      engine.activateRecovery?.();
+    const ownershipAdopted = adoptHaDirectWebRtcEngine?.(engine);
+    if (ownershipAdopted === false) {
+      setEngine?.(null, { retainPrevious: true });
+      try {
+        releaseHaDirectEngine?.(engine);
+      } catch (_) {}
+      try {
+        mediaNode.remove?.();
+      } catch (_) {}
+      return false;
     }
+    if (ownershipAdopted !== true) engine.activateRecovery?.();
     setEngineMountedMuted?.(getStreamMuted?.());
-    const validateRetainedHls =
-      engine.streamType === "hls" &&
-      typeof resumeHaDirectEngine === "function";
-    if (validateRetainedHls) {
-      setActiveStreamType?.("hls");
-      setStreamLoading?.(true);
-      setStreamFallbackVisible?.(true, true);
-    } else {
-      setActiveStreamType?.(engine.streamType);
-      setStreamLoading?.(false);
-      setStreamFallbackVisible?.(false);
-    }
+    setActiveStreamType?.("webrtc");
+    setStreamLoading?.(false);
+    setStreamFallbackVisible?.(false);
     if (getRotateOverlayActive?.()) setLiveNativeControls?.(true);
     void video?.play?.().catch?.(() => {});
-    if (validateRetainedHls) {
-      refreshLivePresentation?.(video);
-      globalThis.requestAnimationFrame?.(() =>
-        refreshLivePresentation?.(video),
-      );
-    }
-    if (validateRetainedHls) {
-      let resumeResult = false;
-      try {
-        resumeResult = resumeHaDirectEngine(engine);
-      } catch (_) {}
-      void Promise.resolve(resumeResult)
-        .catch(() => false)
-        .then((ready) => {
-          if (getEngine?.() !== engine) return;
-          setStreamLoading?.(false);
-          if (ready === true) {
-            setStreamFallbackVisible?.(false);
-          } else {
-            setStreamFallbackVisible?.(true);
-          }
-        });
-    }
     return true;
   };
 
@@ -542,6 +466,18 @@ export function createLiveGraceController({
       setEngine?.(null, { retainPrevious: true });
       return;
     }
+    if (engine?.type === "ha_direct") {
+      try {
+        releaseHaDirectEngine?.(engine);
+      } catch (_) {}
+      const mediaNode =
+        engine.streamType === "webrtc" ? engine.video : engine;
+      try {
+        mediaNode?.remove?.();
+      } catch (_) {}
+      setEngine?.(null, { retainPrevious: true });
+      return;
+    }
     if (
       preserveLiveEntity &&
       activeStreamType === "webrtc" &&
@@ -580,10 +516,6 @@ export function createLiveGraceController({
       mseGraceHost?.remove?.();
     } catch (_) {}
     mseGraceHost = null;
-    try {
-      haDirectGraceHost?.remove?.();
-    } catch (_) {}
-    haDirectGraceHost = null;
   };
 
   return {

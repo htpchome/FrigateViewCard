@@ -58,10 +58,6 @@ export const createLiveLifecycleControllers = (
       card._haDirectMounter?.release?.(engine),
     adoptHaDirectWebRtcEngine: (engine) =>
       card._haDirectMounter?.adoptRetainedWebRtcEngine?.(engine),
-    resumeHaDirectEngine: (engine) =>
-      card._haDirectMounter?.resumeRetainedEngine?.(engine),
-    refreshLivePresentation: () =>
-      card._liveVideoZoomController?.refreshPresentation?.(),
     scheduleResumeLive: (reason) => card._scheduleResumeLive(reason),
     resetMseDiagnostics: (connectedAt) => {
       card._mseConnectAt = connectedAt;

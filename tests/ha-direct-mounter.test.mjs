@@ -715,104 +715,6 @@ test("ha direct mounter shows ready HLS while WebRTC continues and takes over", 
   }
 });
 
-test("ha direct mounter requires fresh HLS progress after grace adoption", async () => {
-  await withFakeDocument(async () => {
-    const hass = {
-      states: {
-        "camera.front": { entity_id: "camera.front", attributes: {} },
-      },
-    };
-    let assignedEngine = null;
-    const mounter = createHaDirectMounter({
-      getHass: () => hass,
-      getPreferredStreamType: () => "hls",
-      getStreamMuted: () => true,
-      getRotateOverlayActive: () => false,
-      isCurrentEngine: (engine) => assignedEngine === engine,
-      waitForStreamStart: async () => true,
-      assignCommittedEngine: (engine) => {
-        assignedEngine = engine;
-      },
-      onCommittedMediaReady: () => {},
-      onCommittedStream: () => {},
-      applyResolvedStreamUiState: () => {},
-      setLiveNativeControls: () => {},
-    });
-    const slot = {
-      innerHTML: "",
-      appendChild(node) {
-        this.lastChild = node;
-      },
-    };
-
-    await mounter.tryMount(slot, null, {
-      entity: "camera.front",
-      commit: true,
-    });
-    await flushAsyncWork();
-
-    const resumed = mounter.resumeRetainedEngine(assignedEngine, {
-      timeoutMs: 300,
-    });
-    await flushAsyncWork();
-    assignedEngine.video.presentFrame();
-
-    assert.equal(await resumed, true);
-    mounter.release(assignedEngine);
-  });
-});
-
-test("ha direct mounter rejects audio-only retained HLS with stale video dimensions", async () => {
-  await withFakeDocument(async () => {
-    const hass = {
-      states: {
-        "camera.front": { entity_id: "camera.front", attributes: {} },
-      },
-    };
-    let assignedEngine = null;
-    const mounter = createHaDirectMounter({
-      getHass: () => hass,
-      getPreferredStreamType: () => "hls",
-      getStreamMuted: () => true,
-      getRotateOverlayActive: () => false,
-      isCurrentEngine: (engine) => assignedEngine === engine,
-      waitForStreamStart: async () => true,
-      assignCommittedEngine: (engine) => {
-        assignedEngine = engine;
-      },
-      onCommittedMediaReady: () => {},
-      onCommittedStream: () => {},
-      applyResolvedStreamUiState: () => {},
-      setLiveNativeControls: () => {},
-    });
-
-    await mounter.tryMount(
-      { innerHTML: "", appendChild() {} },
-      null,
-      { entity: "camera.front", commit: true },
-    );
-    await flushAsyncWork();
-
-    const video = assignedEngine.video;
-    video.requestVideoFrameCallback = undefined;
-    video.paused = false;
-    video.readyState = 4;
-    video.videoWidth = 1920;
-    video.playbackRate = 1;
-    const resumed = mounter.resumeRetainedEngine(assignedEngine, {
-      timeoutMs: 250,
-    });
-    await flushAsyncWork();
-    for (const time of [0.1, 0.2, 0.3]) {
-      video.currentTime = time;
-      video.dispatch("timeupdate");
-    }
-
-    assert.equal(await resumed, false);
-    mounter.release(assignedEngine);
-  });
-});
-
 function createHlsHarness(waitForStreamStart = async () => true) {
   let current = null;
   const types = [];
@@ -1113,7 +1015,7 @@ test("HLS timeupdate recovery ignores isolated jumps and backward movement", asy
   });
 });
 
-test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate connection", { timeout: 3000 }, async () => {
+test("HA Direct HLS cleanup creates a fresh player and keeps its snapshot until ready", { timeout: 3000 }, async () => {
   await withFakeDocument(async ({ hlsPlayers }) => {
     const hass = {
       states: {
@@ -1126,7 +1028,11 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
     let engine = null;
     let activeStreamType = "snapshot";
     let fallbackVisible = true;
-    let presentationRefreshes = 0;
+    let waitCalls = 0;
+    let resolveFreshPlayer;
+    const freshPlayerReady = new Promise((resolve) => {
+      resolveFreshPlayer = resolve;
+    });
     let mounter = null;
     const assignEngine = (nextEngine, options = {}) => {
       if (engine === nextEngine) return;
@@ -1142,7 +1048,10 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
       getStreamMuted: () => true,
       getRotateOverlayActive: () => false,
       isCurrentEngine: (candidate) => engine === candidate,
-      waitForStreamStart: async () => true,
+      waitForStreamStart: async () => {
+        waitCalls += 1;
+        return waitCalls === 1 ? true : await freshPlayerReady;
+      },
       assignCommittedEngine: assignEngine,
       onCommittedMediaReady: () => {},
       onCommittedStream: (type) => {
@@ -1186,11 +1095,6 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
       setLiveNativeControls: () => {},
       releaseHaDirectEngine: (releasedEngine) =>
         mounter.release(releasedEngine),
-      resumeHaDirectEngine: (retainedEngine) =>
-        mounter.resumeRetainedEngine(retainedEngine),
-      refreshLivePresentation: () => {
-        presentationRefreshes += 1;
-      },
       adoptHaDirectWebRtcEngine: () => {
         throw new Error("HLS must not enter WebRTC ownership adoption");
       },
@@ -1217,15 +1121,16 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
     assert.equal(mountedEngine.listenerCount("streams"), 1);
 
     graceController.cleanupEngine({ preserveLiveEntity: "camera.front" });
-    const cachedEntry = graceController.takeGraceHaDirectEntry(
-      "camera.front",
-      "hls",
-    );
 
     assert.equal(engine, null);
-    assert.equal(cachedEntry?.engine, mountedEngine);
+    assert.equal(
+      graceController.takeGraceHaDirectEntry("camera.front", "hls"),
+      null,
+    );
     assert.equal(hlsPlayers.length, 1);
-    assert.equal(mountedEngine.listenerCount("streams"), 1);
+    assert.equal(mountedEngine.removeCalled, true);
+    assert.equal(mountedEngine.listenerCount("load"), 0);
+    assert.equal(mountedEngine.listenerCount("streams"), 0);
 
     const returnSlot = {
       innerHTML: "occupied",
@@ -1234,45 +1139,24 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
         node.parentElement = this;
       },
     };
-    assert.equal(
-      graceController.adoptGraceHaDirectEngine(
-        returnSlot,
-        cachedEntry.engine,
-      ),
-      true,
-    );
-    assert.equal(engine, mountedEngine);
-    assert.equal(returnSlot.child, mountedEngine);
-    assert.equal(hlsPlayers.length, 1);
-    assert.equal(activeStreamType, "hls");
-    assert.equal(fallbackVisible, true);
-    assert.equal(presentationRefreshes, 1);
-    assert.equal(
-      mountedEngine.video.style.cssText.includes("left:-9999px"),
-      false,
+    applyFallbackState(true);
+    const freshMount = await mounter.tryMount(
+      returnSlot,
+      { streamType: "hls" },
+      { entity: "camera.front", commit: true },
     );
 
-    await flushAsyncWork();
-    mountedEngine.video.presentFrame();
-    await flushAsyncWork();
-    assert.equal(fallbackVisible, false);
-
-    mountedEngine.dispatch("streams", { hasVideo: false });
-    await flushAsyncWork();
-    assert.equal(activeStreamType, "snapshot");
+    const freshEngine = engine;
+    assert.equal(freshMount?.ok, true);
+    assert.notEqual(freshEngine, mountedEngine);
+    assert.equal(returnSlot.child, freshEngine);
+    assert.equal(hlsPlayers.length, 2);
     assert.equal(fallbackVisible, true);
-    assert.equal(mountedEngine.video.pendingFrames().length, 1);
 
-    mountedEngine.video.presentFrame();
+    resolveFreshPlayer(true);
     await flushAsyncWork();
     assert.equal(activeStreamType, "hls");
     assert.equal(fallbackVisible, false);
-    assert.equal(hlsPlayers.length, 1);
-
-    mountedEngine.dispatch("streams", { hasVideo: false });
-    await flushAsyncWork();
-    assert.equal(activeStreamType, "snapshot");
-    assert.equal(fallbackVisible, true);
 
     graceController.cleanupEngine({ preserveLiveEntity: "camera.front" });
     assert.equal(engine, null);
@@ -1280,10 +1164,9 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
       graceController.takeGraceHaDirectEntry("camera.front", "hls"),
       null,
     );
-    assert.equal(mountedEngine.listenerCount("load"), 0);
-    assert.equal(mountedEngine.listenerCount("streams"), 0);
-    assert.equal(mountedEngine.video.listenerCount("timeupdate"), 0);
-    assert.equal(mountedEngine.video.pendingFrames().length, 0);
+    assert.equal(freshEngine.removeCalled, true);
+    assert.equal(freshEngine.listenerCount("load"), 0);
+    assert.equal(freshEngine.listenerCount("streams"), 0);
     graceController.clearGracePool();
   });
 });

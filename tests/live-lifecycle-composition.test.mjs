@@ -82,9 +82,6 @@ test("live lifecycle composition preserves grace, handoff, and mount wiring", ()
     _twoWayTalkSession: null,
     _dashboardLiveGraceActive: true,
     _mseChunkCount: 0,
-    _liveVideoZoomController: {
-      refreshPresentation: () => calls.push(["refresh-presentation"]),
-    },
     _haDirectMounter: haDirectMounter,
     _haDirectTwoWayTalkMounter: { name: "ha-talk-mounter" },
     _go2rtcRaceMounter: { name: "go2rtc-race" },
@@ -256,8 +253,6 @@ test("live lifecycle composition preserves grace, handoff, and mount wiring", ()
   assert.equal(card._mseChunkCount, 1);
   optionsByFactory.liveGrace.setStreamFallbackVisible(true, true);
   assert.deepEqual(calls.at(-1), ["fallback", true, true]);
-  optionsByFactory.liveGrace.refreshLivePresentation();
-  assert.deepEqual(calls.at(-1), ["refresh-presentation"]);
   optionsByFactory.liveGrace.releaseHaDirectEngine("ha-engine");
   optionsByFactory.liveGrace.adoptHaDirectWebRtcEngine("ha-engine");
   assert.deepEqual(calls.slice(-2), [

@@ -111,6 +111,14 @@ test("camera switching preserves recent live engines for short switch-back reuse
     liveGraceControllerSource.includes("adoptGraceHaDirectEngine"),
     true,
   );
+  assert.equal(
+    liveGraceControllerSource.includes("isHaDirectHlsEngineReusable"),
+    false,
+  );
+  assert.equal(
+    liveGraceControllerSource.includes("ensureHaDirectGraceHost"),
+    false,
+  );
   assert.equal(liveGraceControllerSource.includes("clearGracePool"), true);
   assert.equal(
     pendingDestroyersSource.includes("splitPendingDestroyersByGraceMse"),

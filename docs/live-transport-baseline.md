@@ -2,16 +2,19 @@
 
 ## Current Baseline
 
-`v1.1.5-dev.63` is the known-good baseline for both live connection modes as
-physically tested on September 6, 2026.
+`v1.1.5-dev.63` established the original live connection baseline physically
+tested on September 6, 2026. Later Mac Catalyst testing found that its HA Direct
+HLS browser-player retention was not valid. `v1.1.7-dev.64` corrects that
+lifecycle in code and automated coverage; physical Catalyst validation remains
+required.
 
 - `frigate_go2rtc` connections are good. Preserve its established WebRTC/MSE
   startup, connection retention, camera-switch behavior, fallbacks, and
   two-way-talk behavior exactly unless a request explicitly targets this mode.
-- `ha_direct` connections are good. HLS supplies the first picture nearly
+- `ha_direct` HLS supplies the first picture nearly
   immediately, a capable WebRTC connection may take over when ready, retained
-  connections are reused, and browsers that cannot complete WebRTC remain on
-  HLS.
+  WebRTC connections are reused, and browsers that cannot complete WebRTC
+  remain on HLS.
 - HA Direct WebRTC takeover and HA Direct two-way-talk negotiation work, but
   remain slower than desired. This is accepted for this baseline. Treat faster
   negotiation as deferred optimization, not an active defect requiring a
@@ -33,9 +36,18 @@ Preserve all of these behaviors together:
 6. If WebRTC fails, keep the already-playing HLS connection.
 7. When the camera changes, cancel the pending takeover before retaining or
    releasing the current HLS engine so no WebRTC session is orphaned.
-8. Preserve connection retention and reuse across camera switches.
+8. Preserve card-owned HA Direct WebRTC retention and reuse across camera
+   switches. Do not retain or reparent Home Assistant's `ha-hls-player` custom
+   element; release it on departure and create a fresh player on return.
 9. On browsers where WebRTC is unavailable or cannot complete, use HA HLS and
    do not force the stream down to snapshots while HLS is viable.
+
+Home Assistant owns the HA Direct HLS player lifecycle. Removing or reparenting
+`ha-hls-player` invokes its disconnect cleanup, which destroys browser-side HLS
+playback. The card must therefore keep the snapshot visible while a fresh HLS
+player starts and hide it only after rendered-media readiness. Home Assistant
+may independently keep its backend camera stream warm; that backend reuse must
+not be simulated by caching the browser custom element.
 
 Do not add a short WebRTC selection cutoff. A prior three-second first-track
 cutoff rejected connections that would have succeeded and caused the wrong
@@ -79,6 +91,10 @@ one of those policies is the cause.
 - `v1.1.5-dev.63` restored Home Assistant's audio/video ordering and initial
   ICE-candidate offer handling, and applied the initial-candidate optimization
   to HA Direct two-way talk without changing its media shape.
+- `v1.1.7-dev.64` stopped grace-caching HA Direct HLS players after physical
+  Catalyst testing showed that custom-element reparenting restarted playback
+  and could leave video black while audio continued. HA Direct WebRTC and
+  Frigate go2rtc retention remain unchanged.
 
 ## Validation Expectations
 
@@ -88,7 +104,8 @@ and must include physical checks for:
 - first-picture time on WebRTC-capable and non-WebRTC clients;
 - eventual WebRTC takeover on a capable client;
 - stable HLS playback when WebRTC cannot complete;
-- retained connection counts during fast camera switching;
+- retained WebRTC/MSE connection counts during fast camera switching and fresh
+  HA Direct HLS player creation on return;
 - complete teardown without increasing connection or subscription counts;
 - HA Direct two-way-talk incoming and outgoing audio;
 - unchanged `frigate_go2rtc` startup, fallback, switching, and talk behavior.
