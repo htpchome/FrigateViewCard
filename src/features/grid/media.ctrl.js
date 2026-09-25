@@ -7,6 +7,7 @@ import {
   watchHaPlaybackFirstFrame,
 } from "../../integrations/home-assistant/playback.js";
 import { appendCacheBustParam } from "../live/fallbacks/fallback-url.js";
+import { attachContainedVideoFit } from "../../shared/media/video-fit.js";
 import { adoptMountedAttemptSlot } from "../live/mount-result.js";
 import { createStrategyForType } from "../live/stream.strategies.js";
 import { StreamOrchestrator } from "../live/stream.orchestrator.js";
@@ -562,7 +563,7 @@ export class GridMediaController {
           return Boolean(liveStage);
         }
         liveTarget.appendChild(stream);
-        this._host._attachVideoFit(stream);
+        attachContainedVideoFit(stream);
         let released = false;
         const handoffType = haDirectStreamHint;
         const handoff = {

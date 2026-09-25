@@ -495,12 +495,16 @@ test("clicking a Companion Camera uses the normal manual camera switch", () => {
 const createElement = (tagName) => ({
   tagName,
   style: {},
+  video: { style: {} },
   dataset: {},
   children: [],
   isConnected: true,
   appendChild(child) {
     child.isConnected = true;
     this.children.push(child);
+  },
+  querySelector(selector) {
+    return selector === "video" ? this.video : null;
   },
   remove() {
     this.isConnected = false;
@@ -520,7 +524,6 @@ test("camera tile live mounts keep HA Direct and Frigate/go2rtc distinct", async
           return { ok: true, engine: { destroy() {} } };
         },
       },
-      _attachVideoFit() {},
     };
     const go2rtcController = new GridMediaController(go2rtcHost);
     const go2rtcCell = createElement("cell");
@@ -552,7 +555,6 @@ test("camera tile live mounts keep HA Direct and Frigate/go2rtc distinct", async
           throw new Error("go2rtc must not run for HA Direct");
         },
       },
-      _attachVideoFit() {},
       _findVideoDeep: () => null,
     };
     const haController = new GridMediaController(haHost);

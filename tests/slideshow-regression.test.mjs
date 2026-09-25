@@ -21,6 +21,13 @@ const videoFitSource = fs.readFileSync(
   new URL("../src/shared/media/video-fit.js", import.meta.url),
   "utf8",
 );
+const liveMediaPresentationSource = fs.readFileSync(
+  new URL(
+    "../src/features/live/media-presentation.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 test("slideshow config is wired through the card", () => {
   assert.equal(source.includes("slideshow_rotation_enabled"), true);
@@ -104,12 +111,11 @@ test("live resize and media-only clicks do not restart slideshow rotation", () =
 });
 
 test("main live video fit remains stable after metadata loads", () => {
-  const fitStart = cardSource.indexOf("  _applyVideoFit(videoEl) {");
-  const fitEnd = cardSource.indexOf("  _attachVideoFit(", fitStart);
-  const fitMethod = cardSource.slice(fitStart, fitEnd);
-
-  assert.notEqual(fitStart, -1);
-  assert.equal(fitMethod.includes("applyContainedVideoFit(videoEl);"), true);
+  assert.equal(
+    liveMediaPresentationSource.includes("applyContainedVideoFit(video);"),
+    true,
+  );
+  assert.equal(cardSource.includes("_applyVideoFit("), false);
   assert.equal(videoFitSource.includes('objectFit = "contain";'), true);
   assert.equal(videoFitSource.includes("loadedmetadata"), false);
   assert.equal(videoFitSource.includes('"cover"'), false);

@@ -7,6 +7,8 @@ import {
 import { createGo2RtcResolver } from "../../integrations/frigate/go2rtc-resolver.js";
 import { createHaDirectTwoWayTalkBackchannel } from "../../integrations/home-assistant/two-way-talk-backchannel.js";
 import { createHaDirectTwoWayTalkMounter } from "../../integrations/home-assistant/two-way-talk-mounter.js";
+import { waitForMediaStart } from "../../shared/media/first-frame.js";
+import { attachContainedVideoFit } from "../../shared/media/video-fit.js";
 import { createGo2RtcTwoWayTalkBackchannel } from "../two-way-talk/go2rtc-backchannel.js";
 import { createGo2RtcMounter } from "./go2rtc-mounter.js";
 import { createGo2RtcRaceMounter } from "./go2rtc-race-mounter.js";
@@ -34,6 +36,18 @@ export const createLiveTransportControllers = (
   } = {},
 ) => {
   const resolvedFactories = { ...DEFAULT_FACTORIES, ...factories };
+  const waitForStreamStart = (
+    streamEl,
+    timeoutMs = 3500,
+    options = {},
+  ) =>
+    waitForMediaStart(streamEl, timeoutMs, {
+      ...options,
+      resolveVideo:
+        typeof options.resolveVideo === "function"
+          ? options.resolveVideo
+          : (root) => card._findVideoDeep(root),
+    });
   const go2rtcResolver = resolvedFactories.createGo2RtcResolver({
     getHass: () => card._hass,
     getConfig: () => card._config,
@@ -55,9 +69,8 @@ export const createLiveTransportControllers = (
   const go2rtcMounter = resolvedFactories.createGo2RtcMounter({
     resolver: go2rtcResolver,
     getStreamMuted: () => card._streamMuted,
-    waitForStreamStart: (streamEl, timeoutMs, options) =>
-      card._waitForStreamStart(streamEl, timeoutMs, options),
-    attachVideoFit: (streamEl) => card._attachVideoFit(streamEl),
+    waitForStreamStart,
+    attachVideoFit: attachContainedVideoFit,
     assignCommittedEngine: (engine) => card._assignLiveEngine(engine),
     onCommittedStream: (type) => {
       card._setActiveStreamType(type);
@@ -83,8 +96,7 @@ export const createLiveTransportControllers = (
     getStreamMuted: () => card._streamMuted,
     getRotateOverlayActive: () => card._rotateOverlayActive,
     isCurrentEngine: (streamEl) => card._engine === streamEl,
-    waitForStreamStart: (streamEl, timeoutMs, options) =>
-      card._waitForStreamStart(streamEl, timeoutMs, options),
+    waitForStreamStart,
     assignCommittedEngine: (engine, options) =>
       card._assignLiveEngine(engine, options),
     onCommittedMediaReady: (engine, video) => {
@@ -109,9 +121,8 @@ export const createLiveTransportControllers = (
     resolvedFactories.createHaDirectTwoWayTalkMounter({
       getHass: () => card._hass,
       getStreamMuted: () => card._streamMuted,
-      waitForStreamStart: (streamEl, timeoutMs, options) =>
-        card._waitForStreamStart(streamEl, timeoutMs, options),
-      attachVideoFit: (streamEl) => card._attachVideoFit(streamEl),
+      waitForStreamStart,
+      attachVideoFit: attachContainedVideoFit,
       assignCommittedEngine: (engine) => card._assignLiveEngine(engine),
       onCommittedStream: (type) => {
         card._setActiveStreamType(type);
@@ -159,8 +170,7 @@ export const createLiveTransportControllers = (
         setLiveNativeControls: (enabled) =>
           card._setLiveNativeControls(enabled),
       }),
-    waitForStreamStart: (streamEl, timeoutMs, options) =>
-      card._waitForStreamStart(streamEl, timeoutMs, options),
+    waitForStreamStart,
     isCurrentWinnerEngine: (engine) => card._engine === engine,
     getPendingWebRtcTakeoverTimer: () => card._pendingWebRTCTakeoverTimer,
     setPendingWebRtcTakeoverTimer: (timer) => {

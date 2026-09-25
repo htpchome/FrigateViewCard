@@ -1,4 +1,5 @@
 import { attachVideoZoom } from "../../shared/media/video-zoom.ctrl.js";
+import { applyContainedVideoFit } from "../../shared/media/video-fit.js";
 
 export class LiveMediaPresentationController {
   constructor(host) {
@@ -36,7 +37,7 @@ export class LiveMediaPresentationController {
       hostCard._findVideoDeep(engine);
     if (!video) return;
 
-    hostCard._applyVideoFit(video);
+    applyContainedVideoFit(video);
     hostCard._liveViewResizeController?.attachMedia(video);
     const currentZoomController = hostCard._liveVideoZoomController;
     const sameVideo = currentZoomController?.video === video;

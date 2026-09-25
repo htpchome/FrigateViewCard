@@ -607,6 +607,9 @@ const createPreviewMediaElement = (tagName) => {
     dispatchEvent(event) {
       listeners.get(event?.type)?.forEach((listener) => listener(event));
     },
+    querySelector() {
+      return null;
+    },
     remove() {
       if (this.parentNode?.children) {
         this.parentNode.children = this.parentNode.children.filter(
@@ -856,6 +859,7 @@ test("Preview HA Direct HLS reveals only after the active HA player renders", as
   let stream = null;
   let hlsFrameCallback = null;
   const hlsVideo = {
+    style: {},
     readyState: 0,
     videoWidth: 0,
     currentTime: 0,
@@ -897,7 +901,6 @@ test("Preview HA Direct HLS reveals only after the active HA player renders", as
       },
       _streamFallbackUrl: async () => "/snapshot/front.jpg",
       _shouldUseGo2RtcForEntity: () => false,
-      _attachVideoFit() {},
       _findVideoDeep: () => {
         throw new Error("HA Direct must resolve HA's active player");
       },

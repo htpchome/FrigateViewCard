@@ -3,6 +3,7 @@ import {
   MSE_SWITCH_GRACE_MS,
 } from "../../constants.js";
 import { buildEditorLiveHandoffKey } from "../editor-preview/context.ctrl.js";
+import { attachContainedVideoFit } from "../../shared/media/video-fit.js";
 import {
   createEditorLiveHandoffController,
   createLiveMountController,
@@ -47,7 +48,7 @@ export const createLiveLifecycleControllers = (
       card._engineMountedMuted = muted;
     },
     getRotateOverlayActive: () => card._rotateOverlayActive,
-    attachVideoFit: (streamEl) => card._attachVideoFit(streamEl),
+    attachVideoFit: attachContainedVideoFit,
     setActiveStreamType: (type) => card._setActiveStreamType(type),
     setStreamLoading: (loading) => card._setStreamLoading(loading),
     setStreamFallbackVisible: (visible) =>

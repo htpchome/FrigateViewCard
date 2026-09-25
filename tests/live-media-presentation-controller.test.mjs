@@ -39,13 +39,12 @@ test("live media presentation replaces engines through one cleanup path", () => 
 
 test("live media presentation refreshes an unchanged video attachment", () => {
   const engine = {};
-  const video = {};
+  const video = { style: {} };
   const zoomHost = {};
   const interactionTarget = {};
   const calls = [];
   const host = {
     _engine: engine,
-    _applyVideoFit: (media) => calls.push(["fit", media]),
     _liveViewResizeController: {
       attachMedia: (media) => calls.push(["resize", media]),
     },
@@ -61,11 +60,17 @@ test("live media presentation refreshes an unchanged video attachment", () => {
   new LiveMediaPresentationController(host).attachVideoZoom(engine, video);
 
   assert.deepEqual(calls, [
-    ["fit", video],
     ["resize", video],
     ["refresh"],
     ["sync-pip"],
   ]);
+  assert.deepEqual(video.style, {
+    display: "block",
+    width: "100%",
+    height: "100%",
+    objectPosition: "center center",
+    objectFit: "contain",
+  });
 });
 
 test("live media presentation suspends zoom during rotate overlays", () => {

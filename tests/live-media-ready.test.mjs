@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { findVideoDeep } from "../src/shared/media/fullscreen.js";
+import { waitForMediaStart } from "../src/shared/media/first-frame.js";
 
 globalThis.window = globalThis.window || { customCards: [] };
 globalThis.window.customCards = globalThis.window.customCards || [];
@@ -74,10 +75,7 @@ test("stream readiness reports a video inside nested shadow roots", async () => 
   };
   let readyVideo = null;
 
-  const started = await FrigateViewCard.prototype._waitForStreamStart.call(
-    {
-      _findVideoDeep: findVideoDeep,
-    },
+  const started = await waitForMediaStart(
     streamEl,
     500,
     {
@@ -87,6 +85,7 @@ test("stream readiness reports a video inside nested shadow roots", async () => 
       onVideoReady: (discoveredVideo) => {
         readyVideo = discoveredVideo;
       },
+      resolveVideo: findVideoDeep,
     },
   );
 
@@ -97,11 +96,10 @@ test("stream readiness reports a video inside nested shadow roots", async () => 
 test("known ready media uses the shared live attachment path without querying", () => {
   const engine = {};
   const host = {};
-  const video = { parentElement: host };
+  const video = { parentElement: host, style: {} };
   const calls = [];
   const context = {
     _engine: engine,
-    _applyVideoFit: (media) => calls.push(["fit", media]),
     _liveViewResizeController: {
       attachMedia: (media) => calls.push(["resize", media]),
     },
@@ -127,11 +125,11 @@ test("known ready media uses the shared live attachment path without querying", 
   );
 
   assert.deepEqual(calls, [
-    ["fit", video],
     ["resize", video],
     ["refresh"],
     ["pip"],
   ]);
+  assert.equal(video.style.objectFit, "contain");
 });
 
 test("HA direct stale checks probe only the visible HA player", () => {
@@ -312,8 +310,7 @@ test("stream readiness releases pending video callbacks and listeners on abort",
     },
   };
   const abortController = new AbortController();
-  const pending = FrigateViewCard.prototype._waitForStreamStart.call(
-    { _findVideoDeep: () => null },
+  const pending = waitForMediaStart(
     {},
     1000,
     {

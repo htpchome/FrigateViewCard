@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { createLiveTransportControllers } from "../src/features/live/transport-composition.js";
+import { attachContainedVideoFit } from "../src/shared/media/video-fit.js";
 
 test("live transport composition keeps go2rtc and HA Direct stacks explicit", async () => {
   const optionsByFactory = {};
@@ -49,8 +50,7 @@ test("live transport composition keeps go2rtc and HA Direct stacks explicit", as
     _discoverOne: async (entity) => calls.push(["discover", entity]),
     _supportsNativeHlsPlayback: () => true,
     _preferredStreamType: () => "webrtc",
-    _waitForStreamStart: (...args) => calls.push(["wait", ...args]),
-    _attachVideoFit: (streamEl) => calls.push(["fit", streamEl]),
+    _findVideoDeep: () => null,
     _assignLiveEngine: (...args) => calls.push(["assign-engine", ...args]),
     _setActiveStreamType: (type) => calls.push(["stream-type", type]),
     _setStreamLoading: (loading) => calls.push(["loading", loading]),
@@ -87,6 +87,14 @@ test("live transport composition keeps go2rtc and HA Direct stacks explicit", as
     controllers._go2rtcMounter,
   );
   assert.strictEqual(optionsByFactory.go2rtcMounter.scopeKey, card);
+  assert.strictEqual(
+    optionsByFactory.go2rtcMounter.attachVideoFit,
+    attachContainedVideoFit,
+  );
+  assert.strictEqual(
+    optionsByFactory.haDirectTwoWayTalkMounter.attachVideoFit,
+    attachContainedVideoFit,
+  );
   assert.strictEqual(optionsByFactory.haDirectMounter.scopeKey, card);
   assert.equal(optionsByFactory.go2rtcRaceMounter.isMobile, true);
   assert.equal(optionsByFactory.go2rtcRaceMounter.isMountTokenCurrent(7), true);

@@ -7,6 +7,7 @@ import {
 } from "../src/constants.js";
 import { buildEditorLiveHandoffKey } from "../src/features/editor-preview/context.ctrl.js";
 import { createLiveLifecycleControllers } from "../src/features/live/lifecycle-composition.js";
+import { attachContainedVideoFit } from "../src/shared/media/video-fit.js";
 
 test("live lifecycle composition preserves grace, handoff, and mount wiring", () => {
   const optionsByFactory = {};
@@ -107,7 +108,6 @@ test("live lifecycle composition preserves grace, handoff, and mount wiring", ()
     _clearRotateVideoFullscreenStyle: () =>
       calls.push(["clear-fullscreen-style"]),
     _assignLiveEngine: (...args) => calls.push(["assign-engine", ...args]),
-    _attachVideoFit: (streamEl) => calls.push(["fit", streamEl]),
     _setActiveStreamType: (type) => calls.push(["stream-type", type]),
     _setStreamLoading: (loading) => calls.push(["loading", loading]),
     _setStreamFallbackVisible: (...args) => calls.push(["fallback", ...args]),
@@ -138,6 +138,10 @@ test("live lifecycle composition preserves grace, handoff, and mount wiring", ()
   });
   assert.equal(optionsByFactory.mseGrace.graceMs, MSE_SWITCH_GRACE_MS);
   assert.equal(optionsByFactory.mseGrace.graceMax, MSE_SWITCH_GRACE_MAX);
+  assert.strictEqual(
+    optionsByFactory.mseGrace.attachVideoFit,
+    attachContainedVideoFit,
+  );
   assert.strictEqual(optionsByFactory.liveMount.mseGraceController, mseGraceController);
   assert.strictEqual(optionsByFactory.liveMount.haDirectMounter, haDirectMounter);
   assert.strictEqual(

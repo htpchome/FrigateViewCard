@@ -971,7 +971,7 @@ test("live media presentation is owned by its feature controller", () => {
     assert.equal(cardSource.includes(delegation), true);
   }
   for (const ownedMechanic of [
-    "hostCard._applyVideoFit(video)",
+    "applyContainedVideoFit(video)",
     "hostCard._liveViewResizeController?.attachMedia(video)",
     "host._haDirectMounter?.release?.(host._engine)",
     "attachVideoZoom(video, {",
@@ -1260,11 +1260,20 @@ test("generic media readiness behavior is owned by shared media primitives", () 
     cardSource.includes(
       'import { waitForMediaStart } from "../shared/media/first-frame.js";',
     ),
+    false,
+  );
+  assert.equal(cardSource.includes("_waitForStreamStart("), false);
+  assert.equal(
+    liveTransportCompositionSource.includes(
+      'import { waitForMediaStart } from "../../shared/media/first-frame.js";',
+    ),
     true,
   );
-  assert.match(
-    cardSource,
-    /_waitForStreamStart\(streamEl, timeoutMs = 3500, opts = \{\}\) \{\s*return waitForMediaStart\(streamEl, timeoutMs, \{/,
+  assert.equal(
+    liveTransportCompositionSource.includes(
+      "waitForMediaStart(streamEl, timeoutMs, {",
+    ),
+    true,
   );
   assert.equal(
     sharedMediaFirstFrameSource.includes(
@@ -1286,15 +1295,31 @@ test("generic media readiness behavior is owned by shared media primitives", () 
 test("generic contained-video fitting is owned by shared media primitives", () => {
   assert.equal(
     cardSource.includes('from "../shared/media/video-fit.js";'),
+    false,
+  );
+  assert.equal(cardSource.includes("_applyVideoFit("), false);
+  assert.equal(cardSource.includes("_attachVideoFit("), false);
+  assert.equal(
+    liveMediaPresentationControllerSource.includes(
+      "applyContainedVideoFit(video)",
+    ),
     true,
   );
-  assert.match(
-    cardSource,
-    /_applyVideoFit\(videoEl\) \{\s*applyContainedVideoFit\(videoEl\);\s*\}/,
+  assert.equal(
+    liveTransportCompositionSource.includes(
+      "attachVideoFit: attachContainedVideoFit",
+    ),
+    true,
   );
-  assert.match(
-    cardSource,
-    /_attachVideoFit\(streamEl, retries = 12\) \{\s*attachContainedVideoFit\(streamEl, retries\);\s*\}/,
+  assert.equal(
+    liveLifecycleCompositionSource.includes(
+      "attachVideoFit: attachContainedVideoFit",
+    ),
+    true,
+  );
+  assert.equal(
+    gridMediaControllerSource.includes("attachContainedVideoFit(stream)"),
+    true,
   );
   for (const styleAssignment of [
     'style.display = "block"',

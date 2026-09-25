@@ -103,11 +103,6 @@ import {
   setScopedVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
 } from "../shared/media/video-factory.js";
-import { waitForMediaStart } from "../shared/media/first-frame.js";
-import {
-  applyContainedVideoFit,
-  attachContainedVideoFit,
-} from "../shared/media/video-fit.js";
 import { CameraGroupLiveController } from "../features/camera-groups/live.ctrl.js";
 import { LinkedLightController } from "../features/linked-entities/light.ctrl.js";
 import {
@@ -1429,24 +1424,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _applyMountTrackingState(nextState) {
     return getLiveMountStateController(this).applyTrackingState(nextState);
-  }
-
-  _waitForStreamStart(streamEl, timeoutMs = 3500, opts = {}) {
-    return waitForMediaStart(streamEl, timeoutMs, {
-      ...opts,
-      resolveVideo:
-        typeof opts.resolveVideo === "function"
-          ? opts.resolveVideo
-          : (root) => this._findVideoDeep(root),
-    });
-  }
-
-  _applyVideoFit(videoEl) {
-    applyContainedVideoFit(videoEl);
-  }
-
-  _attachVideoFit(streamEl, retries = 12) {
-    attachContainedVideoFit(streamEl, retries);
   }
 
   _setStreamLoading(loading, text = "Loading…") {
