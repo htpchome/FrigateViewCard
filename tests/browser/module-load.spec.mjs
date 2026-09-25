@@ -1227,6 +1227,77 @@ test("browse filters and calendar localize in place and after rebuilding", async
   });
 });
 
+test("browse filter and calendar panels close on outside pointer interaction", async ({
+  page,
+}) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    card._renderShell();
+
+    const root = card.shadowRoot;
+    const filterButton = root.querySelector("#filter-btn");
+    const calendarButton = root.querySelector("#cal-btn");
+    const filterPanel = root.querySelector("#filter-panel");
+    const calendarPanel = root.querySelector("#cal-panel");
+    const pointerDown = (target, pointerType = "mouse") => {
+      target.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          composed: true,
+          isPrimary: true,
+          pointerType,
+        }),
+      );
+    };
+
+    filterButton.click();
+    const filterOption = filterPanel.querySelector("[data-flabel]");
+    pointerDown(filterOption);
+    const filterAfterInside = filterPanel.style.display;
+    pointerDown(filterButton);
+    const filterAfterTrigger = filterPanel.style.display;
+    pointerDown(document.body, "touch");
+    const filterAfterOutside = {
+      display: filterPanel.style.display,
+      pressed: filterButton.getAttribute("aria-pressed"),
+    };
+
+    calendarButton.click();
+    const calendarControl = calendarPanel.querySelector("[data-cal-nav]");
+    pointerDown(calendarControl, "touch");
+    const calendarAfterInside = calendarPanel.style.display;
+    pointerDown(calendarButton, "touch");
+    const calendarAfterTrigger = calendarPanel.style.display;
+    pointerDown(document.body);
+    const calendarAfterOutside = {
+      display: calendarPanel.style.display,
+      pressed: calendarButton.getAttribute("aria-pressed"),
+    };
+
+    return {
+      filterAfterInside,
+      filterAfterTrigger,
+      filterAfterOutside,
+      calendarAfterInside,
+      calendarAfterTrigger,
+      calendarAfterOutside,
+    };
+  });
+
+  expect(state).toEqual({
+    filterAfterInside: "block",
+    filterAfterTrigger: "block",
+    filterAfterOutside: { display: "none", pressed: "false" },
+    calendarAfterInside: "block",
+    calendarAfterTrigger: "block",
+    calendarAfterOutside: { display: "none", pressed: "false" },
+  });
+});
+
 test("browse empty states localize in place and after switching tabs", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

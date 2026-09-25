@@ -7,6 +7,7 @@ import { BrowseCalendarPanelController } from "./calendar-panel.ctrl.js";
 import { BrowseCollectionController } from "./collection.ctrl.js";
 import { BrowseFilterController } from "./filter-state.js";
 import { BrowseFavoriteMutationController } from "./favorite-mutation.ctrl.js";
+import { BrowsePanelDismissController } from "./panel-dismiss.ctrl.js";
 import { BrowseTabDataController } from "./tab-data.ctrl.js";
 import { BrowseWindowLoaderController } from "./window-loader.ctrl.js";
 import {
@@ -27,6 +28,8 @@ const DEFAULT_FACTORIES = Object.freeze({
     new BrowseFilterController(card, options),
   createFavoriteMutationController: (card) =>
     new BrowseFavoriteMutationController(card),
+  createPanelDismissController: (card) =>
+    new BrowsePanelDismissController(card),
   createTabDataController: (card) => new BrowseTabDataController(card),
   createWindowLoaderController: (card) =>
     new BrowseWindowLoaderController(card),
@@ -52,6 +55,8 @@ export const createBrowseControllers = (
     }),
     _browseFavoriteMutationController:
       resolvedFactories.createFavoriteMutationController(card),
+    _browsePanelDismissController:
+      resolvedFactories.createPanelDismissController(card),
     _browseTabDataController:
       resolvedFactories.createTabDataController(card),
     _browseWindowLoaderController:

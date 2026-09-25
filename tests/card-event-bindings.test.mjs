@@ -122,6 +122,10 @@ test("global card bindings retain viewport, lifecycle, and preview behavior", ()
       handleDocumentPointerDown: (event) =>
         calls.push(["light-document", event]),
     },
+    _browsePanelDismissController: {
+      handleDocumentPointerDown: (event) =>
+        calls.push(["dismiss-browse-panels", event]),
+    },
     _mobileCamSwitcherController: {
       close: () => calls.push(["switcher-close"]),
     },
@@ -180,6 +184,13 @@ test("global card bindings retain viewport, lifecycle, and preview behavior", ()
     ["preview-draft", { title: "Draft" }, "mobile"],
   );
 
-  documentTarget.listener("pointerdown")({ composedPath: () => [] });
+  const pointerDown = { composedPath: () => [] };
+  documentTarget.listener("pointerdown")(pointerDown);
+  assert.ok(
+    calls.some(
+      ([name, event]) =>
+        name === "dismiss-browse-panels" && event === pointerDown,
+    ),
+  );
   assert.ok(calls.some(([name]) => name === "switcher-close"));
 });

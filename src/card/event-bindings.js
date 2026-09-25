@@ -183,6 +183,7 @@ export const bindCardGlobalEvents = (
 
   card._onDocumentPointerDown = (event) => {
     card._linkedLightController?.handleDocumentPointerDown?.(event);
+    card._browsePanelDismissController?.handleDocumentPointerDown?.(event);
     if (!card._mobileCamSwitcherOpen) return;
     const path =
       typeof event?.composedPath === "function" ? event.composedPath() : [];

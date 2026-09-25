@@ -21,6 +21,7 @@ test("browse composition preserves controller order and markup dependencies", ()
     collection: { type: "collection" },
     favoriteMutation: { type: "favorite-mutation" },
     filter: { type: "filter" },
+    panelDismiss: { type: "panel-dismiss" },
     tabData: { type: "tab-data" },
     windowLoader: { type: "window-loader" },
   };
@@ -48,6 +49,10 @@ test("browse composition preserves controller order and markup dependencies", ()
       calls.push(["favorite-mutation", host]);
       return controllers.favoriteMutation;
     },
+    createPanelDismissController: (host) => {
+      calls.push(["panel-dismiss", host]);
+      return controllers.panelDismiss;
+    },
     createTabDataController: (host) => {
       calls.push(["tab-data", host]);
       return controllers.tabData;
@@ -66,6 +71,7 @@ test("browse composition preserves controller order and markup dependencies", ()
     _browseCollectionController: controllers.collection,
     _browseFilterController: controllers.filter,
     _browseFavoriteMutationController: controllers.favoriteMutation,
+    _browsePanelDismissController: controllers.panelDismiss,
     _browseTabDataController: controllers.tabData,
     _browseWindowLoaderController: controllers.windowLoader,
   });
@@ -75,6 +81,7 @@ test("browse composition preserves controller order and markup dependencies", ()
     ["collection", card],
     ["filter", card],
     ["favorite-mutation", card],
+    ["panel-dismiss", card],
     ["tab-data", card],
     ["window-loader", card],
   ]);

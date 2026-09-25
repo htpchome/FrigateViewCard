@@ -1555,6 +1555,51 @@ test("Card View calendar passes the timezone-aware current day to shared markup"
   assert.equal(state.activeDayDateString, "");
 });
 
+test("Card View calendar and drawer panels close only for outside interaction", () => {
+  const controller = new CardViewPageController({});
+  const renders = [];
+  controller.renderToolbar = () => renders.push("toolbar");
+  controller.renderCalendar = () => renders.push("calendar");
+  controller.renderMediaDrawerCalendar = () =>
+    renders.push("drawer-calendar");
+  controller.renderMediaDrawerFilter = () => renders.push("drawer-filter");
+  controller.renderMediaDrawer = () => renders.push("drawer");
+  controller._calendarOpen = true;
+  controller._mediaDrawerCalendarOpen = true;
+  controller._mediaDrawerFilterOpen = true;
+
+  const inside = controller.closeCalendarIfOutside({
+    composedPath: () => [
+      {
+        matches: (selector) =>
+          selector.includes(".card-view-media-drawer-popover"),
+      },
+    ],
+  });
+
+  assert.equal(inside, false);
+  assert.equal(controller._calendarOpen, true);
+  assert.equal(controller._mediaDrawerCalendarOpen, true);
+  assert.equal(controller._mediaDrawerFilterOpen, true);
+  assert.deepEqual(renders, []);
+
+  const outside = controller.closeCalendarIfOutside({
+    composedPath: () => [{ matches: () => false, closest: () => null }],
+  });
+
+  assert.equal(outside, true);
+  assert.equal(controller._calendarOpen, false);
+  assert.equal(controller._mediaDrawerCalendarOpen, false);
+  assert.equal(controller._mediaDrawerFilterOpen, false);
+  assert.deepEqual(renders, [
+    "toolbar",
+    "calendar",
+    "drawer-calendar",
+    "drawer-filter",
+    "drawer",
+  ]);
+});
+
 test("Card View alert takeover remains independent of shared modes", () => {
   let toolbarSyncs = 0;
   const stateChanges = [];
