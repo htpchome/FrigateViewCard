@@ -276,13 +276,7 @@ test("live controls keep a shared overlay including Mobile View mute", () => {
     false,
   );
   assert.equal(
-    mobileViewStylesSource.includes(
-      ".card.mobile-view-active.mobile-rotate-live #mobile-view-mute-btn",
-    ),
-    true,
-  );
-  assert.equal(
-    popupToolbarControllerSource.includes('#mute-btn, #mobile-view-mute-btn'),
+    popupToolbarControllerSource.includes('#mute-btn, #two-way-talk-mute-btn'),
     true,
   );
   assert.equal(
@@ -314,9 +308,13 @@ test("live controls keep a shared overlay including Mobile View mute", () => {
   );
   assert.equal(
     mobileViewStylesSource.includes(
-      ":is(.mobile-view-inline-mute-btn,.mobile-view-microphone-mute-btn):not(.active):hover",
+      ".mobile-view-microphone-mute-btn:not(.active):hover",
     ),
     true,
+  );
+  assert.equal(
+    mobileViewStylesSource.includes("mobile-view-inline-mute-btn"),
+    false,
   );
 });
 

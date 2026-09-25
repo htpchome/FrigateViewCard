@@ -917,7 +917,6 @@ test("live audio behavior is owned by its feature controller", () => {
     true,
   );
   for (const delegation of [
-    "getLiveAudioController(this).buildMobileInlineControlMarkup()",
     "getLiveAudioController(this).resolveMuted()",
     "getLiveAudioController(this).setMuted(muted)",
     "getLiveAudioController(this).syncMuteButtons()",

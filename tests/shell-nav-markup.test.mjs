@@ -711,22 +711,6 @@ test("shared shell builders expose stable page region anchors", () => {
   assert.doesNotMatch(mobileLiveFullscreen, /square-btn/);
   assert.match(mobileLiveMute, /class="icon-btn mute-btn"/);
   assert.doesNotMatch(mobileLiveMute, /square-btn/);
-  const mobileInlineMute = buildLiveMuteControlMarkup({
-    icons: { volOff: "M", volOn: "V" },
-    streamMuted: false,
-    buttonClass: "icon-btn",
-    buttonId: "mobile-view-mute-btn",
-    region: "",
-    extraClass: "mobile-view-inline-mute-btn",
-    pressed: true,
-  });
-  assert.match(
-    mobileInlineMute,
-    /class="icon-btn mute-btn mobile-view-inline-mute-btn active"/,
-  );
-  assert.match(mobileInlineMute, /id="mobile-view-mute-btn"/);
-  assert.match(mobileInlineMute, /aria-pressed="true"/);
-  assert.doesNotMatch(mobileInlineMute, /data-fvc-region/);
   const hiddenTalkMute = buildLiveMuteControlMarkup({
     icons: { volOff: "M", volOn: "V" },
     streamMuted: false,

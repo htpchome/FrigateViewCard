@@ -338,8 +338,6 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
           twoWayTalk: host?._buildTwoWayTalkMobileButtonMarkup?.() || "",
           mobileMicrophoneMute:
             host?._buildMobileViewMicrophoneMuteButtonMarkup?.() || "",
-          mobileInlineMute:
-            host?._buildMobileViewInlineMuteButtonMarkup?.() || "",
           linkedEntitiesLeft:
             host?._buildLinkedLightControlMarkup?.({
               buttonClass: "icon-btn",

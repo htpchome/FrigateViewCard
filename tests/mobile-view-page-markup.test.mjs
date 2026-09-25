@@ -197,8 +197,6 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
         `<div id="mobile-view-two-way-talk-slot" data-fvc-region="two-way-talk"><button id="two-way-talk-btn" hidden></button></div>`,
       mobileMicrophoneMute:
         `<button class="icon-btn mute-btn mobile-view-microphone-mute-btn" id="mobile-view-microphone-mute-btn" hidden></button>`,
-      mobileInlineMute:
-        `<button class="icon-btn mute-btn mobile-view-inline-mute-btn" id="mobile-view-mute-btn"></button>`,
       browseHeader: `<div data-fvc-region="browse-header"></div>`,
       browse: `<div class="browse" data-fvc-region="browse"></div>`,
       footer: `<div class="footer" data-fvc-region="footer"></div>`,
@@ -237,17 +235,15 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
     markup.includes('id="mobile-view-microphone-mute-btn"'),
     true,
   );
-  assert.equal(markup.includes('id="mobile-view-mute-btn"'), true);
+  assert.equal(markup.includes('id="mobile-view-mute-btn"'), false);
   assert.equal(
     markup.indexOf('id="mobile-view-microphone-mute-btn"') <
-      markup.indexOf('id="two-way-talk-btn"') &&
-      markup.indexOf('id="two-way-talk-btn"') <
-      markup.indexOf('id="mobile-view-mute-btn"'),
+      markup.indexOf('id="two-way-talk-btn"'),
     true,
   );
   assert.match(
     markup,
-    /class="button-holder-row mobile-microphone-row">[\s\S]*?mobile-view-microphone-mute-btn[\s\S]*?two-way-talk-btn[\s\S]*?mobile-view-mute-btn[\s\S]*?<\/div>/,
+    /class="button-holder-row mobile-microphone-row">[\s\S]*?mobile-view-microphone-mute-btn[\s\S]*?two-way-talk-btn[\s\S]*?<\/div>/,
   );
   assert.equal(
     markup.match(/data-fvc-region="tabs"/g)?.length,
@@ -272,14 +268,7 @@ test("mobile view centers the microphone independently of the mute button", () =
     MOBILE_VIEW_PAGE_STYLES,
     /\.mobile-microphone-row \.mobile-view-two-way-talk-slot\{grid-column:2;\}/,
   );
-  assert.match(
-    MOBILE_VIEW_PAGE_STYLES,
-    /\.mobile-microphone-row \.mobile-view-inline-mute-btn\{grid-column:3;\}/,
-  );
-  assert.match(
-    MOBILE_VIEW_PAGE_STYLES,
-    /\.mobile-view-two-way-talk-slot\[hidden\] \+ \.mobile-view-inline-mute-btn,[\s\S]*?\.mobile-view-inline-mute-btn:only-child\{grid-column:2;\}/,
-  );
+  assert.doesNotMatch(MOBILE_VIEW_PAGE_STYLES, /mobile-view-inline-mute-btn/);
   assert.match(
     MOBILE_VIEW_PAGE_STYLES,
     /:is\(\.mobile-video-controls-left-row,\.mobile-video-controls-right-row\):not\(\[hidden\]\)\{justify-self:stretch;justify-content:center;min-width:40px;\}/,
@@ -294,7 +283,7 @@ test("mobile view centers the microphone independently of the mute button", () =
   );
   assert.match(
     MOBILE_VIEW_PAGE_STYLES,
-    /mobile-microphone-row:has\(\.two-way-talk-control-row\.has-soundwave\) > :is\(\.mobile-view-microphone-mute-btn,\.mobile-view-inline-mute-btn\)\{display:none !important;\}/,
+    /mobile-microphone-row:has\(\.two-way-talk-control-row\.has-soundwave\) > \.mobile-view-microphone-mute-btn\{display:none !important;\}/,
   );
 });
 

@@ -3317,10 +3317,6 @@ export class FrigateViewCard extends HTMLElement {
     ).buildMobileMicrophoneMuteButtonMarkup();
   }
 
-  _buildMobileViewInlineMuteButtonMarkup() {
-    return getLiveAudioController(this).buildMobileInlineControlMarkup();
-  }
-
   _buildTwoWayTalkControlRowMarkup({
     includeIncomingAudioMute = true,
   } = {}) {
