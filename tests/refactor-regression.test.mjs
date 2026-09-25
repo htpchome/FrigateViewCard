@@ -930,18 +930,18 @@ test("live audio behavior is owned by its feature controller", () => {
   assert.equal(cardSource.includes("needsHaDirectRecovery"), false);
   assert.equal(liveAudioControllerSource.includes("setIncomingAudioMuted"), true);
   assert.equal(
-    liveAudioControllerSource.includes("const needsHaDirectRecovery ="),
-    true,
+    liveAudioControllerSource.includes("needsHaDirectRecovery"),
+    false,
   );
   assert.equal(
     liveAudioControllerSource.includes("host._useHaDirectStreamPath()"),
-    true,
+    false,
   );
   assert.equal(
     liveAudioControllerSource.includes(
       "host._mountEngine(null, { quiet: true });",
     ),
-    true,
+    false,
   );
   assert.equal(
     liveAudioControllerSource.includes("[120, 400, 900].forEach"),

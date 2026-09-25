@@ -35,6 +35,7 @@ export function createMseGraceController({
   setLiveNativeControls,
   releaseHaDirectEngine,
   adoptHaDirectWebRtcEngine,
+  resumeHaDirectEngine,
   scheduleResumeLive,
   resetMseDiagnostics,
   markMseChunk,
@@ -433,6 +434,27 @@ export function createMseGraceController({
     setStreamFallbackVisible?.(false);
     if (getRotateOverlayActive?.()) setLiveNativeControls?.(true);
     void video?.play?.().catch?.(() => {});
+    if (
+      engine.streamType === "hls" &&
+      typeof resumeHaDirectEngine === "function"
+    ) {
+      let resumeResult = false;
+      try {
+        resumeResult = resumeHaDirectEngine(engine);
+      } catch (_) {}
+      void Promise.resolve(resumeResult)
+        .catch(() => false)
+        .then((ready) => {
+          if (ready !== false || getEngine?.() !== engine) return;
+          setEngine?.(null, { retainPrevious: true });
+          try {
+            releaseHaDirectEngine?.(engine);
+            mediaNode.remove?.();
+          } catch (_) {}
+          setStreamLoading?.(true);
+          scheduleResumeLive?.("ha-direct-retained-hls-stalled");
+        });
+    }
     return true;
   };
 

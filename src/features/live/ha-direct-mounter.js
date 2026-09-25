@@ -20,10 +20,13 @@ const normalizeHaDirectStreamType = (value) => {
 
 const HA_DIRECT_HIDDEN_ATTEMPT_STYLE =
   "position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;left:-9999px;top:-9999px;background:var(--c-bg-deep)";
+const HA_DIRECT_VISIBLE_HLS_ATTEMPT_STYLE =
+  "position:absolute;inset:0;z-index:1;width:100%;height:100%;display:block;pointer-events:none;background:var(--c-bg-deep)";
 const HA_DIRECT_VISIBLE_STYLE =
   "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
 const HA_DIRECT_TIME_RECOVERY_MIN_ADVANCES = 2;
 const HA_DIRECT_TIME_RECOVERY_MIN_PROGRESS_SECONDS = 0.05;
+const HA_DIRECT_RETAINED_HLS_PROBE_MS = 2200;
 
 export function createHaDirectMounter({
   getHass,
@@ -62,6 +65,7 @@ export function createHaDirectMounter({
     binding.disposed = true;
     binding.revision += 1;
     binding.cleanupRecovery?.();
+    binding.retainedProbeAbortController?.abort?.();
     binding.abortController.abort();
     binding.fallbackAbortController?.abort?.();
     binding.fallbackEngine?.remove?.();
@@ -111,6 +115,7 @@ export function createHaDirectMounter({
       failureRevision: 0,
       recoveryVideo: null,
       cleanupRecovery: () => {},
+      retainedProbeAbortController: null,
       abortController: new AbortController(),
       reconcile: null,
       onStreams: null,
@@ -284,6 +289,138 @@ export function createHaDirectMounter({
     return true;
   };
 
+  const waitForRetainedHlsProgress = async (
+    engine,
+    timeoutMs = HA_DIRECT_RETAINED_HLS_PROBE_MS,
+  ) => {
+    const binding = mediaBindings.get(engine);
+    if (!binding || binding.disposed || !isCurrentEngine(engine)) return false;
+
+    binding.retainedProbeAbortController?.abort?.();
+    const abortController = new AbortController();
+    binding.retainedProbeAbortController = abortController;
+    await awaitUpdate(engine);
+    if (
+      abortController.signal.aborted ||
+      binding.disposed ||
+      !isCurrentEngine(engine)
+    ) {
+      return false;
+    }
+
+    return await new Promise((resolve) => {
+      let settled = false;
+      let video = null;
+      let frameId = null;
+      let pollT = null;
+      let timeoutT = null;
+      let lastTime = null;
+      let advancingSamples = 0;
+      let progressStartTime = null;
+
+      const cleanupVideo = () => {
+        if (!video) return;
+        video.removeEventListener?.("timeupdate", onTimeUpdate);
+        if (frameId != null) video.cancelVideoFrameCallback?.(frameId);
+        video = null;
+        frameId = null;
+      };
+      const cleanup = () => {
+        if (pollT != null) clearInterval(pollT);
+        if (timeoutT != null) clearTimeout(timeoutT);
+        abortController.signal.removeEventListener?.("abort", onAbort);
+        cleanupVideo();
+        if (binding.retainedProbeAbortController === abortController) {
+          binding.retainedProbeAbortController = null;
+        }
+      };
+      const done = (ready) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(ready === true);
+      };
+      const isActive = () =>
+        !abortController.signal.aborted &&
+        !binding.disposed &&
+        isCurrentEngine(engine);
+      const resetTimeEvidence = (time) => {
+        lastTime = Number.isFinite(time) ? time : null;
+        advancingSamples = 0;
+        progressStartTime = null;
+      };
+      const onTimeUpdate = () => {
+        if (!isActive() || !video) return;
+        const time = Number(video.currentTime);
+        if (!Number.isFinite(time)) {
+          resetTimeEvidence(time);
+          return;
+        }
+        if (lastTime == null || time < lastTime) {
+          resetTimeEvidence(time);
+          return;
+        }
+        if (time === lastTime) return;
+        advancingSamples += 1;
+        if (progressStartTime == null) progressStartTime = time;
+        lastTime = time;
+        if (
+          advancingSamples >= HA_DIRECT_TIME_RECOVERY_MIN_ADVANCES &&
+          time - progressStartTime >=
+            HA_DIRECT_TIME_RECOVERY_MIN_PROGRESS_SECONDS
+        ) {
+          done(true);
+        }
+      };
+      const onFrame = () => {
+        frameId = null;
+        if (!isActive()) return;
+        done(true);
+      };
+      const bindCurrentVideo = () => {
+        if (!isActive()) {
+          done(false);
+          return;
+        }
+        const currentVideo = findActiveHaCameraStreamVideo(engine);
+        if (!currentVideo || currentVideo === video) return;
+        cleanupVideo();
+        video = currentVideo;
+        resetTimeEvidence(Number(video.currentTime));
+        video.addEventListener?.("timeupdate", onTimeUpdate);
+        if (typeof video.requestVideoFrameCallback === "function") {
+          frameId = video.requestVideoFrameCallback(onFrame);
+        }
+        void video.play?.().catch?.(() => {});
+      };
+      const onAbort = () => done(false);
+
+      abortController.signal.addEventListener("abort", onAbort, {
+        once: true,
+      });
+      bindCurrentVideo();
+      pollT = setInterval(bindCurrentVideo, 100);
+      timeoutT = setTimeout(
+        () => done(false),
+        Math.max(250, Number(timeoutMs) || HA_DIRECT_RETAINED_HLS_PROBE_MS),
+      );
+    });
+  };
+
+  const resumeRetainedEngine = async (engine, options = {}) => {
+    if (
+      engine?.type !== "ha_direct" ||
+      engine?.streamType !== "hls" ||
+      engine?.tagName?.toLowerCase?.() !== "ha-hls-player"
+    ) {
+      return true;
+    }
+    const binding = mediaBindings.get(engine);
+    if (!binding || binding.disposed || !isCurrentEngine(engine)) return false;
+    binding.reconcile?.();
+    return await waitForRetainedHlsProgress(engine, options.timeoutMs);
+  };
+
   const tryMount = async (slot, startup = null, options = {}) => {
     const preferredStreamType = getPreferredStreamType();
     const haDirectPlan = buildHaDirectMountPlan({
@@ -419,7 +556,12 @@ export function createHaDirectMounter({
     const binding = createWebRtcBinding(engine);
     onCommittedMediaReady?.(engine, engine.video);
     if (getRotateOverlayActive()) setLiveNativeControls(true);
-    const fallbackEngine = createHlsEngine(HA_DIRECT_HIDDEN_ATTEMPT_STYLE);
+    // HLS is the first-picture path. Keep it visibly layered over the pending
+    // WebRTC attempt so WebKit/Catalyst will render it instead of throttling an
+    // offscreen 1px player. WebRTC remains owned and may take over when ready.
+    const fallbackEngine = createHlsEngine(
+      HA_DIRECT_VISIBLE_HLS_ATTEMPT_STYLE,
+    );
     const fallbackAbortController = new AbortController();
     if (fallbackEngine) {
       binding.fallbackEngine = fallbackEngine;
@@ -522,6 +664,7 @@ export function createHaDirectMounter({
     adoptRetainedWebRtcEngine,
     detachWebRtcForHandoff,
     release,
+    resumeRetainedEngine,
     tryMount,
   };
 }

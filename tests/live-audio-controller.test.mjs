@@ -30,7 +30,7 @@ const createMuteChangeHost = ({ haDirect, talkActive = false }) => {
   return { calls, host };
 };
 
-test("live audio remount recovery remains exclusive to HA Direct", () => {
+test("live audio changes do not remount either live transport", () => {
   const haDirect = createMuteChangeHost({ haDirect: true });
   new LiveAudioController(haDirect.host).applyMuteChange(false);
 
@@ -38,9 +38,8 @@ test("live audio remount recovery remains exclusive to HA Direct", () => {
     ["set-muted", false],
     ["sync-group-audio"],
     ["render-mute"],
-    ["mount", null, { quiet: true }],
   ]);
-  assert.equal(haDirect.host._engineMountedMuted, true);
+  assert.equal(haDirect.host._engineMountedMuted, false);
 
   const frigateGo2rtc = createMuteChangeHost({ haDirect: false });
   new LiveAudioController(frigateGo2rtc.host).applyMuteChange(false);

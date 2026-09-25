@@ -640,10 +640,16 @@ test("ha direct mounter shows ready HLS while WebRTC continues and takes over", 
   });
 
   try {
-    const result = await mounter.tryMount(slot, null, {
+    const mountPromise = mounter.tryMount(slot, null, {
       entity: "camera.front",
       commit: true,
     });
+    assert.match(
+      hlsPlayers[0].style.cssText,
+      /position:absolute;inset:0/,
+    );
+    assert.equal(hlsPlayers[0].style.cssText.includes("opacity:0"), false);
+    const result = await mountPromise;
     const webRtcEngine = result.engine;
     await flushAsyncWork();
     await flushAsyncWork();
@@ -707,6 +713,53 @@ test("ha direct mounter shows ready HLS while WebRTC continues and takes over", 
     globalThis.MediaStream = previousMediaStream;
     globalThis.RTCPeerConnection = previousPeerConnection;
   }
+});
+
+test("ha direct mounter requires fresh HLS progress after grace adoption", async () => {
+  await withFakeDocument(async () => {
+    const hass = {
+      states: {
+        "camera.front": { entity_id: "camera.front", attributes: {} },
+      },
+    };
+    let assignedEngine = null;
+    const mounter = createHaDirectMounter({
+      getHass: () => hass,
+      getPreferredStreamType: () => "hls",
+      getStreamMuted: () => true,
+      getRotateOverlayActive: () => false,
+      isCurrentEngine: (engine) => assignedEngine === engine,
+      waitForStreamStart: async () => true,
+      assignCommittedEngine: (engine) => {
+        assignedEngine = engine;
+      },
+      onCommittedMediaReady: () => {},
+      onCommittedStream: () => {},
+      applyResolvedStreamUiState: () => {},
+      setLiveNativeControls: () => {},
+    });
+    const slot = {
+      innerHTML: "",
+      appendChild(node) {
+        this.lastChild = node;
+      },
+    };
+
+    await mounter.tryMount(slot, null, {
+      entity: "camera.front",
+      commit: true,
+    });
+    await flushAsyncWork();
+
+    const resumed = mounter.resumeRetainedEngine(assignedEngine, {
+      timeoutMs: 300,
+    });
+    await flushAsyncWork();
+    assignedEngine.video.presentFrame();
+
+    assert.equal(await resumed, true);
+    mounter.release(assignedEngine);
+  });
 });
 
 function createHlsHarness(waitForStreamStart = async () => true) {

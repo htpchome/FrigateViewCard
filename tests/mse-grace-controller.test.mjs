@@ -543,3 +543,80 @@ test("live grace controller retains and releases HA-direct HLS separately", asyn
     assert.equal(removeCalls, 1);
   });
 });
+
+test("stalled retained HA-direct HLS is released and remounted", async () => {
+  await withFakeDocument(async ({ shadowRoot }) => {
+    const video = {
+      style: { cssText: "" },
+      dataset: {},
+      classList: { add() {} },
+      setAttribute() {},
+      removeAttribute() {},
+      play: () => Promise.resolve(),
+    };
+    const hlsEngine = {
+      type: "ha_direct",
+      streamType: "hls",
+      tagName: "HA-HLS-PLAYER",
+      style: { cssText: "" },
+      shadowRoot: { querySelector: () => video },
+      querySelector: () => null,
+      removeCalls: 0,
+      remove() {
+        this.removeCalls += 1;
+      },
+    };
+    let engine = hlsEngine;
+    let loading = false;
+    let releasedEngine = null;
+    const recoveryReasons = [];
+    const controller = createMseGraceController({
+      graceMs: 100,
+      graceMax: 2,
+      getShadowRoot: () => shadowRoot,
+      getScopeKey: () => ({ id: "scope" }),
+      getPendingMountDestroyers: () => [],
+      setPendingMountDestroyers: () => {},
+      getPendingWebRtcTakeoverTimer: () => null,
+      setPendingWebRtcTakeoverTimer: () => {},
+      clearRotateOverlayAudioSync: () => {},
+      clearRotateVideoFullscreenStyle: () => {},
+      getEngine: () => engine,
+      setEngine: (next) => {
+        engine = next;
+      },
+      getActiveStreamType: () => "hls",
+      getStreamMuted: () => true,
+      setEngineMountedMuted: () => {},
+      getRotateOverlayActive: () => false,
+      attachVideoFit: () => {},
+      setActiveStreamType: () => {},
+      setStreamLoading: (next) => {
+        loading = next;
+      },
+      setStreamFallbackVisible: () => {},
+      setLiveNativeControls: () => {},
+      releaseHaDirectEngine: (released) => {
+        releasedEngine = released;
+      },
+      resumeHaDirectEngine: async () => false,
+      scheduleResumeLive: (reason) => recoveryReasons.push(reason),
+    });
+    const slot = {
+      innerHTML: "",
+      appendChild(node) {
+        this.child = node;
+      },
+    };
+
+    assert.equal(controller.adoptGraceHaDirectEngine(slot, hlsEngine), true);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.equal(engine, null);
+    assert.equal(releasedEngine, hlsEngine);
+    assert.equal(hlsEngine.removeCalls, 1);
+    assert.equal(loading, true);
+    assert.deepEqual(recoveryReasons, ["ha-direct-retained-hls-stalled"]);
+  });
+});

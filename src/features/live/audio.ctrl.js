@@ -148,25 +148,11 @@ export class LiveAudioController {
     });
   }
 
-  applyMuteChange(nextMuted, { source = "button" } = {}) {
+  applyMuteChange(nextMuted) {
     const host = this._host;
     host._setLiveMuted(nextMuted);
     host._cameraGroupLiveController?.syncAudio?.();
     host._renderMuteButton();
-
-    // Only HA Direct needs a remount when its initially-muted player cannot
-    // recover audio; card-managed Frigate/go2rtc must keep its active engine.
-    const nativeOverlayUnmute =
-      source === "native-controls" && host._rotateOverlayActive;
-    const needsHaDirectRecovery =
-      host._useHaDirectStreamPath() &&
-      !host._twoWayTalkActiveForCurrentCamera() &&
-      !nextMuted &&
-      (!nativeOverlayUnmute || host._engineMountedMuted);
-    if (needsHaDirectRecovery) {
-      host._mountEngine(null, { quiet: true });
-      return;
-    }
     if (!nextMuted) host._engineMountedMuted = false;
   }
 
