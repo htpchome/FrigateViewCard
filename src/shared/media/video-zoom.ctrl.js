@@ -101,11 +101,24 @@ function restoreStyle(style, property, snapshot) {
   style.setProperty(property, snapshot.value, snapshot.priority);
 }
 
+function isEditableKeyboardTarget(target) {
+  if (!target) return false;
+  const tagName = String(target.tagName || "").toLowerCase();
+  if (["input", "select", "textarea"].includes(tagName)) return true;
+  if (target.isContentEditable === true) return true;
+  return Boolean(
+    target.closest?.(
+      'input, select, textarea, [contenteditable=""], [contenteditable="true"]',
+    ),
+  );
+}
+
 export class VideoZoomController {
   constructor(video, options = {}) {
     this._video = video;
     this._host = options.host || video?.parentElement || null;
     this._interactionTarget = options.interactionTarget || video || null;
+    this._keyboardTarget = options.keyboardTarget ?? globalThis.window ?? null;
     this._nativeCoverPanEnabled = options.nativeCoverPan === true;
     this._onInteractionStart =
       typeof options.onInteractionStart === "function"
@@ -258,6 +271,16 @@ export class VideoZoomController {
       this._interactionTarget,
       "pointerleave",
       this._onPointerLeave,
+    );
+    this._cleanup.addEventListener(
+      this._interactionTarget,
+      "pointerenter",
+      this._onPointerEnter,
+    );
+    this._cleanup.addEventListener(
+      this._keyboardTarget,
+      "keydown",
+      this._onKeyboardZoom,
     );
     this._cleanup.addEventListener(this._video, "loadstart", this._onLoadStart);
     if (this._presentationRefreshEnabled) {
@@ -738,6 +761,37 @@ export class VideoZoomController {
     );
   };
 
+  _onKeyboardZoom = (event) => {
+    if (
+      this._presentationSuspended ||
+      !this._hoveringMedia ||
+      event.defaultPrevented ||
+      event.isComposing ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      isEditableKeyboardTarget(event.target)
+    ) {
+      return;
+    }
+    if (
+      typeof this._interactionTarget?.matches === "function" &&
+      !this._interactionTarget.matches(":hover")
+    ) {
+      this._hoveringMedia = false;
+      return;
+    }
+    const key = String(event.key || "");
+    const code = String(event.code || "");
+    const zoomIn = key === "+" || key === "=" || code === "NumpadAdd";
+    const zoomOut = key === "-" || key === "_" || code === "NumpadSubtract";
+    if (!zoomIn && !zoomOut) return;
+    event.preventDefault?.();
+    const previousScale = this._scale;
+    this.zoomBy(zoomIn ? VIDEO_ZOOM_WHEEL_STEP : -VIDEO_ZOOM_WHEEL_STEP);
+    if (this._scale !== previousScale) this._notifyInteractionStart();
+  };
+
   _onPointerDown = (event) => {
     if (this._presentationSuspended) return;
     if (!this._isMediaInteractionStart(event)) return;
@@ -941,6 +995,11 @@ export class VideoZoomController {
   _onPointerLeave = () => {
     if (this._pointers.size) return;
     this._hoveringMedia = false;
+    this._applyCursor();
+  };
+
+  _onPointerEnter = (event) => {
+    this._hoveringMedia = this._isPointOverDisplayedMedia(event);
     this._applyCursor();
   };
 

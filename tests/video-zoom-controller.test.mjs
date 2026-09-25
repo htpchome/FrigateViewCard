@@ -86,6 +86,7 @@ function createZoomFixture({
   onZoomStateChange = null,
   resizeObserverCtor = null,
   enablePresentationRefresh = true,
+  keyboardTarget = new FakeTarget(),
 } = {}) {
   const host = {
     style: new FakeStyle(),
@@ -155,8 +156,9 @@ function createZoomFixture({
     onZoomStateChange,
     resizeObserverCtor,
     enablePresentationRefresh,
+    keyboardTarget,
   }).bind();
-  return { controller, host, interactionTarget, video };
+  return { controller, host, interactionTarget, keyboardTarget, video };
 }
 
 test("video zoom reuses ResizeObserver dimensions without rereading layout", () => {
@@ -337,6 +339,41 @@ test("modified-wheel and unadvertised Catalyst gestures preserve deliberate trac
   assert.equal(change.defaultPrevented, true);
   assert.equal(end.defaultPrevented, true);
   assert.equal(controller.state.scale, 2.01);
+});
+
+test("unmodified plus and minus keys zoom only while displayed media is hovered", () => {
+  const { controller, keyboardTarget, video } = createZoomFixture();
+
+  const beforeHover = keyboardTarget.dispatch("keydown", { key: "+" });
+  assert.equal(beforeHover.defaultPrevented, false);
+  assert.equal(controller.state.scale, 1);
+
+  video.dispatch("pointerenter", { clientX: 150, clientY: 100 });
+  const zoomIn = keyboardTarget.dispatch("keydown", { key: "+" });
+  assert.equal(zoomIn.defaultPrevented, true);
+  assert.equal(controller.state.scale, 1.2);
+
+  const zoomOut = keyboardTarget.dispatch("keydown", { key: "-" });
+  assert.equal(zoomOut.defaultPrevented, true);
+  assert.equal(controller.state.scale, 1);
+
+  const browserZoom = keyboardTarget.dispatch("keydown", {
+    key: "+",
+    metaKey: true,
+  });
+  assert.equal(browserZoom.defaultPrevented, false);
+  assert.equal(controller.state.scale, 1);
+
+  const editableZoom = keyboardTarget.dispatch("keydown", {
+    key: "+",
+    target: { tagName: "INPUT" },
+  });
+  assert.equal(editableZoom.defaultPrevented, false);
+  assert.equal(controller.state.scale, 1);
+
+  video.dispatch("pointerleave");
+  keyboardTarget.dispatch("keydown", { key: "+" });
+  assert.equal(controller.state.scale, 1);
 });
 
 test("accepted zoom and pan gestures notify their shared interaction owner", () => {
