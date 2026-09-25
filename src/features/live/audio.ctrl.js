@@ -1,4 +1,5 @@
 import { ICONS } from "../../icons.js";
+import { normalizePageRoute, PAGE_IDS } from "../navigation/router.js";
 import { buildLiveMuteControlMarkup } from "./view.tmpl.js";
 
 export class LiveAudioController {
@@ -23,6 +24,28 @@ export class LiveAudioController {
       icons: this._icons,
       streamMuted: this.resolveMuted(),
       buttonClass,
+    });
+  }
+
+  buildMobileTalkMuteControlMarkup() {
+    const host = this._host;
+    if (
+      normalizePageRoute(host._pageId) !== PAGE_IDS.mobileView ||
+      host._isLikelyMobileClient?.() !== true
+    ) {
+      return "";
+    }
+    const talkActive = host._twoWayTalkActiveForCurrentCamera();
+    const muted = this.resolveMuted();
+    return buildLiveMuteControlMarkup({
+      icons: this._icons,
+      streamMuted: muted,
+      buttonClass: "icon-btn",
+      buttonId: "mobile-view-mute-btn",
+      region: "",
+      extraClass: `mobile-view-talk-mute-btn${talkActive && !muted ? " talk-audio-active" : ""}`,
+      pressed: !muted,
+      hidden: !talkActive,
     });
   }
 
@@ -85,6 +108,7 @@ export class LiveAudioController {
     const host = this._host;
     const buttons = [
       host._$("#mute-btn"),
+      host._$("#mobile-view-mute-btn"),
       host._$("#two-way-talk-mute-btn"),
     ].filter(Boolean);
     if (!buttons.length) return;
@@ -106,10 +130,12 @@ export class LiveAudioController {
         : "Mute live view";
     const label = host._localization?.t?.(labelKey) || fallbackLabel;
     buttons.forEach((button) => {
+      const mobileTalkMute = button.id === "mobile-view-mute-btn";
       const inlineTalkMute = button.id === "two-way-talk-mute-btn";
       const hideMute =
-        host._viewMode === "grid" || (inlineTalkMute && !talkActive);
-      if (inlineTalkMute) {
+        host._viewMode === "grid" ||
+        ((mobileTalkMute || inlineTalkMute) && !talkActive);
+      if (mobileTalkMute || inlineTalkMute) {
         const audioEnabled = !muted;
         button.classList.toggle("active", audioEnabled);
         button.classList.toggle(

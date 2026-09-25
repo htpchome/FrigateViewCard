@@ -50,11 +50,11 @@ test("active desktop talk controls share the soundwave surface", () => {
   );
   assert.match(
     STYLES,
-    /\.mobile-view-microphone-mute-btn\.active svg,[\s\S]*?color:\s*var\(--c-text2\);/,
+    /:is\(\.mobile-view-microphone-mute-btn,\.mobile-view-talk-mute-btn\)\.active svg,[\s\S]*?color:\s*var\(--c-text2\);/,
   );
   assert.match(
     STYLES,
-    /\.mobile-view-microphone-mute-btn\.talk-audio-active svg\s*\{[\s\S]*?color:\s*var\(--c-text\);/,
+    /:is\(\.mobile-view-microphone-mute-btn,\.mobile-view-talk-mute-btn\)\.talk-audio-active svg\s*\{[\s\S]*?color:\s*var\(--c-text\);/,
   );
 });
 

@@ -180,6 +180,8 @@ test("mobile profile exposes custom main layout shell builder", () => {
         `<div data-fvc-region="two-way-talk">Talk</div>`,
       _buildMobileViewMicrophoneMuteButtonMarkup: () =>
         `<button id="mobile-view-microphone-mute-btn">Microphone mute</button>`,
+      _buildMobileViewTalkMuteButtonMarkup: () =>
+        `<button class="icon-btn" id="mobile-view-mute-btn" hidden>Mute</button>`,
     },
     regions: {
       live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
@@ -207,7 +209,7 @@ test("mobile profile exposes custom main layout shell builder", () => {
     markup.includes('id="mobile-view-microphone-mute-btn"'),
     true,
   );
-  assert.equal(markup.includes('id="mobile-view-mute-btn"'), false);
+  assert.equal(markup.includes('id="mobile-view-mute-btn"'), true);
   assert.equal(markup.includes("live-stage--overlay"), true);
   const validation = validatePageShellRegionMarkup(markup, {
     requiredRegions: resolveRequiredPageShellRegions(mobileProfile),

@@ -49,7 +49,7 @@ export class PopupToolbarController {
     }
     if (
       target?.closest?.(
-        "#mute-btn, #two-way-talk-mute-btn",
+        "#mute-btn, #mobile-view-mute-btn, #two-way-talk-mute-btn",
       )
     ) {
       this._onToggleMute();

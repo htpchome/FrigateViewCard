@@ -165,3 +165,79 @@ test("live audio preserves the shared mute button class contract", () => {
   assert.match(controller.buildControlMarkup(), /class="square-btn mute-btn"/);
   assert.match(controller.buildControlMarkup(), /id="mute-btn"/);
 });
+
+test("mobile talk mute markup exists only on mobile Mobile View and waits for connection", () => {
+  let talkActive = false;
+  const host = {
+    _pageId: "mobile-view",
+    _streamMuted: true,
+    _isLikelyMobileClient: () => true,
+    _twoWayTalkActiveForCurrentCamera: () => talkActive,
+  };
+  const controller = new LiveAudioController(host, {
+    icons: { volOff: "muted", volOn: "audible" },
+  });
+
+  const disconnected = controller.buildMobileTalkMuteControlMarkup();
+  assert.match(disconnected, /id="mobile-view-mute-btn"/);
+  assert.match(disconnected, /mobile-view-talk-mute-btn/);
+  assert.match(disconnected, / hidden/);
+
+  talkActive = true;
+  const connected = controller.buildMobileTalkMuteControlMarkup();
+  assert.doesNotMatch(
+    connected.match(/<button[^>]*id="mobile-view-mute-btn"[^>]*>/)?.[0] || "",
+    / hidden/,
+  );
+
+  host._pageId = "single-view";
+  assert.equal(controller.buildMobileTalkMuteControlMarkup(), "");
+  host._pageId = "mobile-view";
+  host._isLikelyMobileClient = () => false;
+  assert.equal(controller.buildMobileTalkMuteControlMarkup(), "");
+});
+
+test("mobile talk mute follows the connected two-way-talk state", () => {
+  let talkActive = false;
+  let muted = true;
+  const classes = new Set();
+  const button = {
+    id: "mobile-view-mute-btn",
+    hidden: false,
+    style: {},
+    classList: {
+      toggle(name, enabled) {
+        if (enabled) classes.add(name);
+        else classes.delete(name);
+      },
+    },
+    attributes: new Map(),
+    setAttribute(name, value) {
+      this.attributes.set(name, String(value));
+    },
+  };
+  const host = {
+    _viewMode: "single",
+    _$: (selector) =>
+      selector === "#mobile-view-mute-btn" ? button : null,
+    _twoWayTalkActiveForCurrentCamera: () => talkActive,
+    _resolveLiveMuteControlMuted: () => muted,
+  };
+  const controller = new LiveAudioController(host, {
+    icons: { volOff: "muted", volOn: "audible" },
+  });
+
+  controller.syncMuteButtons();
+  assert.equal(button.hidden, true);
+  assert.equal(button.style.display, "none");
+
+  talkActive = true;
+  muted = false;
+  controller.syncMuteButtons();
+  assert.equal(button.hidden, false);
+  assert.equal(button.style.display, "");
+  assert.equal(classes.has("active"), true);
+  assert.equal(classes.has("talk-audio-active"), true);
+  assert.equal(button.attributes.get("aria-pressed"), "true");
+  assert.equal(button.innerHTML, "audible");
+});

@@ -255,6 +255,7 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   }
   .card.mobile-view-active .mobile-microphone-row .mobile-view-microphone-mute-btn{grid-column:1;}
   .card.mobile-view-active .mobile-microphone-row .mobile-view-two-way-talk-slot{grid-column:2;}
+  .card.mobile-view-active .mobile-microphone-row .mobile-view-talk-mute-btn{grid-column:3;}
   .card.mobile-view-active .mobile-microphone-row:has(.two-way-talk-control-row.has-soundwave){grid-template-columns:112px;}
   .card.mobile-view-active .mobile-microphone-row:has(.two-way-talk-control-row.has-soundwave) > .mobile-view-two-way-talk-slot{grid-column:1;}
   .card.mobile-view-active .mobile-microphone-row:has(.two-way-talk-control-row.has-soundwave) > .mobile-view-microphone-mute-btn{display:none !important;}
@@ -305,29 +306,29 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     display: none !important;
   }
 
-  .card.mobile-view-active .mobile-view-microphone-mute-btn:not(.active),
-  .card.mobile-view-active .mobile-view-microphone-mute-btn:not(.active):hover,
-  .card.mobile-view-active .mobile-view-microphone-mute-btn:not(.active):active {
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn):not(.active),
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn):not(.active):hover,
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn):not(.active):active {
     color: var(--c-text2);
   }
 
-  .card.mobile-view-active .mobile-view-microphone-mute-btn:not(.active) svg,
-  .card.mobile-view-active .mobile-view-microphone-mute-btn:not(.active):hover svg,
-  .card.mobile-view-active .mobile-view-microphone-mute-btn:not(.active):active svg {
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn):not(.active) svg,
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn):not(.active):hover svg,
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn):not(.active):active svg {
     color: var(--c-text2);
   }
 
-  .card.mobile-view-active .mobile-view-microphone-mute-btn.active,
-  .card.mobile-view-active .mobile-view-microphone-mute-btn.active:hover,
-  .card.mobile-view-active .mobile-view-microphone-mute-btn.active:active,
-  .card.mobile-view-active .mobile-view-microphone-mute-btn.active svg,
-  .card.mobile-view-active .mobile-view-microphone-mute-btn.active:hover svg,
-  .card.mobile-view-active .mobile-view-microphone-mute-btn.active:active svg {
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn).active,
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn).active:hover,
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn).active:active,
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn).active svg,
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn).active:hover svg,
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn).active:active svg {
     color: var(--c-text2);
   }
 
-  .card.mobile-view-active .mobile-view-microphone-mute-btn.talk-audio-active,
-  .card.mobile-view-active .mobile-view-microphone-mute-btn.talk-audio-active svg {
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn).talk-audio-active,
+  .card.mobile-view-active :is(.mobile-view-microphone-mute-btn,.mobile-view-talk-mute-btn).talk-audio-active svg {
     color: var(--c-text);
   }
 
