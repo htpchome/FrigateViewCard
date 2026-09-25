@@ -133,9 +133,7 @@ export class LiveRotateOverlayController {
     if (host._liveVideoZoomController?.video === video) {
       host._liveVideoZoomController.refresh();
     }
-    if (host._popupVideoZoomController?.video === video) {
-      host._popupVideoZoomController.refresh();
-    }
+    host._popupMediaPresentationController?.refreshVideo?.(video);
     video.setAttribute("playsinline", "");
     video.setAttribute("webkit-playsinline", "true");
   }

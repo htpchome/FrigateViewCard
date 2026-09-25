@@ -258,7 +258,7 @@ test("Safari clips use the exact camera VOD range without configured padding", a
     },
     _isSafari: () => true,
     _supportsNativeHlsPlayback: () => true,
-    _attachPopupVideoZoom: () => {},
+    _popupMediaPresentationController: { attach: () => {} },
     _scheduleRotateOverlayUpdate: () => {},
     _preparePopupPlaybackTarget: () => {},
   };
@@ -426,9 +426,11 @@ test("showRecording signs candidates and initializes popup recording playback on
     shadowRoot: {
       querySelector: () => viewer,
     },
-    _attachPopupVideoZoom: (media) => {
-      calls.push(["attachZoom", media]);
-      return { kind: "zoom" };
+    _popupMediaPresentationController: {
+      attach: (media) => {
+        calls.push(["attachZoom", media]);
+        return { kind: "zoom" };
+      },
     },
     _signed: async (path) => `signed:${path}`,
     _scheduleRotateOverlayUpdate: () => calls.push(["scheduleRotate"]),
@@ -711,7 +713,7 @@ test("Card View drawer popup resize grows its live panel without the old card ce
   };
   const host = {
     _isCardViewPageActive: () => true,
-    _attachPopupVideoZoom: () => null,
+    _popupMediaPresentationController: { attach: () => null },
     _$: (selector) =>
       selector === "#live-stage"
         ? { getBoundingClientRect: () => ({ width: 400, height: 240 }) }
@@ -743,7 +745,7 @@ test("normal popup media starts in a 16:9 stage only on mobile devices", () => {
     let resizeOptions = null;
     const controller = new PopupMediaLoaderController(
       {
-        _attachPopupVideoZoom: () => null,
+        _popupMediaPresentationController: { attach: () => null },
         _$: () => null,
       },
       {
@@ -854,7 +856,7 @@ test("Safari pre-roll and post-roll keep Alert popup AirPlay-capable", async () 
       return `signed:${path}`;
     },
     _isSafari: () => true,
-    _attachPopupVideoZoom: () => {},
+    _popupMediaPresentationController: { attach: () => {} },
     _scheduleRotateOverlayUpdate: () => {},
     _preparePopupPlaybackTarget: () => {},
   };
@@ -973,8 +975,10 @@ test("padded Alert playback falls back to the Frigate event clip", async () => {
     },
     shadowRoot: { querySelector: () => viewer },
     _signed: async (path) => path,
-    _attachPopupVideoZoom: () => {},
-    _clearPopupVideoZoom: () => {},
+    _popupMediaPresentationController: {
+      attach: () => {},
+      clear: () => {},
+    },
   };
   const controller = new PopupMediaLoaderController(host, {
     isEventPrePostRollEnabled: () => true,
@@ -1174,8 +1178,10 @@ test("snapshot popup media attaches the shared zoom controller", () => {
       return null;
     },
     _media: (id, file) => `/media/${id}/${file}`,
-    _attachPopupVideoZoom: (media) => {
-      zoomTarget = media;
+    _popupMediaPresentationController: {
+      attach: (media) => {
+        zoomTarget = media;
+      },
     },
     _scheduleRotateOverlayUpdate: () => {},
     _preparePopupPlaybackTarget: () => {},

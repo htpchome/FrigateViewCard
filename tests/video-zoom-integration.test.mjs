@@ -28,6 +28,13 @@ const popupLoaderSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupMediaPresentationSource = fs.readFileSync(
+  new URL(
+    "../src/features/popup/media-presentation.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const popupCompositionSource = fs.readFileSync(
   new URL("../src/features/popup/composition.js", import.meta.url),
   "utf8",
@@ -58,7 +65,7 @@ test("media zoom is attached through committed main-live and popup lifecycles", 
     cardSource.includes(
       'import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";',
     ),
-    true,
+    false,
   );
   assert.equal(
     liveMediaPresentationSource.includes(
@@ -73,18 +80,44 @@ test("media zoom is attached through committed main-live and popup lifecycles", 
     true,
   );
   assert.equal(
-    popupLoaderSource.includes("this._host._attachPopupVideoZoom?.(media)"),
+    popupMediaPresentationSource.includes(
+      'import { attachVideoZoom } from "../../shared/media/video-zoom.ctrl.js";',
+    ),
     true,
   );
-  assert.equal(cardSource.includes("host: viewer || video?.parentElement"), true);
-  assert.equal(cardSource.includes("interactionTarget: viewer || video"), true);
-  assert.equal(cardSource.includes("nativeCoverPan: true"), true);
   assert.equal(
-    (cardSource.match(/onInteractionStart: \(\) => this\._dismissLinkedLightDimmers\(\)/g) || [])
-      .length +
-      (liveMediaPresentationSource.match(/onInteractionStart: \(\) => hostCard\._dismissLinkedLightDimmers\(\)/g) || [])
-        .length,
-    3,
+    popupLoaderSource.includes(
+      "this._mediaPresentationController?.attach?.(media)",
+    ),
+    true,
+  );
+  assert.equal(
+    popupCompositionSource.includes(
+      "new PopupMediaPresentationController(options)",
+    ),
+    true,
+  );
+  assert.equal(
+    popupMediaPresentationSource.includes(
+      "host: viewer || media?.parentElement",
+    ),
+    true,
+  );
+  assert.equal(
+    popupMediaPresentationSource.includes(
+      "interactionTarget: viewer || media",
+    ),
+    true,
+  );
+  assert.equal(
+    popupMediaPresentationSource.includes("nativeCoverPan: true"),
+    true,
+  );
+  assert.equal(
+    popupCompositionSource.includes(
+      "onInteractionStart: () => card._dismissLinkedLightDimmers()",
+    ),
+    true,
   );
   assert.equal(
     cardEventBindingsSource.includes(
@@ -169,6 +202,12 @@ test("displayed-frame snapshots consume the matching live and popup zoom state",
     frameCaptureSource.includes("activeZoomController?.state || null"),
     true,
   );
+  assert.equal(
+    cardSource.includes(
+      "this._popupMediaPresentationController?.zoomController?.()",
+    ),
+    true,
+  );
   assert.equal(cardSource.includes('this._takeDisplayedSnapshot("live")'), true);
   assert.equal(
     popupCompositionSource.includes('card._takeDisplayedSnapshot("popup")'),
@@ -197,6 +236,12 @@ test("popup video and snapshot resizing reuse the active popup zoom controller",
     2,
   );
   assert.equal(
+    popupLoaderSource.includes(
+      "this._mediaPresentationController?.attach?.(media)",
+    ),
+    true,
+  );
+  assert.equal(
     popupLoaderSource.includes("placePopupViewResizeGrip({"),
     true,
   );
@@ -208,4 +253,5 @@ test("popup video and snapshot resizing reuse the active popup zoom controller",
     cardSource.includes("this._liveVideoZoomController?.zoomToCenter?.(scale)"),
     true,
   );
+  assert.equal(cardSource.includes("_popupVideoZoomController"), false);
 });

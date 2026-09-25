@@ -103,7 +103,6 @@ import {
   setScopedVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
 } from "../shared/media/video-factory.js";
-import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
 import { waitForMediaStart } from "../shared/media/first-frame.js";
 import {
   applyContainedVideoFit,
@@ -306,7 +305,7 @@ export class FrigateViewCard extends HTMLElement {
         },
         resolveZoomController: (scope) =>
           scope === "popup"
-            ? this._popupVideoZoomController
+            ? this._popupMediaPresentationController?.zoomController?.()
             : this._liveVideoZoomController,
         captureGroupedFrame: (scope) =>
           scope === "live"
@@ -1402,24 +1401,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _attachPopupVideoZoom(video) {
-    if (this._popupVideoZoomController?.video === video) {
-      this._popupVideoZoomController.refresh();
-      return this._popupVideoZoomController;
-    }
-    this._clearPopupVideoZoom?.();
-    const viewer = this._$("#viewer");
-    this._popupVideoZoomController = attachVideoZoom(video, {
-      host: viewer || video?.parentElement,
-      interactionTarget: viewer || video,
-      nativeCoverPan: true,
-      onInteractionStart: () => this._dismissLinkedLightDimmers(),
-    });
-    return this._popupVideoZoomController;
+    return this._popupMediaPresentationController?.attach?.(video);
   }
 
   _clearPopupVideoZoom() {
-    this._popupVideoZoomController?.dispose?.();
-    this._popupVideoZoomController = null;
+    this._popupMediaPresentationController?.clear?.();
   }
 
   _dismissLinkedLightDimmers() {

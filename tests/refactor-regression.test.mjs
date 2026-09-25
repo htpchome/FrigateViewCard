@@ -365,6 +365,13 @@ const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupMediaPresentationControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/popup/media-presentation.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const popupCompositionSource = fs.readFileSync(
   new URL("../src/features/popup/composition.js", import.meta.url),
   "utf8",
@@ -2885,6 +2892,54 @@ test("popup media loading delegates through the popup media loader controller", 
       popupMediaLoaderControllerSource,
     ),
     true,
+  );
+});
+
+test("popup media presentation is owned by its feature controller", () => {
+  assert.equal(
+    popupCompositionSource.includes(
+      'from "./media-presentation.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    popupCompositionSource.includes(
+      "new PopupMediaPresentationController(options)",
+    ),
+    true,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes(
+      "this._mediaPresentationController?.attach?.(media)",
+    ),
+    true,
+  );
+  for (const ownedMechanic of [
+    "attachZoom = attachVideoZoom",
+    "this._attachZoom(media, {",
+    "host: viewer || media?.parentElement",
+    "interactionTarget: viewer || media",
+    "nativeCoverPan: true",
+  ]) {
+    assert.equal(
+      popupMediaPresentationControllerSource.includes(ownedMechanic),
+      true,
+    );
+  }
+  assert.match(
+    cardSource,
+    /_attachPopupVideoZoom\(video\) \{\s*return this\._popupMediaPresentationController\?\.attach\?\.\(video\);\s*\}/,
+  );
+  assert.match(
+    cardSource,
+    /_clearPopupVideoZoom\(\) \{\s*this\._popupMediaPresentationController\?\.clear\?\.\(\);\s*\}/,
+  );
+  assert.equal(cardSource.includes("_popupVideoZoomController"), false);
+  assert.equal(
+    cardSource.includes(
+      'import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";',
+    ),
+    false,
   );
 });
 

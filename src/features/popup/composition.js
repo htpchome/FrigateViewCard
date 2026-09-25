@@ -17,6 +17,7 @@ import { PopupInfoController } from "./info.ctrl.js";
 import { PopupLifecycleController } from "./lifecycle.ctrl.js";
 import { PopupMediaControlsSurfaceController } from "./media.ctrl.js";
 import { PopupMediaLoaderController } from "./media-loader.ctrl.js";
+import { PopupMediaPresentationController } from "./media-presentation.ctrl.js";
 import { PopupPlaybackTargetController } from "./playback-target.ctrl.js";
 import { PopupRecordingScrubController } from "./recording-scrub.ctrl.js";
 import { PopupToolbarController } from "./toolbar.ctrl.js";
@@ -31,6 +32,8 @@ const DEFAULT_FACTORIES = Object.freeze({
     new PopupMediaControlsSurfaceController(options),
   createMediaLoaderController: (card, options) =>
     new PopupMediaLoaderController(card, options),
+  createMediaPresentationController: (options) =>
+    new PopupMediaPresentationController(options),
   createPlaybackTargetController: (options) =>
     new PopupPlaybackTargetController(options),
   createRecordingScrubController: (options) =>
@@ -50,6 +53,12 @@ export const createPopupControllers = (
   let popupLifecycleController;
   let popupMediaLoaderController;
   let popupPlaybackTargetController;
+
+  const popupMediaPresentationController =
+    resolvedFactories.createMediaPresentationController({
+      resolveViewer: () => card._$("#viewer"),
+      onInteractionStart: () => card._dismissLinkedLightDimmers(),
+    });
 
   const popupRecordingScrubController =
     resolvedFactories.createRecordingScrubController({
@@ -287,7 +296,7 @@ export const createPopupControllers = (
       popupPlaybackTargetController.release(scope),
     onClearPictureInPicture: (scope) =>
       card._clearPictureInPictureButtonController(scope),
-    onClearVideoZoom: () => card._clearPopupVideoZoom?.(),
+    onClearVideoZoom: () => popupMediaPresentationController.clear(),
     onDisposeCarousel: () => popupCarouselController.dispose(),
     onClearCarousel: () => popupCarouselController.clear(),
     onDisposeMediaControls: () => popupMediaControlsController.dispose(),
@@ -302,6 +311,7 @@ export const createPopupControllers = (
       infoController: popupInfoController,
       carouselController: popupCarouselController,
       mediaControlsController: popupMediaControlsController,
+      mediaPresentationController: popupMediaPresentationController,
       recordingScrubController: popupRecordingScrubController,
       lifecycleController: popupLifecycleController,
     },
@@ -312,6 +322,7 @@ export const createPopupControllers = (
     _popupInfoController: popupInfoController,
     _popupCarouselController: popupCarouselController,
     _popupMediaControlsController: popupMediaControlsController,
+    _popupMediaPresentationController: popupMediaPresentationController,
     _popupPlaybackTargetController: popupPlaybackTargetController,
     _popupToolbarController: popupToolbarController,
     _popupLifecycleController: popupLifecycleController,

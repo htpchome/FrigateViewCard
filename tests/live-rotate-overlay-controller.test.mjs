@@ -170,6 +170,34 @@ test("rotate overlay native controls retain retry timing and timer receiver", ()
   );
 });
 
+test("rotate overlay fullscreen styling refreshes matching popup presentation zoom", () => {
+  const { calls, host } = createHost();
+  const styleCalls = [];
+  const video = {
+    getAttribute: () => "",
+    setAttribute: (...args) => calls.push(["attribute", ...args]),
+    style: {
+      setProperty: (...args) => styleCalls.push(args),
+    },
+  };
+  host._popupMediaPresentationController = {
+    refreshVideo: (target) => calls.push(["popup-refresh", target]),
+  };
+  const controller = new LiveRotateOverlayController(host, {
+    windowTarget: { innerWidth: 844, innerHeight: 390 },
+  });
+
+  controller.applyVideoFullscreenStyle(video);
+
+  assert.equal(styleCalls.length > 0, true);
+  assert.equal(
+    calls.some(
+      ([name, target]) => name === "popup-refresh" && target === video,
+    ),
+    true,
+  );
+});
+
 test("rotate overlay disposal clears presentation resources", () => {
   const { calls, host } = createHost();
   const removed = [];

@@ -139,6 +139,7 @@ export class PopupMediaLoaderController {
       infoController = host._popupInfoController,
       carouselController = host._popupCarouselController,
       mediaControlsController = host._popupMediaControlsController,
+      mediaPresentationController = host._popupMediaPresentationController,
       recordingScrubController = host._popupRecordingScrubController,
       lifecycleController = host._popupLifecycleController,
       ...loaderDeps
@@ -147,6 +148,7 @@ export class PopupMediaLoaderController {
     this._infoController = infoController;
     this._carouselController = carouselController;
     this._mediaControlsController = mediaControlsController;
+    this._mediaPresentationController = mediaPresentationController;
     this._recordingScrubController = recordingScrubController;
     this._lifecycleController = lifecycleController;
     this._recordingHls = null;
@@ -182,7 +184,7 @@ export class PopupMediaLoaderController {
   _bindViewResize({ viewer, media, controls = null }) {
     if (!viewer || !media) return null;
     const zoomController =
-      this._host._attachPopupVideoZoom?.(media) || null;
+      this._mediaPresentationController?.attach?.(media) || null;
     const grip = this._deps.createPopupViewResizeGrip?.(
       globalThis.document,
       this._host._localization?.t,
@@ -958,7 +960,7 @@ export class PopupMediaLoaderController {
           this._recordingScrubController?.teardown();
         }
         this.clearRecordingTransport();
-        this._host._clearPopupVideoZoom?.();
+        this._mediaPresentationController?.clear?.();
         if (event && this._host._playSeq === token) {
           this._showDirectClip(event, {
             ...fallbackOpts,

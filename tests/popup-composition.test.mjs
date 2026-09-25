@@ -41,6 +41,9 @@ const createHarness = () => {
       showTemporarily: () => calls.push(["controls-show"]),
       video: () => "popup-video",
     },
+    mediaPresentation: {
+      clear: () => calls.push(["clear-zoom"]),
+    },
     playbackTarget: {
       dispose: () => calls.push(["target-dispose"]),
       prepare: () => calls.push(["prepare-target"]),
@@ -81,6 +84,10 @@ const createHarness = () => {
       calls.push(["loader-host", value, deps]);
       return controllers.loader;
     },
+    createMediaPresentationController: (value) => {
+      options.mediaPresentation = value;
+      return controllers.mediaPresentation;
+    },
     createPlaybackTargetController: (value) => {
       options.playbackTarget = value;
       return controllers.playbackTarget;
@@ -106,7 +113,6 @@ const createHarness = () => {
     _cc: () => ({ cam: "doorbell", clientId: "default-client" }),
     _clearPictureInPictureButtonController: (scope) =>
       calls.push(["clear-pip", scope]),
-    _clearPopupVideoZoom: () => calls.push(["clear-zoom"]),
     _dateTimeLabel: (value) => `date-time:${value}`,
     _findEventById: (id) => ({ id }),
     _findVideoDeep: (root) => {
@@ -136,6 +142,7 @@ const createHarness = () => {
     _localization: { t: (key) => `translated:${key}` },
     _mediaForCamera: (...args) => `media:${args.join(":")}`,
     _monthDay: (value) => `month-day:${value}`,
+    _dismissLinkedLightDimmers: () => calls.push(["dismiss-dimmers"]),
     _pauseSlideshowForPopup: () => calls.push(["pause-slideshow"]),
     _playSeq: 7,
     _recordingsBrowseNavController: {
@@ -181,6 +188,7 @@ test("popup composition creates the complete controller set and preserves cross-
     _popupInfoController: controllers.info,
     _popupCarouselController: controllers.carousel,
     _popupMediaControlsController: controllers.mediaControls,
+    _popupMediaPresentationController: controllers.mediaPresentation,
     _popupPlaybackTargetController: controllers.playbackTarget,
     _popupToolbarController: controllers.toolbar,
     _popupLifecycleController: controllers.lifecycle,
@@ -193,6 +201,7 @@ test("popup composition creates the complete controller set and preserves cross-
       infoController: controllers.info,
       carouselController: controllers.carousel,
       mediaControlsController: controllers.mediaControls,
+      mediaPresentationController: controllers.mediaPresentation,
       recordingScrubController: controllers.recordingScrub,
       lifecycleController: controllers.lifecycle,
     },
@@ -244,6 +253,7 @@ test("popup composition creates the complete controller set and preserves cross-
   options.lifecycle.onDisposeCarousel();
   options.lifecycle.onClearCarousel();
   options.lifecycle.onDisposeMediaControls();
+  options.lifecycle.onClearVideoZoom();
   options.lifecycle.onHideInfo();
   options.lifecycle.onClearMediaTransport();
 
@@ -283,6 +293,7 @@ test("popup composition creates the complete controller set and preserves cross-
     ["carousel-dispose"],
     ["carousel-clear"],
     ["controls-dispose"],
+    ["clear-zoom"],
     ["info-hide"],
     ["loader-cancel"],
   ]);
@@ -311,6 +322,7 @@ test("popup composition keeps recording timeline expansion inside the popup feat
         infoController: controllers.info,
         carouselController: controllers.carousel,
         mediaControlsController: controllers.mediaControls,
+        mediaPresentationController: controllers.mediaPresentation,
         recordingScrubController: controllers.recordingScrub,
         lifecycleController: controllers.lifecycle,
       },
