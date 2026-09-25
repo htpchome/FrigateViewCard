@@ -68,6 +68,7 @@ import {
   resolveRuntimeCardConfigChangePlan,
 } from "../config/card-config.js";
 import { createInitialCardRuntimeState } from "./initial-state.js";
+import { CardFullscreenController } from "./fullscreen.ctrl.js";
 import {
   bindCardGlobalEvents,
   bindCardShadowEvents,
@@ -97,21 +98,12 @@ import {
   resolveCameraAvailabilitySnapshot,
 } from "../features/live/stream.state.js";
 import {
-  resolveFullscreenButtonVisibility,
-} from "../features/live/rotate-overlay-state.js";
-import {
   buildVideoOptionsForView,
   createVideoElement,
   setScopedVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
 } from "../shared/media/video-factory.js";
 import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
-import {
-  exitDocumentFullscreen,
-  findFullscreenVideo,
-  findVideoDeep,
-  requestMediaFullscreen,
-} from "../shared/media/fullscreen.js";
 import { waitForMediaStart } from "../shared/media/first-frame.js";
 import {
   applyContainedVideoFit,
@@ -281,6 +273,7 @@ export class FrigateViewCard extends HTMLElement {
         singleViewPageId: PAGE_IDS.singleView,
       }),
     );
+    this._cardFullscreenController = new CardFullscreenController(this);
     this._localization = createLocalizationController();
     this._localizedDateController = new LocalizedDateController(this);
     this._displayedFrameCaptureController =
@@ -393,15 +386,7 @@ export class FrigateViewCard extends HTMLElement {
       onTogglePictureInPicture: () =>
         this._togglePictureInPicture(this._livePictureInPictureVideo()),
       onTakeSnapshot: () => this._takeDisplayedSnapshot("live"),
-      onFullscreen: () => {
-        const liveStage = this._$("#live-stage");
-        const fullscreenTarget =
-          this._cardViewPageController?.liveFullscreenTarget?.() || liveStage;
-        this._fullscreen(fullscreenTarget, {
-          preferLive: true,
-          preferElementFullscreen: fullscreenTarget !== liveStage,
-        });
-      },
+      onFullscreen: () => this._cardFullscreenController.requestLive(),
     });
     this._liveOverlayPresentationController =
       new LiveOverlayPresentationController(this);
@@ -4274,35 +4259,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _syncFullscreenButtonsVisibility() {
-    const liveBtn = this._$("#live-fs-btn");
-    const popupControlsFsBtn = this._$("#popup-media-fs");
-    const popupMobileFsBtn = this._$("#popup-mobile-fs-btn");
-    const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
-    const isFullscreen = !!(
-      document.fullscreenElement || document.webkitFullscreenElement
-    );
-    const inGridMode = this._viewMode === "grid";
-    const pageId = normalizePageRoute(this._pageId);
-    const visibility = resolveFullscreenButtonVisibility({
-      popupOpen: !!popupOpen,
-      isFullscreen,
-      inGridMode,
-      isMobileTabletViewport: this._isMobileTabletViewport(),
-      showLiveFullscreenOnMobile:
-        pageId === PAGE_IDS.singleView ||
-        pageId === PAGE_IDS.mobileView ||
-        pageId === PAGE_IDS.cardView,
-    });
-    if (liveBtn) {
-      liveBtn.hidden = visibility.liveButtonHidden;
-    }
-    if (popupControlsFsBtn) {
-      popupControlsFsBtn.hidden = visibility.popupControlsFullscreenHidden;
-    }
-    if (popupMobileFsBtn) {
-      popupMobileFsBtn.hidden = visibility.popupMobileFullscreenHidden;
-    }
-    this._syncTakeSnapshotButtonVisibility();
+    return this._cardFullscreenController.syncButtonVisibility();
   }
 
   _syncTakeSnapshotButtonVisibility() {
@@ -4424,48 +4381,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _findFullscreenVideo(el) {
-    return findFullscreenVideo(el);
+    return this._cardFullscreenController.findFullscreenVideo(el);
   }
 
   _findVideoDeep(root, maxDepth = 7) {
-    return findVideoDeep(root, maxDepth);
+    return this._cardFullscreenController.findVideoDeep(root, maxDepth);
   }
 
   _fullscreen(el, opts = {}) {
-    if (!el) return;
-    let video = this._findFullscreenVideo(el);
-    if (!video) video = this._findVideoDeep(el);
-    if (!video && opts.preferLive) {
-      video =
-        this._findVideoDeep(this._$("#engine")) ||
-        this._findVideoDeep(this._engine);
-    }
-    requestMediaFullscreen({
-      element: el,
-      video,
-      preferElementFullscreen: opts.preferElementFullscreen === true,
-      onBeginNativeVideoFullscreen: (fullscreenVideo) => {
-        if (opts.preferLive) {
-          this._liveFullscreenLifecycleController?.beginNativeVideoFullscreen(
-            fullscreenVideo,
-          );
-        }
-      },
-      onBeginDocumentFullscreen: (fullscreenVideo) => {
-        if (opts.preferLive) {
-          this._liveFullscreenLifecycleController?.beginDocumentFullscreen(
-            fullscreenVideo,
-          );
-        }
-      },
-      onRequestFailure: opts.preferLive
-        ? () => this._liveFullscreenLifecycleController?.cancel()
-        : null,
-    });
+    this._cardFullscreenController.request(el, opts);
   }
 
   _exitFullscreen() {
-    return exitDocumentFullscreen(this.ownerDocument || globalThis.document);
+    return this._cardFullscreenController.exit();
   }
   _frigateContextForCameraName(cameraName = "") {
     return this._frigateMediaResolverController.contextForCameraName(

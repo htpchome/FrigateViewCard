@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { findVideoDeep } from "../src/shared/media/fullscreen.js";
 
 globalThis.window = globalThis.window || { customCards: [] };
 globalThis.window.customCards = globalThis.window.customCards || [];
@@ -75,7 +76,7 @@ test("stream readiness reports a video inside nested shadow roots", async () => 
 
   const started = await FrigateViewCard.prototype._waitForStreamStart.call(
     {
-      _findVideoDeep: FrigateViewCard.prototype._findVideoDeep,
+      _findVideoDeep: findVideoDeep,
     },
     streamEl,
     500,

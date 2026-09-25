@@ -18,6 +18,10 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
+const cardFullscreenControllerSource = fs.readFileSync(
+  new URL("../src/card/fullscreen.ctrl.js", import.meta.url),
+  "utf8",
+);
 
 test("HA review polling does not schedule redundant live remount checks", () => {
   assert.equal(cardSource.includes('"ha-review-status-alert"'), false);
@@ -1197,23 +1201,37 @@ test("live fallback adapter orchestration is owned by its live feature controlle
 test("generic fullscreen behavior is owned by shared media primitives", () => {
   assert.equal(
     cardSource.includes(
-      'from "../shared/media/fullscreen.js";',
+      'import { CardFullscreenController } from "./fullscreen.ctrl.js";',
     ),
     true,
   );
   assert.match(
     cardSource,
-    /_findFullscreenVideo\(el\) \{\s*return findFullscreenVideo\(el\);\s*\}/,
+    /_findFullscreenVideo\(el\) \{\s*return this\._cardFullscreenController\.findFullscreenVideo\(el\);\s*\}/,
   );
   assert.match(
     cardSource,
-    /_findVideoDeep\(root, maxDepth = 7\) \{\s*return findVideoDeep\(root, maxDepth\);\s*\}/,
+    /_findVideoDeep\(root, maxDepth = 7\) \{\s*return this\._cardFullscreenController\.findVideoDeep\(root, maxDepth\);\s*\}/,
   );
-  assert.equal(cardSource.includes("requestMediaFullscreen({"), true);
+  assert.match(
+    cardSource,
+    /_fullscreen\(el, opts = \{\}\) \{\s*this\._cardFullscreenController\.request\(el, opts\);\s*\}/,
+  );
   assert.equal(
     cardSource.includes(
-      "return exitDocumentFullscreen(this.ownerDocument || globalThis.document);",
+      "return this._cardFullscreenController.exit();",
     ),
+    true,
+  );
+  assert.equal(cardSource.includes("requestMediaFullscreen({"), false);
+  assert.equal(
+    cardFullscreenControllerSource.includes(
+      'from "../shared/media/fullscreen.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardFullscreenControllerSource.includes("this._requestFullscreen({"),
     true,
   );
   assert.equal(cardSource.includes("webkitEnterFullscreen"), false);
