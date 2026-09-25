@@ -1,5 +1,50 @@
 import { resolveFallbackDisplaySource } from "./fallback-image.js";
 
+const FALLBACK_PRELOAD_TIMEOUT_MS = 3000;
+
+export const preloadFallbackImageSource = async (
+  src,
+  {
+    createImage = () => {
+      const ImageCtor = globalThis.Image;
+      return typeof ImageCtor === "function" ? new ImageCtor() : null;
+    },
+    timeoutMs = FALLBACK_PRELOAD_TIMEOUT_MS,
+  } = {},
+) => {
+  const source = String(src || "").trim();
+  if (!source) return false;
+  const image = createImage?.();
+  if (!image) return true;
+  return await new Promise((resolve) => {
+    let settled = false;
+    let timeout = null;
+    const done = (ready) => {
+      if (settled) return;
+      settled = true;
+      if (timeout != null) clearTimeout(timeout);
+      image.onload = null;
+      image.onerror = null;
+      resolve(ready === true);
+    };
+    image.onload = () => done(true);
+    image.onerror = () => done(false);
+    timeout = setTimeout(
+      () => done(false),
+      Math.max(250, Number(timeoutMs) || FALLBACK_PRELOAD_TIMEOUT_MS),
+    );
+    image.src = source;
+    if (typeof image.decode === "function") {
+      void image.decode().then(
+        () => done(true),
+        () => {
+          if (image.complete && Number(image.naturalWidth) > 0) done(true);
+        },
+      );
+    }
+  });
+};
+
 export const nextFallbackRequestId = (currentRequestId) =>
   Number(currentRequestId || 0) + 1;
 
@@ -119,6 +164,10 @@ export const executeFallbackRefreshWrite = ({
     src: writeInput.src,
   });
   if (writeInput.applyPayload.img) {
+    if (writeInput.applyPayload.img.dataset) {
+      writeInput.applyPayload.img.dataset.fallbackEntity =
+        writeInput.applyPayload.entity;
+    }
     writeInput.applyPayload.img.hidden = false;
   }
 };
@@ -209,6 +258,7 @@ export const runFallbackRefreshCycle = async ({
   loadAlt,
   applyHandlers,
   applySource,
+  preloadSource = preloadFallbackImageSource,
 }) => {
   const { imgEl, statusEl } = getFallbackRefreshElements(shadowRoot);
   const begin = beginFallbackRefresh({
@@ -226,13 +276,6 @@ export const runFallbackRefreshCycle = async ({
   setActiveRequestId?.(token.nextRequestId);
 
   const entity = resolveFallbackRefreshEntity(activeCam);
-  const previousEntity = String(
-    imgEl.dataset?.fallbackEntity || "",
-  ).trim();
-  if (previousEntity && previousEntity !== entity) {
-    imgEl.hidden = true;
-  }
-  if (imgEl.dataset) imgEl.dataset.fallbackEntity = entity;
   const primaryPhase = await loadPrimaryWithStaleGate({
     entity,
     token,
@@ -261,8 +304,39 @@ export const runFallbackRefreshCycle = async ({
     };
   }
 
+  const alternateSource = writePlan.context?.sources?.altSrc || "";
+  let readySource = writePlan.writeInput.src;
+  let sourceReady = await preloadSource?.(readySource);
+  if (
+    !sourceReady &&
+    alternateSource &&
+    alternateSource !== readySource
+  ) {
+    readySource = alternateSource;
+    sourceReady = await preloadSource?.(readySource);
+  }
+  if (
+    shouldAbortStaleFallbackRefresh({
+      requestId: token.requestId,
+      activeRequestId: readActiveRequestId?.() ?? token.nextRequestId,
+    })
+  ) {
+    return {
+      shouldAbort: true,
+      didWrite: false,
+    };
+  }
+  const writeInput = {
+    ...writePlan.writeInput,
+    src: readySource,
+    applyPayload: {
+      ...writePlan.writeInput.applyPayload,
+      src: readySource,
+    },
+  };
+
   executeFallbackRefreshWrite({
-    writeInput: writePlan.writeInput,
+    writeInput,
     applyHandlers,
     applySource,
   });

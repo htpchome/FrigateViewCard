@@ -15,6 +15,7 @@ import {
   loadPrimaryFallbackSource,
   loadPrimaryWithStaleGate,
   nextFallbackRequestId,
+  preloadFallbackImageSource,
   resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
   resolveFallbackRefreshSources,
@@ -175,7 +176,7 @@ test("runFallbackRefreshCycle writes once when source resolves", async () => {
   assert.equal(imgEl.dataset.fallbackEntity, "camera.front");
 });
 
-test("fallback refresh hides a previous camera image until the new source is ready", async () => {
+test("fallback refresh preserves the previous camera image until the new source is ready", async () => {
   let resolvePrimary;
   const imgEl = {
     dataset: { fallbackEntity: "camera.primary" },
@@ -200,14 +201,81 @@ test("fallback refresh hides a previous camera image until the new source is rea
     applySource: (entry) => writes.push(entry),
   });
 
-  assert.equal(imgEl.hidden, true);
-  assert.equal(imgEl.dataset.fallbackEntity, "camera.secondary");
+  assert.equal(imgEl.hidden, false);
+  assert.equal(imgEl.dataset.fallbackEntity, "camera.primary");
 
   resolvePrimary("https://ha.local/secondary.jpg");
   const result = await refresh;
   assert.equal(result.didWrite, true);
   assert.equal(imgEl.hidden, false);
+  assert.equal(imgEl.dataset.fallbackEntity, "camera.secondary");
   assert.equal(writes[0].src, "https://ha.local/secondary.jpg");
+});
+
+test("fallback refresh swaps only after the replacement snapshot is decoded", async () => {
+  let resolvePreload;
+  let signalPreloadStarted;
+  const preloadStarted = new Promise((resolve) => {
+    signalPreloadStarted = resolve;
+  });
+  const imgEl = {
+    dataset: { fallbackEntity: "camera.primary" },
+    hidden: false,
+    src: "https://ha.local/primary.jpg",
+  };
+  const writes = [];
+  const refresh = runFallbackRefreshCycle({
+    shadowRoot: {
+      querySelector: (selector) =>
+        selector === "#stream-fallback-img" ? imgEl : null,
+    },
+    currentRequestId: 0,
+    activeCam: { entity: "camera.secondary" },
+    setActiveRequestId: () => {},
+    readActiveRequestId: () => 1,
+    loadPrimary: async () => "https://ha.local/secondary.jpg",
+    loadAlt: () => "",
+    preloadSource: async () => {
+      signalPreloadStarted();
+      return await new Promise((resolve) => {
+        resolvePreload = resolve;
+      });
+    },
+    applyHandlers: () => {},
+    applySource: (entry) => writes.push(entry),
+  });
+
+  await preloadStarted;
+  assert.equal(imgEl.hidden, false);
+  assert.equal(imgEl.src, "https://ha.local/primary.jpg");
+  assert.equal(imgEl.dataset.fallbackEntity, "camera.primary");
+  assert.equal(writes.length, 0);
+
+  resolvePreload(true);
+  const result = await refresh;
+  assert.equal(result.didWrite, true);
+  assert.equal(imgEl.dataset.fallbackEntity, "camera.secondary");
+  assert.equal(writes[0].src, "https://ha.local/secondary.jpg");
+});
+
+test("snapshot preloader resolves after decode without mutating the displayed image", async () => {
+  const preloadImage = {
+    src: "",
+    complete: false,
+    naturalWidth: 0,
+    decode: async () => {
+      preloadImage.complete = true;
+      preloadImage.naturalWidth = 1920;
+    },
+  };
+
+  assert.equal(
+    await preloadFallbackImageSource("https://ha.local/next.jpg", {
+      createImage: () => preloadImage,
+    }),
+    true,
+  );
+  assert.equal(preloadImage.src, "https://ha.local/next.jpg");
 });
 
 test("runFallbackRefreshCycle aborts when request becomes stale after primary load", async () => {

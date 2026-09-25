@@ -388,7 +388,7 @@ Live controls vary by view and device and can include mute, fullscreen, Take Sna
 
 For live sources narrower than 16:9, a subtle resize grip can extend the live area vertically. The live area cannot be dragged taller than its width.
 
-Two-camera groups add per-pane audio selection and focus controls on desktop/tablet, or an A/B source switch on phones. Zoom interaction is limited to the displayed video surface rather than its letterboxed background.
+Two-camera groups add per-pane audio selection and focus controls on desktop/tablet, or an A/B source switch on phones. Zoom interaction is limited to the displayed video surface rather than its letterboxed background. Double-click or double-tap toggles zoom, pinch gestures zoom around the gesture point, and dragging pans a zoomed image. On a trackpad, ordinary two-finger movement remains page scrolling; use a pinch gesture (or Control/Command plus scrolling) to zoom the video.
 
 ## Browse tabs and media popup
 

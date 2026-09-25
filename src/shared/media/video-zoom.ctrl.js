@@ -10,10 +10,12 @@ export const VIDEO_ZOOM_MAX = 3;
 export const VIDEO_ZOOM_WHEEL_STEP = 0.2;
 
 const DOUBLE_TAP_DELAY_MS = 320;
+const DOUBLE_POINTER_CLICK_DELAY_MS = 500;
 const DOUBLE_TAP_DISTANCE_PX = 28;
 const MOVE_TOLERANCE_PX = 8;
 const EPSILON = 0.001;
 const COVER_OVERFLOW_EPSILON_PX = 0.5;
+const WHEEL_LINE_HEIGHT_PX = 16;
 
 export function clampVideoZoom(value, min = VIDEO_ZOOM_MIN, max = VIDEO_ZOOM_MAX) {
   return Math.min(max, Math.max(min, Number(value) || min));
@@ -113,6 +115,8 @@ export class VideoZoomController {
       typeof options.onZoomStateChange === "function"
         ? options.onZoomStateChange
         : null;
+    this._presentationRefreshEnabled =
+      options.enablePresentationRefresh !== false;
     this._maxScale = Math.max(
       VIDEO_ZOOM_DOUBLE_TAP,
       Number(options.maxScale) || VIDEO_ZOOM_MAX,
@@ -133,7 +137,8 @@ export class VideoZoomController {
     this._coverOverflowY = 0;
     this._coverPannable = false;
     this._lastTap = null;
-    this._lastTouchZoomAt = 0;
+    this._lastPointerZoomAt = 0;
+    this._gestureStartScale = null;
     this._hoveringMedia = false;
     this._bound = false;
     this._styleSnapshots = null;
@@ -217,6 +222,19 @@ export class VideoZoomController {
       "dblclick",
       this._onDoubleClick,
     );
+    const supportsTrackpadGestureEvents =
+      typeof globalThis.GestureEvent === "function" ||
+      "ongesturestart" in this._interactionTarget;
+    if (supportsTrackpadGestureEvents) {
+      for (const eventName of ["gesturestart", "gesturechange", "gestureend"]) {
+        this._cleanup.addEventListener(
+          this._interactionTarget,
+          eventName,
+          this._onTrackpadGesture,
+          { passive: false },
+        );
+      }
+    }
     this._cleanup.addEventListener(
       this._interactionTarget,
       "pointerdown",
@@ -245,19 +263,21 @@ export class VideoZoomController {
       this._onPointerLeave,
     );
     this._cleanup.addEventListener(this._video, "loadstart", this._onLoadStart);
-    for (const eventName of ["emptied", "stalled", "waiting"]) {
-      this._cleanup.addEventListener(
-        this._video,
-        eventName,
-        this._onPresentationInterrupted,
-      );
-    }
-    for (const eventName of ["canplay", "loadeddata", "playing"]) {
-      this._cleanup.addEventListener(
-        this._video,
-        eventName,
-        this._onPresentationResumed,
-      );
+    if (this._presentationRefreshEnabled) {
+      for (const eventName of ["emptied", "stalled", "waiting"]) {
+        this._cleanup.addEventListener(
+          this._video,
+          eventName,
+          this._onPresentationInterrupted,
+        );
+      }
+      for (const eventName of ["canplay", "loadeddata", "playing"]) {
+        this._cleanup.addEventListener(
+          this._video,
+          eventName,
+          this._onPresentationResumed,
+        );
+      }
     }
 
     const ResizeObserverCtor = this._ResizeObserver;
@@ -281,7 +301,9 @@ export class VideoZoomController {
     }
 
     this.refresh();
-    this._refreshPresentationAfterNextVideoFrame();
+    if (this._presentationRefreshEnabled) {
+      this._refreshPresentationAfterNextVideoFrame();
+    }
     return this;
   }
 
@@ -298,6 +320,7 @@ export class VideoZoomController {
       this._presentationVideoFrameCallback = null;
     }
     this._presentationSuspended = false;
+    this._gestureStartScale = null;
     this.reset();
     this._cleanup.dispose();
     this._bound = false;
@@ -395,6 +418,10 @@ export class VideoZoomController {
 
   refreshPresentation() {
     if (!this._bound || !this._video?.style?.setProperty) return;
+    if (!this._presentationRefreshEnabled) {
+      this._apply();
+      return;
+    }
     if (this._presentationSuspended) {
       this._apply();
       return;
@@ -429,7 +456,13 @@ export class VideoZoomController {
   }
 
   _refreshPresentationAfterNextVideoFrame() {
-    if (!this._bound || this._presentationVideoFrameCallback != null) return;
+    if (
+      !this._bound ||
+      !this._presentationRefreshEnabled ||
+      this._presentationVideoFrameCallback != null
+    ) {
+      return;
+    }
     if (typeof this._video?.requestVideoFrameCallback !== "function") {
       this._presentationInterrupted = false;
       this.refreshPresentation();
@@ -603,8 +636,8 @@ export class VideoZoomController {
     this._pan = {
       mode,
       pointerId: point.pointerId,
-      startClientX: point.clientX,
-      startClientY: point.clientY,
+      startClientX: point.startX,
+      startClientY: point.startY,
       startX: this._x,
       startY: this._y,
       startCoverOffsetX: -this._coverOverflowX * this._coverPositionX,
@@ -638,21 +671,25 @@ export class VideoZoomController {
 
   _onWheel = (event) => {
     if (this._presentationSuspended) return;
+    if (event.ctrlKey !== true && event.metaKey !== true) return;
     if (!this._isMediaInteractionStart(event)) return;
-    const direction = Math.sign(Number(event.deltaY) || 0);
-    if (!direction) return;
+    const rawDelta = Number(event.deltaY) || 0;
+    if (!rawDelta) return;
+    const deltaMode = Number(event.deltaMode) || 0;
+    const deltaPixels = deltaMode === 1
+      ? rawDelta * WHEEL_LINE_HEIGHT_PX
+      : deltaMode === 2
+        ? rawDelta * Math.max(1, this._bounds().height)
+        : rawDelta;
+    const zoomDelta = Math.max(
+      -VIDEO_ZOOM_WHEEL_STEP,
+      Math.min(VIDEO_ZOOM_WHEEL_STEP, -deltaPixels * 0.002),
+    );
     const nextScale = clampVideoZoom(
-      this._scale - direction * VIDEO_ZOOM_WHEEL_STEP,
+      this._scale + zoomDelta,
       VIDEO_ZOOM_MIN,
       this._maxScale,
     );
-    if (
-      nextScale === this._scale &&
-      this._scale <= VIDEO_ZOOM_MIN + EPSILON &&
-      direction > 0
-    ) {
-      return;
-    }
     event.preventDefault?.();
     if (nextScale === this._scale) return;
     this._notifyInteractionStart();
@@ -662,10 +699,46 @@ export class VideoZoomController {
   _onDoubleClick = (event) => {
     if (this._presentationSuspended) return;
     if (!this._isMediaInteractionStart(event)) return;
-    if (Date.now() - this._lastTouchZoomAt < 500) return;
+    if (Date.now() - this._lastPointerZoomAt < 500) return;
     event.preventDefault?.();
     this._notifyInteractionStart();
     this.toggleDoubleZoom(event.clientX, event.clientY);
+  };
+
+  _onTrackpadGesture = (event) => {
+    if (this._presentationSuspended) return;
+    const type = String(event.type || "").toLowerCase();
+    if (type === "gestureend") {
+      if (this._gestureStartScale == null) return;
+      event.preventDefault?.();
+      this._gestureStartScale = null;
+      return;
+    }
+    if (!this._isMediaInteractionStart(event)) return;
+    if (type === "gesturestart") {
+      this._gestureStartScale = this._scale;
+      event.preventDefault?.();
+      this._notifyInteractionStart();
+      return;
+    }
+    if (type !== "gesturechange" || this._gestureStartScale == null) return;
+    const gestureScale = Number(event.scale);
+    if (!Number.isFinite(gestureScale) || gestureScale <= 0) return;
+    const bounds = this._bounds();
+    const eventX = Number(event.clientX);
+    const eventY = Number(event.clientY);
+    const clientX = Number.isFinite(eventX)
+      ? eventX
+      : bounds.left + bounds.width / 2;
+    const clientY = Number.isFinite(eventY)
+      ? eventY
+      : bounds.top + bounds.height / 2;
+    event.preventDefault?.();
+    this.zoomTo(
+      this._gestureStartScale * gestureScale,
+      clientX,
+      clientY,
+    );
   };
 
   _onPointerDown = (event) => {
@@ -684,14 +757,12 @@ export class VideoZoomController {
       return;
     }
     if (this._scale > VIDEO_ZOOM_MIN + EPSILON) {
-      event.preventDefault?.();
-      this._startPan(point);
+      point.panMode = "transform";
       return;
     }
     // Measure native cover crop once per gesture; popup resizing stays write-only.
     if (this._refreshNativeCoverPan()) {
-      event.preventDefault?.();
-      this._startPan(point, "cover");
+      point.panMode = "cover";
     }
   };
 
@@ -744,6 +815,9 @@ export class VideoZoomController {
       return;
     }
 
+    if (!this._pan && point.panMode && point.moved) {
+      this._startPan(point, point.panMode);
+    }
     if (!this._pan || this._pan.pointerId !== event.pointerId) return;
     event.preventDefault?.();
     if (this._pan.mode === "cover") {
@@ -786,11 +860,18 @@ export class VideoZoomController {
     if (!point) return;
     const wasPinching = !!this._pinch;
     this._pointers.delete(event.pointerId);
-    this._interactionTarget?.releasePointerCapture?.(event.pointerId);
+    try {
+      const hasCapture = this._interactionTarget?.hasPointerCapture?.(
+        event.pointerId,
+      );
+      if (hasCapture !== false) {
+        this._interactionTarget?.releasePointerCapture?.(event.pointerId);
+      }
+    } catch (_) {}
 
     if (this._pinch?.pointerIds.includes(event.pointerId)) {
       this._pinch = null;
-      this._lastTouchZoomAt = Date.now();
+      this._lastPointerZoomAt = Date.now();
     }
     if (this._pan?.pointerId === event.pointerId) {
       this._pan = null;
@@ -818,7 +899,7 @@ export class VideoZoomController {
     if (
       !cancelled &&
       !wasPinching &&
-      point.pointerType === "touch" &&
+      ["mouse", "pen", "touch"].includes(point.pointerType) &&
       !point.moved
     ) {
       const now = Date.now();
@@ -827,18 +908,25 @@ export class VideoZoomController {
         clientY: Number(event.clientY) || point.clientY,
         at: now,
       };
+      const activationDelay = point.pointerType === "touch"
+        ? DOUBLE_TAP_DELAY_MS
+        : DOUBLE_POINTER_CLICK_DELAY_MS;
       if (
         this._lastTap &&
-        now - this._lastTap.at <= DOUBLE_TAP_DELAY_MS &&
+        this._lastTap.pointerType === point.pointerType &&
+        now - this._lastTap.at <= activationDelay &&
         distanceBetween(this._lastTap, currentTap) <= DOUBLE_TAP_DISTANCE_PX
       ) {
         event.preventDefault?.();
         this._lastTap = null;
-        this._lastTouchZoomAt = now;
+        this._lastPointerZoomAt = now;
         this._notifyInteractionStart();
         this.toggleDoubleZoom(currentTap.clientX, currentTap.clientY);
       } else {
-        this._lastTap = currentTap;
+        this._lastTap = {
+          ...currentTap,
+          pointerType: point.pointerType,
+        };
       }
     }
 

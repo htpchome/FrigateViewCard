@@ -11,6 +11,7 @@ export const resolveHaDirectStartup = (startup = {}) => ({
   minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
   requireReadyState: normalizeNumber(startup.requireReadyState, 0),
   strict: startup.strict ?? false,
+  requirePresentedFrame: startup.requirePresentedFrame !== false,
   streamType: startup.streamType,
 });
 
@@ -26,6 +27,7 @@ export const buildHaDirectMountPlan = ({
       minDecodedFrames: policy.minDecodedFrames,
       requireReadyState: policy.requireReadyState,
       strict: policy.strict,
+      requirePresentedFrame: policy.requirePresentedFrame,
     },
     waitMs: policy.waitMs,
   };

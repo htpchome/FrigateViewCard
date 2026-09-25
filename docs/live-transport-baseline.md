@@ -4,8 +4,10 @@
 
 `v1.1.5-dev.63` established the original live connection baseline physically
 tested on September 6, 2026. Later Mac Catalyst testing found that its HA Direct
-HLS browser-player retention was not valid. `v1.1.7-dev.64` corrects that
-lifecycle in code and automated coverage; physical Catalyst validation remains
+HLS browser-player retention was not valid. `v1.1.7-dev.64` corrected that
+lifecycle. `v1.1.7-dev.65` keeps the snapshot in place until fresh HLS has
+presented a painted video frame and avoids applying the generic compositor
+refresh transform to HA Direct HLS. Physical Catalyst validation remains
 required.
 
 - `frigate_go2rtc` connections are good. Preserve its established WebRTC/MSE
@@ -95,6 +97,9 @@ one of those policies is the cause.
   Catalyst testing showed that custom-element reparenting restarted playback
   and could leave video black while audio continued. HA Direct WebRTC and
   Frigate go2rtc retention remain unchanged.
+- `v1.1.7-dev.65` made the HA Direct snapshot-to-HLS transition wait for
+  presented-frame and paint-boundary evidence, preloaded replacement snapshots,
+  and excluded HA Direct HLS from the generic video compositor refresh nudge.
 
 ## Validation Expectations
 

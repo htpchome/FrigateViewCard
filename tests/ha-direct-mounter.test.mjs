@@ -176,6 +176,7 @@ test("ha direct mounter mounts and schedules follow-up without blocking", async 
         waitForStreamStart: async (_streamEl, _waitMs, options) => {
           waitCalls += 1;
           assert.equal(options.onVideoReady, undefined);
+          assert.equal(options.requirePresentedFrame, true);
           return true;
         },
         assignCommittedEngine: (engine) => {

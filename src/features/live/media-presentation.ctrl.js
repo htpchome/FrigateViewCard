@@ -66,9 +66,16 @@ export class LiveMediaPresentationController {
     }
 
     this.clearVideoZoom();
+    const enablePresentationRefresh =
+      attachmentOptions.enablePresentationRefresh ??
+      !(
+        engine?.type === "ha_direct" &&
+        engine?.streamType === "hls"
+      );
     hostCard._liveVideoZoomController = attachVideoZoom(video, {
       host: zoomHost,
       interactionTarget,
+      enablePresentationRefresh,
       onInteractionStart: () => hostCard._dismissLinkedLightDimmers(),
       onZoomStateChange: (zoomed) => {
         hostCard._$("#card")?.classList?.toggle?.(

@@ -77,6 +77,7 @@ export function waitForMediaStart(
     minDecodedFrames = 1,
     requireReadyState = 0,
     strict = false,
+    requirePresentedFrame = false,
     abortSignal = null,
     resolveVideo,
     onVideoReady,
@@ -90,6 +91,7 @@ export function waitForMediaStart(
   const minimumDecodedFrames = Number(minDecodedFrames ?? 1);
   const minimumReadyState = Number(requireReadyState ?? 0);
   const strictReadiness = strict === true;
+  const visualReadiness = requirePresentedFrame === true;
   const signal = abortSignal || null;
 
   return new Promise((resolve) => {
@@ -103,6 +105,43 @@ export function waitForMediaStart(
     let onAbort = null;
     let tick = null;
     let timeout = null;
+    let firstPaintFrame = null;
+    let secondPaintFrame = null;
+    let presentationPending = false;
+    let progressVideo = null;
+    let progressSamples = 0;
+    let progressStartTime = null;
+    let progressStartDecoded = null;
+    let lastProgressTime = null;
+    let lastProgressDecoded = null;
+
+    const clearPaintBoundary = () => {
+      if (firstPaintFrame != null) {
+        globalThis.cancelAnimationFrame?.(firstPaintFrame);
+      }
+      if (secondPaintFrame != null) {
+        globalThis.cancelAnimationFrame?.(secondPaintFrame);
+      }
+      firstPaintFrame = null;
+      secondPaintFrame = null;
+      presentationPending = false;
+    };
+
+    const resetProgressEvidence = (video = null) => {
+      progressVideo = video;
+      progressSamples = 0;
+      const currentTime = Number(video?.currentTime);
+      const decodedFrames = Number(
+        video?.webkitDecodedFrameCount ||
+          video?.getVideoPlaybackQuality?.()?.totalVideoFrames,
+      );
+      progressStartTime = Number.isFinite(currentTime) ? currentTime : null;
+      progressStartDecoded = Number.isFinite(decodedFrames)
+        ? decodedFrames
+        : null;
+      lastProgressTime = progressStartTime;
+      lastProgressDecoded = progressStartDecoded;
+    };
 
     const clearVideoBindings = () => {
       if (boundVideo && finish) {
@@ -124,6 +163,8 @@ export function waitForMediaStart(
       finish = null;
       frameCallbackBound = false;
       eventBound = false;
+      clearPaintBoundary();
+      resetProgressEvidence();
     };
 
     const done = (ok, video = null) => {
@@ -145,6 +186,75 @@ export function waitForMediaStart(
       resolve(ok);
     };
 
+    const finishAfterPaint = (video) => {
+      if (settled || presentationPending) return;
+      presentationPending = true;
+      const requestFrame = globalThis.requestAnimationFrame;
+      if (typeof requestFrame !== "function") {
+        done(true, video);
+        return;
+      }
+      firstPaintFrame = requestFrame(() => {
+        firstPaintFrame = null;
+        if (settled) return;
+        secondPaintFrame = requestFrame(() => {
+          secondPaintFrame = null;
+          done(true, video);
+        });
+      });
+    };
+
+    const noteProgressEvidence = (video) => {
+      if (!video || settled || presentationPending) return;
+      if (progressVideo !== video) {
+        resetProgressEvidence(video);
+        return;
+      }
+      const readyState = Number(video.readyState) || 0;
+      const currentTime = Number(video.currentTime);
+      const decodedFrames = Number(
+        video.webkitDecodedFrameCount ||
+          video.getVideoPlaybackQuality?.()?.totalVideoFrames,
+      );
+      const usable =
+        !video.paused &&
+        !video.ended &&
+        !video.seeking &&
+        readyState >= Math.max(2, minimumReadyState) &&
+        Number(video.videoWidth) > 0;
+      if (!usable) {
+        resetProgressEvidence(video);
+        return;
+      }
+      const timeAdvanced =
+        Number.isFinite(currentTime) &&
+        lastProgressTime != null &&
+        currentTime > lastProgressTime;
+      const decodedAdvanced =
+        Number.isFinite(decodedFrames) &&
+        lastProgressDecoded != null &&
+        decodedFrames > lastProgressDecoded;
+      if (!timeAdvanced && !decodedAdvanced) return;
+      progressSamples += 1;
+      if (Number.isFinite(currentTime)) lastProgressTime = currentTime;
+      if (Number.isFinite(decodedFrames)) lastProgressDecoded = decodedFrames;
+      const timeProgress =
+        Number.isFinite(currentTime) && progressStartTime != null
+          ? currentTime - progressStartTime
+          : 0;
+      const decodedProgress =
+        Number.isFinite(decodedFrames) && progressStartDecoded != null
+          ? decodedFrames - progressStartDecoded
+          : 0;
+      if (
+        progressSamples >= 2 &&
+        (timeProgress >= Math.max(0.05, minimumCurrentTime) ||
+          decodedProgress >= Math.max(2, minimumDecodedFrames))
+      ) {
+        finishAfterPaint(video);
+      }
+    };
+
     if (signal) {
       onAbort = () => done(false);
       if (signal.aborted) {
@@ -161,15 +271,18 @@ export function waitForMediaStart(
       if (!frameCallbackBound && video.requestVideoFrameCallback) {
         frameCallbackBound = true;
         frameCallbackVideo = video;
-        frameCallbackId = video.requestVideoFrameCallback(() =>
-          done(true, video),
-        );
+        frameCallbackId = video.requestVideoFrameCallback(() => {
+          frameCallbackId = null;
+          if (visualReadiness) finishAfterPaint(video);
+          else done(true, video);
+        });
       }
       if (!eventBound) {
         eventBound = true;
         boundVideo = video;
         finish = () => {
-          if (!strictReadiness) done(true, video);
+          if (visualReadiness) noteProgressEvidence(video);
+          else if (!strictReadiness) done(true, video);
         };
         video.addEventListener("loadeddata", finish, { once: true });
         video.addEventListener("canplay", finish, { once: true });
@@ -181,6 +294,10 @@ export function waitForMediaStart(
         Number(video.getVideoPlaybackQuality?.().totalVideoFrames) ||
         0;
       const ready = Number(video.readyState) || 0;
+      if (visualReadiness) {
+        noteProgressEvidence(video);
+        return;
+      }
       const timeOk = video.currentTime >= minimumCurrentTime;
       const decodeOk = decoded >= minimumDecodedFrames;
       if (ready >= minimumReadyState && (timeOk || decodeOk)) {

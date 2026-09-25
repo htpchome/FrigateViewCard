@@ -85,6 +85,8 @@ function createZoomFixture({
   onInteractionStart = null,
   onZoomStateChange = null,
   resizeObserverCtor = null,
+  gestureEvents = false,
+  enablePresentationRefresh = true,
 } = {}) {
   const host = {
     style: new FakeStyle(),
@@ -117,6 +119,7 @@ function createZoomFixture({
   const interactionTarget = separateInteractionTarget
     ? new FakeTarget()
     : video;
+  if (gestureEvents) interactionTarget.ongesturestart = null;
   interactionTarget.capturedPointers = [];
   interactionTarget.releasedPointers = [];
   interactionTarget.setPointerCapture = (pointerId) => {
@@ -153,6 +156,7 @@ function createZoomFixture({
     onInteractionStart,
     onZoomStateChange,
     resizeObserverCtor,
+    enablePresentationRefresh,
   }).bind();
   return { controller, host, interactionTarget, video };
 }
@@ -289,27 +293,50 @@ test("suspended presentation shows uncropped media and restores zoom afterward",
   assert.deepEqual(controller.state, zoomState);
 });
 
-test("wheel zoom is pointer-focused, capped at 3x, and releases outward page scroll at 1x", () => {
+test("plain wheel scroll is released while modified wheel zoom is pointer-focused and capped", () => {
   const { controller, video } = createZoomFixture();
 
-  const inward = video.dispatch("wheel", { deltaY: -100 });
+  const pageScroll = video.dispatch("wheel", { deltaY: -100 });
+  assert.equal(pageScroll.defaultPrevented, false);
+  assert.equal(controller.state.scale, 1);
+
+  const inward = video.dispatch("wheel", { deltaY: -100, ctrlKey: true });
   assert.equal(inward.defaultPrevented, true);
   assert.equal(controller.state.scale, 1.2);
   assert.deepEqual(controller.state, { scale: 1.2, x: -30, y: -20 });
 
   for (let i = 0; i < 20; i++) {
-    video.dispatch("wheel", { deltaY: -100 });
+    video.dispatch("wheel", { deltaY: -100, ctrlKey: true });
   }
   assert.equal(controller.state.scale, VIDEO_ZOOM_MAX);
 
   for (let i = 0; i < 20; i++) {
-    video.dispatch("wheel", { deltaY: 100 });
+    video.dispatch("wheel", { deltaY: 100, ctrlKey: true });
   }
   assert.deepEqual(controller.state, { scale: 1, x: 0, y: 0 });
 
-  const outward = video.dispatch("wheel", { deltaY: 100 });
-  assert.equal(outward.defaultPrevented, false);
+  const outward = video.dispatch("wheel", { deltaY: 100, ctrlKey: true });
+  assert.equal(outward.defaultPrevented, true);
   assert.deepEqual(controller.state, { scale: 1, x: 0, y: 0 });
+});
+
+test("fractional modified-wheel and Safari gesture zoom preserve deliberate trackpad intent", () => {
+  const { controller, video } = createZoomFixture({ gestureEvents: true });
+
+  video.dispatch("wheel", {
+    deltaY: -2.5,
+    deltaMode: 0,
+    ctrlKey: true,
+  });
+  assert.equal(controller.state.scale, 1.005);
+
+  const start = video.dispatch("gesturestart", { scale: 1 });
+  const change = video.dispatch("gesturechange", { scale: 2 });
+  const end = video.dispatch("gestureend", { scale: 2 });
+  assert.equal(start.defaultPrevented, true);
+  assert.equal(change.defaultPrevented, true);
+  assert.equal(end.defaultPrevented, true);
+  assert.equal(controller.state.scale, 2.01);
 });
 
 test("accepted zoom and pan gestures notify their shared interaction owner", () => {
@@ -323,10 +350,16 @@ test("accepted zoom and pan gestures notify their shared interaction owner", () 
   video.dispatch("wheel", { deltaY: 100 });
   assert.equal(starts, 0);
 
-  video.dispatch("wheel", { deltaY: -100 });
+  video.dispatch("wheel", { deltaY: -100, ctrlKey: true });
   assert.equal(starts, 1);
 
   video.dispatch("pointerdown", { pointerId: 7 });
+  assert.equal(starts, 1);
+  video.dispatch("pointermove", {
+    pointerId: 7,
+    clientX: 130,
+    clientY: 80,
+  });
   assert.equal(starts, 2);
   video.dispatch("pointerup", { pointerId: 7 });
 
@@ -370,6 +403,7 @@ test("letterbox space is excluded from the zoom cursor and interaction zone", ()
     clientX: 75,
     clientY: 100,
     deltaY: -100,
+    ctrlKey: true,
   });
   assert.equal(accepted.defaultPrevented, true);
   assert.equal(controller.state.scale, 1.2);
@@ -410,13 +444,14 @@ test("mouse drag pans only while zoomed and remains inside the visible edges", (
     clientX: 150,
     clientY: 100,
   });
-  assert.equal(video.style.getPropertyValue("cursor"), "grabbing");
+  assert.equal(video.style.getPropertyValue("cursor"), "grab");
 
   video.dispatch("pointermove", {
     pointerId: 1,
     clientX: 600,
     clientY: 500,
   });
+  assert.equal(video.style.getPropertyValue("cursor"), "grabbing");
   assert.deepEqual(controller.state, { scale: 2, x: 0, y: 0 });
 
   video.dispatch("pointermove", {
@@ -487,11 +522,12 @@ test("pulled-down popup cover media pans on touch without transform zoom", () =>
     "pointerdown",
     touchEvent(11, 150, 150, { target: video }),
   );
-  assert.equal(down.defaultPrevented, true);
-  interactionTarget.dispatch(
+  assert.equal(down.defaultPrevented, false);
+  const move = interactionTarget.dispatch(
     "pointermove",
     touchEvent(11, 230, 150, { target: interactionTarget }),
   );
+  assert.equal(move.defaultPrevented, true);
 
   assert.equal(controller.state.scale, 1);
   assert.ok(controller.state.objectPositionX > 0);
@@ -514,7 +550,33 @@ test("pulled-down popup cover media pans on touch without transform zoom", () =>
     "pointerdown",
     touchEvent(12, 150, 150, { target: video }),
   );
-  assert.equal(downAfterReset.defaultPrevented, true);
+  assert.equal(downAfterReset.defaultPrevented, false);
+});
+
+test("stationary pointer double activation toggles zoom and deduplicates native dblclick", () => {
+  const { controller, video } = createZoomFixture();
+  const click = () => {
+    video.dispatch("pointerdown", { pointerId: 1, clientX: 75, clientY: 50 });
+    return video.dispatch("pointerup", {
+      pointerId: 1,
+      clientX: 75,
+      clientY: 50,
+    });
+  };
+
+  click();
+  const secondZoomClick = click();
+  assert.equal(secondZoomClick.defaultPrevented, true);
+  assert.equal(controller.state.scale, 2);
+  video.dispatch("dblclick", { clientX: 75, clientY: 50 });
+  assert.equal(controller.state.scale, 2);
+
+  click();
+  const secondResetClick = click();
+  assert.equal(secondResetClick.defaultPrevented, true);
+  assert.deepEqual(controller.state, { scale: 1, x: 0, y: 0 });
+  video.dispatch("dblclick", { clientX: 75, clientY: 50 });
+  assert.deepEqual(controller.state, { scale: 1, x: 0, y: 0 });
 });
 
 test("touch double tap toggles 2x and pinch zoom is capped at 3x", () => {
@@ -641,4 +703,21 @@ test("video presentation refresh waits for a decoded frame and spans a paint", (
     globalThis.requestAnimationFrame = previousRequestAnimationFrame;
     globalThis.cancelAnimationFrame = previousCancelAnimationFrame;
   }
+});
+
+test("fresh HA Direct HLS can disable compositor presentation nudges", () => {
+  const { controller, video } = createZoomFixture({
+    videoFrameCallbacks: true,
+    enablePresentationRefresh: false,
+  });
+
+  assert.equal(video._videoFrameCallbacks.size, 0);
+  video.dispatch("waiting");
+  video.dispatch("playing");
+  assert.equal(video._videoFrameCallbacks.size, 0);
+  assert.doesNotMatch(
+    video.style.getPropertyValue("transform"),
+    /translateZ\(0\.001px\)/,
+  );
+  controller.dispose();
 });

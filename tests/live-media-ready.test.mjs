@@ -330,3 +330,77 @@ test("stream readiness releases pending video callbacks and listeners on abort",
     0,
   );
 });
+
+test("visual stream readiness ignores early media events until a frame crosses a paint boundary", async () => {
+  const previousRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const previousCancelAnimationFrame = globalThis.cancelAnimationFrame;
+  const listeners = new Map();
+  const videoFrameCallbacks = new Map();
+  const paintCallbacks = [];
+  let nextVideoFrameId = 0;
+  let settled = false;
+  globalThis.requestAnimationFrame = (callback) => {
+    paintCallbacks.push(callback);
+    return paintCallbacks.length;
+  };
+  globalThis.cancelAnimationFrame = () => {};
+  const video = {
+    readyState: 4,
+    ended: false,
+    paused: false,
+    seeking: false,
+    currentTime: 1,
+    videoWidth: 1920,
+    webkitDecodedFrameCount: 1,
+    addEventListener(type, handler) {
+      const handlers = listeners.get(type) || new Set();
+      handlers.add(handler);
+      listeners.set(type, handlers);
+    },
+    removeEventListener(type, handler) {
+      listeners.get(type)?.delete(handler);
+    },
+    dispatch(type) {
+      for (const handler of listeners.get(type) || []) handler({ type });
+    },
+    requestVideoFrameCallback(callback) {
+      const id = ++nextVideoFrameId;
+      videoFrameCallbacks.set(id, callback);
+      return id;
+    },
+    cancelVideoFrameCallback(id) {
+      videoFrameCallbacks.delete(id);
+    },
+  };
+
+  try {
+    const pending = waitForMediaStart({}, 1000, {
+      requirePresentedFrame: true,
+      resolveVideo: () => video,
+    });
+    void pending.then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 220));
+
+    video.dispatch("loadeddata");
+    video.dispatch("playing");
+    await Promise.resolve();
+    assert.equal(settled, false);
+
+    const frameCallback = videoFrameCallbacks.values().next().value;
+    frameCallback?.(0, { presentedFrames: 1 });
+    await Promise.resolve();
+    assert.equal(settled, false);
+    assert.equal(paintCallbacks.length, 1);
+
+    paintCallbacks.shift()?.();
+    await Promise.resolve();
+    assert.equal(settled, false);
+    paintCallbacks.shift()?.();
+    assert.equal(await pending, true);
+  } finally {
+    globalThis.requestAnimationFrame = previousRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = previousCancelAnimationFrame;
+  }
+});

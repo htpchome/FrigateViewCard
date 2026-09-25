@@ -125,6 +125,9 @@ export function createHaDirectMounter({
       binding.recoveryVideo = video;
       let active = true;
       let frameId = null;
+      let firstPaintFrame = null;
+      let secondPaintFrame = null;
+      let presentationPending = false;
       const initialTime = Number(video.currentTime);
       let lastTime = Number.isFinite(initialTime) ? initialTime : null;
       let advancingSamples = 0;
@@ -144,12 +147,48 @@ export function createHaDirectMounter({
         advancingSamples = 0;
         progressStartTime = null;
       };
+      let onFrame = null;
+      const armFrameRecovery = () => {
+        if (
+          frameId == null &&
+          typeof video.requestVideoFrameCallback === "function"
+        ) {
+          frameId = video.requestVideoFrameCallback(onFrame);
+        }
+      };
       const recover = () => {
+        presentationPending = false;
         if (!isActive()) return;
-        if (!hasUsablePlaybackState()) return;
+        if (!hasUsablePlaybackState()) {
+          armFrameRecovery();
+          return;
+        }
         binding.failed = false;
         binding.cleanupRecovery();
         applyReady(engine, "hls");
+      };
+      const recoverAfterPaint = () => {
+        if (
+          !isActive() ||
+          !hasUsablePlaybackState() ||
+          presentationPending
+        ) {
+          return;
+        }
+        presentationPending = true;
+        const requestFrame = globalThis.requestAnimationFrame;
+        if (typeof requestFrame !== "function") {
+          recover();
+          return;
+        }
+        firstPaintFrame = requestFrame(() => {
+          firstPaintFrame = null;
+          if (!isActive()) return;
+          secondPaintFrame = requestFrame(() => {
+            secondPaintFrame = null;
+            recover();
+          });
+        });
       };
       const onTimeUpdate = () => {
         if (!isActive()) return;
@@ -171,18 +210,30 @@ export function createHaDirectMounter({
           time - progressStartTime >=
             HA_DIRECT_TIME_RECOVERY_MIN_PROGRESS_SECONDS
         ) {
-          recover();
+          recoverAfterPaint();
         }
       };
-      const onFrame = () => {
+      onFrame = () => {
         frameId = null;
         if (!isActive()) return;
-        recover();
-        if (isActive()) frameId = video.requestVideoFrameCallback(onFrame);
+        if (!hasUsablePlaybackState()) {
+          armFrameRecovery();
+          return;
+        }
+        recoverAfterPaint();
       };
       binding.cleanupRecovery = () => {
         active = false;
         if (frameId != null) video.cancelVideoFrameCallback?.(frameId);
+        if (firstPaintFrame != null) {
+          globalThis.cancelAnimationFrame?.(firstPaintFrame);
+        }
+        if (secondPaintFrame != null) {
+          globalThis.cancelAnimationFrame?.(secondPaintFrame);
+        }
+        firstPaintFrame = null;
+        secondPaintFrame = null;
+        presentationPending = false;
         video.removeEventListener?.("timeupdate", onTimeUpdate);
         binding.recoveryVideo = null;
         binding.cleanupRecovery = () => {};
@@ -190,9 +241,7 @@ export function createHaDirectMounter({
       // A lone time jump can be a seek or stale buffered state. WKWebView may
       // omit frame callbacks, so require sustained playback as the fallback.
       video.addEventListener?.("timeupdate", onTimeUpdate);
-      if (typeof video.requestVideoFrameCallback === "function") {
-        frameId = video.requestVideoFrameCallback(onFrame);
-      }
+      armFrameRecovery();
     };
     binding.fail = () => {
       if (binding.disposed || !isCurrentEngine(engine)) return;
