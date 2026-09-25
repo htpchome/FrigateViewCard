@@ -5,6 +5,7 @@ import {
   PICTURE_IN_PICTURE_METHOD_STANDARD,
   PICTURE_IN_PICTURE_METHOD_WEBKIT,
   PictureInPictureButtonController,
+  PictureInPictureController,
   refreshVideoPictureInPictureSuppressionLayout,
   resolveVideoPictureInPictureSupport,
   toggleVideoPictureInPicture,
@@ -359,4 +360,128 @@ test("button controller tracks native PiP events and cleans up listeners", () =>
   assert.equal(video.listenerCount("playing"), 0);
   assert.equal(button.hidden, true);
   assert.equal(button.disabled, true);
+});
+
+test("PiP controller binds only eligible live and popup surfaces", () => {
+  const liveButton = createButton();
+  const popupButton = createButton();
+  const liveVideo = { ownerDocument: {} };
+  const popupVideo = { ownerDocument: {} };
+  const created = [];
+  const nativeCalls = [];
+  let popupOpen = false;
+  let mobileTablet = false;
+  let firefox = false;
+  const controller = new PictureInPictureController({
+    resolveButton: (scope) =>
+      scope === "popup" ? popupButton : liveButton,
+    resolveLiveVideo: () => liveVideo,
+    resolvePopupVideo: () => popupVideo,
+    isPopupOpen: () => popupOpen,
+    isMobileTabletViewport: () => mobileTablet,
+    isFirefox: () => firefox,
+    createButtonController: (options) => {
+      const entry = {
+        ...options,
+        bound: 0,
+        refreshed: 0,
+        disposed: 0,
+        bind() {
+          this.bound += 1;
+          return this;
+        },
+        refresh() {
+          this.refreshed += 1;
+        },
+        dispose() {
+          this.disposed += 1;
+        },
+      };
+      created.push(entry);
+      return entry;
+    },
+    enableNative: (video) => nativeCalls.push(["enable", video]),
+    disableNative: (video) => nativeCalls.push(["disable", video]),
+  });
+
+  controller.sync();
+  assert.equal(created.length, 1);
+  assert.equal(created[0].button, liveButton);
+  assert.equal(created[0].video, liveVideo);
+  assert.equal(popupButton.hidden, true);
+  assert.deepEqual(nativeCalls, [
+    ["enable", liveVideo],
+    ["enable", null],
+  ]);
+
+  popupOpen = true;
+  controller.sync();
+  assert.equal(created[0].disposed, 1);
+  assert.equal(created.length, 2);
+  assert.equal(created[1].button, popupButton);
+  assert.equal(created[1].video, popupVideo);
+
+  firefox = true;
+  mobileTablet = true;
+  controller.sync();
+  assert.equal(created[1].disposed, 1);
+  assert.equal(liveButton.hidden, true);
+  assert.equal(popupButton.hidden, true);
+  assert.deepEqual(nativeCalls.slice(-2), [
+    ["disable", liveVideo],
+    ["disable", popupVideo],
+  ]);
+});
+
+test("PiP controller preserves Firefox live and popup toggle policies", async () => {
+  const video = { ownerDocument: { pictureInPictureEnabled: true } };
+  const toggles = [];
+  const failures = [];
+  let popupControlsShown = 0;
+  const controller = new PictureInPictureController({
+    isFirefox: () => true,
+    resolveSupport: () => ({ supported: true, method: "standard" }),
+    togglePictureInPicture: async (options) => toggles.push(options),
+    onFailure: (error) => failures.push(error.message),
+    onShowPopupControls: () => {
+      popupControlsShown += 1;
+    },
+  });
+
+  await controller.toggle(video);
+  await controller.toggle(video, { popup: true });
+
+  assert.deepEqual(
+    toggles.map(({ temporarilyAllowDisabled, resumePlaybackOnExit }) => ({
+      temporarilyAllowDisabled,
+      resumePlaybackOnExit,
+    })),
+    [
+      { temporarilyAllowDisabled: true, resumePlaybackOnExit: true },
+      { temporarilyAllowDisabled: true, resumePlaybackOnExit: false },
+    ],
+  );
+  assert.equal(popupControlsShown, 1);
+  assert.deepEqual(failures, []);
+});
+
+test("PiP controller reports unsupported and failed requests", async () => {
+  const unsupported = [];
+  const failures = [];
+  let supported = false;
+  const controller = new PictureInPictureController({
+    resolveSupport: () => ({ supported, method: "" }),
+    onUnsupported: () => unsupported.push(true),
+    onFailure: (error) => failures.push(error.message),
+    togglePictureInPicture: async () => {
+      throw new Error("blocked");
+    },
+  });
+
+  await controller.toggle(null);
+  supported = true;
+  await controller.toggle({ ownerDocument: {} });
+
+  assert.deepEqual(unsupported, [true]);
+  assert.deepEqual(failures, ["blocked"]);
 });

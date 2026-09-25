@@ -103,8 +103,6 @@ import {
 import {
   buildVideoOptionsForView,
   createVideoElement,
-  disableNativePictureInPicture,
-  enableNativePictureInPicture,
   setScopedVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
 } from "../shared/media/video-factory.js";
@@ -123,9 +121,7 @@ import {
 import { CameraGroupLiveController } from "../features/camera-groups/live.ctrl.js";
 import { LinkedLightController } from "../features/linked-entities/light.ctrl.js";
 import {
-  PictureInPictureButtonController,
-  resolveVideoPictureInPictureSupport,
-  toggleVideoPictureInPicture,
+  PictureInPictureController,
 } from "../shared/media/picture-in-picture.js";
 import { BrowserPlaybackTargetController } from "../shared/media/playback-target.js";
 import { buildFrigateReceiverMediaPath } from "../integrations/frigate/receiver-media.js";
@@ -351,6 +347,45 @@ export class FrigateViewCard extends HTMLElement {
           }
         },
       });
+    this._pictureInPictureController = new PictureInPictureController({
+      resolveButton: (scope) =>
+        this._$(scope === "popup" ? "#popup-pip-btn" : "#live-pip-btn"),
+      resolveLiveVideo: () => this._livePictureInPictureVideo(),
+      resolvePopupVideo: () => this._popupMediaControlsController.video(),
+      isPopupOpen: () =>
+        this._$("#myPopup")?.classList.contains("is-open") === true,
+      isMobileTabletViewport: () => this._isMobileTabletViewport(),
+      isFirefox: () => this._isFirefox(),
+      isLiveAllowed: () =>
+        this._activePageShellCapabilities().hasLivePictureInPicture &&
+        this._viewMode !== "grid",
+      isPopupAllowed: () =>
+        this._isPopupVideoMediaType(
+          this._popupLifecycleController.mediaType(),
+        ),
+      onUnsupported: () =>
+        this._toast("Picture-in-Picture is not supported for this video.", {
+          localizationKey: "runtime.notifications.pipUnsupported",
+        }),
+      onFailure: (error) => {
+        console.warn("[Frigate] Picture-in-Picture request failed", error);
+        const reason = String(error?.message || "").trim();
+        this._toast(
+          reason
+            ? `Picture-in-Picture could not start: ${reason}`
+            : "Picture-in-Picture could not start in this browser.",
+          reason
+            ? {
+                localizationKey:
+                  "runtime.notifications.pipStartFailedWithReason",
+                localizationValues: { reason },
+              }
+            : { localizationKey: "runtime.notifications.pipStartFailed" },
+        );
+      },
+      onShowPopupControls: () =>
+        this._popupMediaControlsController.showTemporarily(),
+    });
     this._twoWayTalkSessionController =
       new TwoWayTalkSessionController(this);
     this._twoWayTalkControlsController =
@@ -1068,7 +1103,7 @@ export class FrigateViewCard extends HTMLElement {
     this._liveViewResizeController?.dispose();
     this._cameraGroupLiveController?.teardown?.();
     this._liveFullscreenLifecycleController?.dispose();
-    this._clearPictureInPictureButtonController("live");
+    this._pictureInPictureController?.dispose?.();
     if (this._playbackTargetController) {
       try {
         this._playbackTargetController.dispose();
@@ -4383,128 +4418,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _clearPictureInPictureButtonController(scope) {
-    const property =
-      scope === "popup"
-        ? "_popupPictureInPictureButtonController"
-        : "_livePictureInPictureButtonController";
-    const controller = this[property];
-    if (controller) {
-      try {
-        controller.dispose();
-      } catch (_) {}
-    }
-    this[property] = null;
+    this._pictureInPictureController.clear(scope);
   }
 
   _bindPictureInPictureButton(scope, button, video) {
-    const property =
-      scope === "popup"
-        ? "_popupPictureInPictureButtonController"
-        : "_livePictureInPictureButtonController";
-    const documentObj = video?.ownerDocument || globalThis.document || null;
-    const current = this[property];
-    if (current?.button === button && current?.video === video) {
-      current.refresh();
-      return;
-    }
-
-    this._clearPictureInPictureButtonController(scope);
-    if (!button || !video) {
-      if (button) {
-        button.hidden = true;
-        button.disabled = true;
-      }
-      return;
-    }
-
-    const controller = new PictureInPictureButtonController({
-      button,
-      video,
-      documentObj,
-    });
-    this[property] = controller;
-    controller.bind();
+    this._pictureInPictureController.bind(scope, button, video);
   }
 
   _syncPictureInPictureButtons() {
-    const popupOpen =
-      this._$("#myPopup")?.classList.contains("is-open") === true;
-    const mobileTablet = this._isMobileTabletViewport();
-    const isFirefox = this._isFirefox();
-    const liveVideo = this._livePictureInPictureVideo();
-    if (isFirefox) {
-      disableNativePictureInPicture(liveVideo);
-    } else {
-      enableNativePictureInPicture(liveVideo);
-    }
-    const liveAllowed =
-      !mobileTablet &&
-      this._activePageShellCapabilities().hasLivePictureInPicture &&
-      this._viewMode !== "grid" &&
-      !popupOpen;
-    this._bindPictureInPictureButton(
-      "live",
-      this._$("#live-pip-btn"),
-      liveAllowed ? liveVideo : null,
-    );
-
-    const popupMediaType = this._popupLifecycleController.mediaType();
-    const popupVideo = popupOpen
-      ? this._popupMediaControlsController.video()
-      : null;
-    if (isFirefox) {
-      disableNativePictureInPicture(popupVideo);
-    } else {
-      enableNativePictureInPicture(popupVideo);
-    }
-    const popupAllowed =
-      !mobileTablet &&
-      popupOpen &&
-      this._isPopupVideoMediaType(popupMediaType);
-    this._bindPictureInPictureButton(
-      "popup",
-      this._$("#popup-pip-btn"),
-      popupAllowed ? popupVideo : null,
-    );
+    this._pictureInPictureController.sync();
   }
 
   async _togglePictureInPicture(video, { popup = false } = {}) {
-    const documentObj = video?.ownerDocument || globalThis.document || null;
-    const isFirefox = this._isFirefox();
-    const support = resolveVideoPictureInPictureSupport({ video, documentObj });
-    if (!support.supported) {
-      this._toast("Picture-in-Picture is not supported for this video.", {
-        localizationKey: "runtime.notifications.pipUnsupported",
-      });
-      this._syncPictureInPictureButtons();
-      return;
-    }
-
-    try {
-      await toggleVideoPictureInPicture({
-        video,
-        documentObj,
-        temporarilyAllowDisabled: isFirefox,
-        resumePlaybackOnExit: isFirefox && !popup,
-      });
-    } catch (error) {
-      console.warn("[Frigate] Picture-in-Picture request failed", error);
-      const reason = String(error?.message || "").trim();
-      this._toast(
-        reason
-          ? `Picture-in-Picture could not start: ${reason}`
-          : "Picture-in-Picture could not start in this browser.",
-        reason
-          ? {
-              localizationKey: "runtime.notifications.pipStartFailedWithReason",
-              localizationValues: { reason },
-            }
-          : { localizationKey: "runtime.notifications.pipStartFailed" },
-      );
-    } finally {
-      this._syncPictureInPictureButtons();
-      if (popup) this._popupMediaControlsController.showTemporarily();
-    }
+    return this._pictureInPictureController.toggle(video, { popup });
   }
 
   _showLiveControlsTemporarily(ms = 2200) {

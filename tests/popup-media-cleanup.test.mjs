@@ -85,8 +85,10 @@ test("_teardownDisconnected delegates popup cleanup to its lifecycle owner", () 
       _stopPreviewMode() {
         calls.push(["stopPreviewMode"]);
       },
-      _clearPictureInPictureButtonController(scope) {
-        calls.push(["clearPictureInPicture", scope]);
+      _pictureInPictureController: {
+        dispose() {
+          calls.push(["disposePictureInPicture"]);
+        },
       },
       _popupLifecycleController: {
         dispose() {
@@ -126,7 +128,7 @@ test("_teardownDisconnected delegates popup cleanup to its lifecycle owner", () 
       ["stopGridModeState"],
       ["stopPreviewMode"],
       ["disconnectToolbarDivider"],
-      ["clearPictureInPicture", "live"],
+      ["disposePictureInPicture"],
       ["disposePopupLifecycle"],
       ["disposePopupRecordingScrub"],
       ["disposeRotateOverlay"],

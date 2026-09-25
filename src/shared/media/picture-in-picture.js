@@ -327,3 +327,135 @@ export class PictureInPictureButtonController {
 
   _sync = () => this.refresh();
 }
+
+export class PictureInPictureController {
+  constructor({
+    resolveButton = () => null,
+    resolveLiveVideo = () => null,
+    resolvePopupVideo = () => null,
+    isPopupOpen = () => false,
+    isMobileTabletViewport = () => false,
+    isFirefox = () => false,
+    isLiveAllowed = () => true,
+    isPopupAllowed = () => true,
+    onUnsupported = () => {},
+    onFailure = () => {},
+    onShowPopupControls = () => {},
+    createButtonController = (options) =>
+      new PictureInPictureButtonController(options),
+    resolveSupport = resolveVideoPictureInPictureSupport,
+    togglePictureInPicture = toggleVideoPictureInPicture,
+    enableNative = enableNativePictureInPicture,
+    disableNative = disableNativePictureInPicture,
+  } = {}) {
+    this._resolveButton = resolveButton;
+    this._resolveLiveVideo = resolveLiveVideo;
+    this._resolvePopupVideo = resolvePopupVideo;
+    this._isPopupOpen = isPopupOpen;
+    this._isMobileTabletViewport = isMobileTabletViewport;
+    this._isFirefox = isFirefox;
+    this._isLiveAllowed = isLiveAllowed;
+    this._isPopupAllowed = isPopupAllowed;
+    this._onUnsupported = onUnsupported;
+    this._onFailure = onFailure;
+    this._onShowPopupControls = onShowPopupControls;
+    this._createButtonController = createButtonController;
+    this._resolveSupport = resolveSupport;
+    this._togglePictureInPicture = togglePictureInPicture;
+    this._enableNative = enableNative;
+    this._disableNative = disableNative;
+    this._buttonControllers = new Map();
+  }
+
+  clear(scope) {
+    const controller = this._buttonControllers.get(scope);
+    if (controller) {
+      try {
+        controller.dispose();
+      } catch (_) {}
+    }
+    this._buttonControllers.delete(scope);
+  }
+
+  bind(scope, button, video) {
+    const current = this._buttonControllers.get(scope);
+    if (current?.button === button && current?.video === video) {
+      current.refresh();
+      return;
+    }
+
+    this.clear(scope);
+    if (!button || !video) {
+      if (button) {
+        button.hidden = true;
+        button.disabled = true;
+      }
+      return;
+    }
+
+    const controller = this._createButtonController({
+      button,
+      video,
+      documentObj: video.ownerDocument || globalThis.document || null,
+    });
+    this._buttonControllers.set(scope, controller);
+    controller.bind();
+  }
+
+  sync() {
+    const popupOpen = this._isPopupOpen() === true;
+    const mobileTablet = this._isMobileTabletViewport() === true;
+    const firefox = this._isFirefox() === true;
+    const liveVideo = this._resolveLiveVideo();
+    if (firefox) this._disableNative(liveVideo);
+    else this._enableNative(liveVideo);
+    this.bind(
+      "live",
+      this._resolveButton("live"),
+      !mobileTablet && !popupOpen && this._isLiveAllowed()
+        ? liveVideo
+        : null,
+    );
+
+    const popupVideo = popupOpen ? this._resolvePopupVideo() : null;
+    if (firefox) this._disableNative(popupVideo);
+    else this._enableNative(popupVideo);
+    this.bind(
+      "popup",
+      this._resolveButton("popup"),
+      !mobileTablet && popupOpen && this._isPopupAllowed()
+        ? popupVideo
+        : null,
+    );
+  }
+
+  async toggle(video, { popup = false } = {}) {
+    const documentObj = video?.ownerDocument || globalThis.document || null;
+    const firefox = this._isFirefox() === true;
+    const support = this._resolveSupport({ video, documentObj });
+    if (!support.supported) {
+      this._onUnsupported();
+      this.sync();
+      return;
+    }
+
+    try {
+      await this._togglePictureInPicture({
+        video,
+        documentObj,
+        temporarilyAllowDisabled: firefox,
+        resumePlaybackOnExit: firefox && !popup,
+      });
+    } catch (error) {
+      this._onFailure(error);
+    } finally {
+      this.sync();
+      if (popup) this._onShowPopupControls();
+    }
+  }
+
+  dispose() {
+    this.clear("live");
+    this.clear("popup");
+  }
+}

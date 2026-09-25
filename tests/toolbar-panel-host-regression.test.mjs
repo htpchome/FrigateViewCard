@@ -56,6 +56,10 @@ const liveRotateOverlayControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const pictureInPictureSource = fs.readFileSync(
+  new URL("../src/shared/media/picture-in-picture.js", import.meta.url),
+  "utf8",
+);
 const twoWayTalkSessionControllerSource = fs.readFileSync(
   new URL(
     "../src/features/two-way-talk/session.ctrl.js",
@@ -442,7 +446,10 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
     ),
     true,
   );
-  assert.equal(cardSource.includes("toggleVideoPictureInPicture"), true);
+  assert.equal(
+    pictureInPictureSource.includes("toggleVideoPictureInPicture"),
+    true,
+  );
   assert.equal(stylesSource.includes(".overlay-fs"), false);
   assert.equal(
     cardSource.includes(
@@ -512,31 +519,37 @@ test("Firefox uses desktop custom PiP buttons with temporary native suppression 
     popupMediaControlsSource,
     /if \(isVideo && !mobileTablet\) \{/,
   );
-  assert.match(cardSource, /const liveAllowed =\s*!mobileTablet &&/);
-  assert.match(cardSource, /const popupAllowed =\s*!mobileTablet &&/);
+  assert.match(
+    pictureInPictureSource,
+    /!mobileTablet && !popupOpen && this\._isLiveAllowed\(\)/,
+  );
+  assert.match(
+    pictureInPictureSource,
+    /!mobileTablet && popupOpen && this\._isPopupAllowed\(\)/,
+  );
   assert.equal(popupMediaControlsSource.includes("_isMobileDevice"), false);
   assert.equal(
     popupMediaControlsSource.includes("!this._isFirefox()"),
     false,
   );
   assert.match(
-    cardSource,
-    /if \(isFirefox\) \{\s*disableNativePictureInPicture\(liveVideo\)/,
+    pictureInPictureSource,
+    /if \(firefox\) this\._disableNative\(liveVideo\)/,
   );
   assert.match(
-    cardSource,
-    /if \(isFirefox\) \{\s*disableNativePictureInPicture\(popupVideo\)/,
+    pictureInPictureSource,
+    /if \(firefox\) this\._disableNative\(popupVideo\)/,
   );
   assert.equal(
     cardSource.includes("temporarilyAllowDisabled: this._isFirefox()"),
     false,
   );
   assert.equal(
-    cardSource.includes("temporarilyAllowDisabled: isFirefox"),
+    pictureInPictureSource.includes("temporarilyAllowDisabled: firefox"),
     true,
   );
   assert.equal(
-    cardSource.includes("resumePlaybackOnExit: isFirefox && !popup"),
+    pictureInPictureSource.includes("resumePlaybackOnExit: firefox && !popup"),
     true,
   );
 });

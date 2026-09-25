@@ -103,8 +103,6 @@ export const createInitialCardRuntimeState = ({ singleViewPageId }) => ({
   _realtimeHeadPollT: null,
   _switchLoadT: null,
   _listScrollController: null,
-  _livePictureInPictureButtonController: null,
-  _popupPictureInPictureButtonController: null,
   _liveControlsHideTimer: null,
   _liveOverlayControlsController: null,
   _lastLiveOverlayPointerType: "mouse",
