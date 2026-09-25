@@ -691,7 +691,6 @@ export class VideoZoomController {
 
   _onWheel = (event) => {
     if (this._presentationSuspended) return;
-    if (event.ctrlKey !== true && event.metaKey !== true) return;
     if (!this._isMediaInteractionStart(event)) return;
     const rawDelta = Number(event.deltaY) || 0;
     if (!rawDelta) return;
@@ -710,6 +709,13 @@ export class VideoZoomController {
       VIDEO_ZOOM_MIN,
       this._maxScale,
     );
+    if (
+      nextScale === this._scale &&
+      this._scale <= VIDEO_ZOOM_MIN + EPSILON &&
+      rawDelta > 0
+    ) {
+      return;
+    }
     event.preventDefault?.();
     if (nextScale === this._scale) return;
     this._notifyInteractionStart();

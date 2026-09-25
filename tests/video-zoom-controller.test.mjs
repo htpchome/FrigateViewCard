@@ -293,31 +293,34 @@ test("suspended presentation shows uncropped media and restores zoom afterward",
   assert.deepEqual(controller.state, zoomState);
 });
 
-test("plain wheel scroll is released while modified wheel zoom is pointer-focused and capped", () => {
+test("wheel zoom is pointer-focused and capped while outward scroll is released at 1x", () => {
   const { controller, video } = createZoomFixture();
 
-  const pageScroll = video.dispatch("wheel", { deltaY: -100 });
-  assert.equal(pageScroll.defaultPrevented, false);
-  assert.equal(controller.state.scale, 1);
-
-  const inward = video.dispatch("wheel", { deltaY: -100, ctrlKey: true });
+  const inward = video.dispatch("wheel", { deltaY: -100 });
   assert.equal(inward.defaultPrevented, true);
   assert.equal(controller.state.scale, 1.2);
   assert.deepEqual(controller.state, { scale: 1.2, x: -30, y: -20 });
 
   for (let i = 0; i < 20; i++) {
-    video.dispatch("wheel", { deltaY: -100, ctrlKey: true });
+    video.dispatch("wheel", { deltaY: -100 });
   }
   assert.equal(controller.state.scale, VIDEO_ZOOM_MAX);
 
   for (let i = 0; i < 20; i++) {
-    video.dispatch("wheel", { deltaY: 100, ctrlKey: true });
+    video.dispatch("wheel", { deltaY: 100 });
   }
   assert.deepEqual(controller.state, { scale: 1, x: 0, y: 0 });
 
-  const outward = video.dispatch("wheel", { deltaY: 100, ctrlKey: true });
-  assert.equal(outward.defaultPrevented, true);
+  const outward = video.dispatch("wheel", { deltaY: 100 });
+  assert.equal(outward.defaultPrevented, false);
   assert.deepEqual(controller.state, { scale: 1, x: 0, y: 0 });
+
+  const modifiedInward = video.dispatch("wheel", {
+    deltaY: -100,
+    ctrlKey: true,
+  });
+  assert.equal(modifiedInward.defaultPrevented, true);
+  assert.equal(controller.state.scale, 1.2);
 });
 
 test("modified-wheel and unadvertised Catalyst gestures preserve deliberate trackpad intent", () => {
@@ -387,7 +390,7 @@ test("accepted zoom and pan gestures notify their shared interaction owner", () 
   video.dispatch("wheel", { deltaY: 100 });
   assert.equal(starts, 0);
 
-  video.dispatch("wheel", { deltaY: -100, ctrlKey: true });
+  video.dispatch("wheel", { deltaY: -100 });
   assert.equal(starts, 1);
 
   video.dispatch("pointerdown", { pointerId: 7 });
@@ -440,7 +443,6 @@ test("letterbox space is excluded from the zoom cursor and interaction zone", ()
     clientX: 75,
     clientY: 100,
     deltaY: -100,
-    ctrlKey: true,
   });
   assert.equal(accepted.defaultPrevented, true);
   assert.equal(controller.state.scale, 1.2);
