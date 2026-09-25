@@ -38,6 +38,13 @@ const popupToolbarControllerSource = fs.readFileSync(
   new URL("../src/features/popup/toolbar.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupPlaybackTargetControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/popup/playback-target.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const liveAudioControllerSource = fs.readFileSync(
   new URL("../src/features/live/audio.ctrl.js", import.meta.url),
   "utf8",
@@ -452,13 +459,15 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
   );
   assert.equal(stylesSource.includes(".overlay-fs"), false);
   assert.equal(
-    cardSource.includes(
+    popupPlaybackTargetControllerSource.includes(
       "#popup-airplay-btn, #popup-media-airplay, #popup-mobile-airplay-btn",
     ),
     true,
   );
   assert.equal(
-    popupCompositionSource.includes("card._playbackTargetController.prompt("),
+    popupCompositionSource.includes(
+      "popupPlaybackTargetController.promptAirPlay(displayedVideo)",
+    ),
     true,
   );
   assert.equal(
@@ -468,13 +477,21 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
     true,
   );
   assert.equal(
-    cardSource.includes(
-      'this._playbackTargetController.observe("popup", displayedVideo)',
+    popupPlaybackTargetControllerSource.includes(
+      "this._targetController?.observe?.(",
     ),
     true,
   );
-  assert.equal(popupCompositionSource.includes("displayedVideo,"), true);
-  assert.equal(cardSource.includes("button.hidden = !supported"), true);
+  assert.equal(
+    popupPlaybackTargetControllerSource.includes("displayedVideo,"),
+    true,
+  );
+  assert.equal(
+    popupPlaybackTargetControllerSource.includes(
+      "button.hidden = !support.airplay",
+    ),
+    true,
+  );
   assert.equal(cardSource.includes("#live-airplay-btn"), false);
   assert.equal(
     stylesSource.includes(
@@ -484,17 +501,20 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
   );
   assert.equal(
     popupCompositionSource.includes(
-      "card._playbackTargetController?.release(scope)",
+      "popupPlaybackTargetController.release(scope)",
     ),
     true,
   );
   assert.equal(
     `${cardSource}\n${cardEventBindingsSource}`.match(
-      /(?:this|card)\._playbackTargetController\?\.release\("popup"\)/g,
+      /(?:this|card)\._popupPlaybackTargetController\?\.release\("popup"\)/g,
     )?.length >= 3,
     true,
   );
-  assert.equal(cardSource.includes("_playbackTargetContext(scope"), true);
+  assert.equal(
+    popupPlaybackTargetControllerSource.includes("context(scope"),
+    true,
+  );
   assert.equal(cardSource.includes("camera/stream"), false);
   assert.equal(cardSource.includes("context.connectionType"), false);
   assert.equal(

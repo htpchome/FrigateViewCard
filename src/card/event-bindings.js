@@ -77,7 +77,7 @@ export const bindCardGlobalEvents = (
       card._wideViewPageController?.resumeCompanionMedia?.();
       return;
     }
-    card._playbackTargetController?.release("popup");
+    card._popupPlaybackTargetController?.release("popup");
     void card._stopPtzMotion("document-hidden");
   };
   documentTarget.addEventListener(
@@ -90,7 +90,7 @@ export const bindCardGlobalEvents = (
   };
   card._onPageHide = () => {
     void card._stopPtzMotion("page-hide");
-    card._playbackTargetController?.release("popup");
+    card._popupPlaybackTargetController?.release("popup");
   };
   card._onWindowPtzPointerStop = (event) => {
     void card._handlePtzControlPointerStop(event);

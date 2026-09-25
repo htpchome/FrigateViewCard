@@ -3,6 +3,11 @@ import {
   buildFrigateNotificationMediaPath,
   buildFrigateReviewThumbnailPath,
 } from "./url.js";
+import {
+  buildFrigateReceiverMediaPath,
+  buildFrigateReceiverPlaybackContext,
+} from "./receiver-media.js";
+import { resolveAbsoluteReceiverSourceUrl } from "../home-assistant/receiver-source.js";
 
 export class FrigateMediaResolverController {
   constructor(host) {
@@ -57,5 +62,37 @@ export class FrigateMediaResolverController {
       reviewId: review?.id || "",
       camera: targetCamera,
     });
+  }
+
+  async receiverPlaybackSource(context = {}) {
+    const media = buildFrigateReceiverMediaPath(context);
+    if (!media.ok) return media;
+    const signedPath = await this._host._signed(media.path);
+    const baseUrl =
+      this._host._hass?.config?.internal_url ||
+      this._host._hass?.config?.external_url ||
+      this._host._hass?.hassUrl?.("/") ||
+      (typeof window !== "undefined" ? window.location.href : "");
+    const url = resolveAbsoluteReceiverSourceUrl(
+      signedPath || media.path,
+      baseUrl,
+    );
+    if (!url) {
+      return {
+        ok: false,
+        message: "The receiver video URL could not be prepared.",
+      };
+    }
+    return {
+      ok: true,
+      url,
+      contentType: media.contentType,
+      title: context.title,
+      ttlMs: 30 * 60 * 1000,
+    };
+  }
+
+  receiverPlaybackContext(options = {}) {
+    return buildFrigateReceiverPlaybackContext(options);
   }
 }

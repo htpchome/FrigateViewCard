@@ -41,6 +41,18 @@ const createHarness = () => {
       showTemporarily: () => calls.push(["controls-show"]),
       video: () => "popup-video",
     },
+    playbackTarget: {
+      dispose: () => calls.push(["target-dispose"]),
+      prepare: () => calls.push(["prepare-target"]),
+      promptAirPlay: (displayedVideo) =>
+        calls.push([
+          "prompt-target",
+          "airplay",
+          { scope: "popup", displayedVideo },
+        ]),
+      release: (scope) => calls.push(["release-target", scope]),
+      syncButtons: () => calls.push(["sync-targets"]),
+    },
     recordingScrub: {
       teardown: () => calls.push(["scrub-teardown"]),
     },
@@ -68,6 +80,10 @@ const createHarness = () => {
     createMediaLoaderController: (value, deps) => {
       calls.push(["loader-host", value, deps]);
       return controllers.loader;
+    },
+    createPlaybackTargetController: (value) => {
+      options.playbackTarget = value;
+      return controllers.playbackTarget;
     },
     createRecordingScrubController: (value) => {
       options.recordingScrub = value;
@@ -104,6 +120,10 @@ const createHarness = () => {
       downloadRecording: (...args) =>
         calls.push(["download-recording", ...args]),
     },
+    _frigateMediaResolverController: {
+      receiverPlaybackContext: (options) => ({ options }),
+      receiverPlaybackSource: (context) => ({ context }),
+    },
     _fullDate: (value) => `full-date:${value}`,
     _isEdge: () => false,
     _isFirefox: () => false,
@@ -117,10 +137,6 @@ const createHarness = () => {
     _mediaForCamera: (...args) => `media:${args.join(":")}`,
     _monthDay: (value) => `month-day:${value}`,
     _pauseSlideshowForPopup: () => calls.push(["pause-slideshow"]),
-    _playbackTargetController: {
-      prompt: (...args) => calls.push(["prompt-target", ...args]),
-      release: (scope) => calls.push(["release-target", scope]),
-    },
     _playSeq: 7,
     _recordingsBrowseNavController: {
       fetchRecordingsInBounds: (...args) => {
@@ -136,15 +152,18 @@ const createHarness = () => {
     _signed: (path) => `signed:${path}`,
     _syncFullscreenButtonsVisibility: () => calls.push(["sync-fullscreen"]),
     _syncPictureInPictureButtons: () => calls.push(["sync-pip"]),
-    _syncPlaybackTargetButtons: () => calls.push(["sync-targets"]),
     _takeDisplayedSnapshot: (scope) => calls.push(["take-snapshot", scope]),
     _time: (value) => `time:${value}`,
     _toggleFav: (...args) => calls.push(["favorite", ...args]),
     _toggleMute: () => calls.push(["toggle-mute"]),
     _togglePictureInPicture: (...args) => calls.push(["toggle-pip", ...args]),
+    _toast: (message) => calls.push(["toast", message]),
     _usePopupCustomControls: (type) => type === "clip",
     _weekday: (value) => `weekday:${value}`,
     _$: (selector) => `node:${selector}`,
+    shadowRoot: {
+      querySelectorAll: () => [],
+    },
   };
 
   return { calls, card, controllers, factories, options };
@@ -162,6 +181,7 @@ test("popup composition creates the complete controller set and preserves cross-
     _popupInfoController: controllers.info,
     _popupCarouselController: controllers.carousel,
     _popupMediaControlsController: controllers.mediaControls,
+    _popupPlaybackTargetController: controllers.playbackTarget,
     _popupToolbarController: controllers.toolbar,
     _popupLifecycleController: controllers.lifecycle,
     _popupMediaLoaderController: controllers.loader,

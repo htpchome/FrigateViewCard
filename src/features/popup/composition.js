@@ -1,11 +1,10 @@
 import { ICONS } from "../../icons.js";
-import { DEVICE_PROFILE } from "../../helpers.js";
+import { cap, DEVICE_PROFILE } from "../../helpers.js";
 import { resolveFrigateEventDuration } from "../../integrations/frigate/event-media.js";
 import {
   buildVideoOptionsForView,
   createVideoElement,
 } from "../../shared/media/video-factory.js";
-import { PLAYBACK_TARGET_AIRPLAY } from "../../shared/media/playback-target.js";
 import {
   buildRecordingPlaybackPlan,
   formatRecordingScrubTime,
@@ -18,6 +17,7 @@ import { PopupInfoController } from "./info.ctrl.js";
 import { PopupLifecycleController } from "./lifecycle.ctrl.js";
 import { PopupMediaControlsSurfaceController } from "./media.ctrl.js";
 import { PopupMediaLoaderController } from "./media-loader.ctrl.js";
+import { PopupPlaybackTargetController } from "./playback-target.ctrl.js";
 import { PopupRecordingScrubController } from "./recording-scrub.ctrl.js";
 import { PopupToolbarController } from "./toolbar.ctrl.js";
 
@@ -31,6 +31,8 @@ const DEFAULT_FACTORIES = Object.freeze({
     new PopupMediaControlsSurfaceController(options),
   createMediaLoaderController: (card, options) =>
     new PopupMediaLoaderController(card, options),
+  createPlaybackTargetController: (options) =>
+    new PopupPlaybackTargetController(options),
   createRecordingScrubController: (options) =>
     new PopupRecordingScrubController(options),
   createToolbarController: (options) => new PopupToolbarController(options),
@@ -47,6 +49,7 @@ export const createPopupControllers = (
   const resolvedFactories = { ...DEFAULT_FACTORIES, ...factories };
   let popupLifecycleController;
   let popupMediaLoaderController;
+  let popupPlaybackTargetController;
 
   const popupRecordingScrubController =
     resolvedFactories.createRecordingScrubController({
@@ -215,11 +218,41 @@ export const createPopupControllers = (
         card._isPopupVideoMediaType(mediaType),
       onClearPictureInPicture: (scope) =>
         card._clearPictureInPictureButtonController(scope),
-      onSyncPlaybackTargetButtons: () => card._syncPlaybackTargetButtons(),
+      onSyncPlaybackTargetButtons: () =>
+        popupPlaybackTargetController?.syncButtons(),
       onSyncPictureInPictureButtons: () =>
         card._syncPictureInPictureButtons(),
       onSyncFullscreenButtons: () =>
         card._syncFullscreenButtonsVisibility(),
+    });
+
+  popupPlaybackTargetController =
+    resolvedFactories.createPlaybackTargetController({
+      getActiveContext: () => card._cc(),
+      getMediaType: () => popupLifecycleController?.mediaType?.() || "",
+      getPlaying: () => popupLifecycleController?.playing?.() || null,
+      getRecordingRange: () => popupRecordingScrubController.range(),
+      findEventById: (id) => card._findEventById(id),
+      buildContext: (options) =>
+        card._frigateMediaResolverController.receiverPlaybackContext(
+          options,
+        ),
+      resolveSource: (context) =>
+        card._frigateMediaResolverController.receiverPlaybackSource(
+          context,
+        ),
+      getDisplayedVideo: () =>
+        popupMediaControlsController.video() ||
+        card._findVideoDeep(card._$("#viewer")),
+      getMount: () => card.shadowRoot,
+      queryAll: (selector) =>
+        card.shadowRoot?.querySelectorAll?.(selector) || [],
+      translate: (key) => card._localization.t(key),
+      isVideoMediaType: (mediaType) =>
+        card._isPopupVideoMediaType(mediaType),
+      formatTitle: (mediaType) =>
+        `${mediaType === "kept" ? "Favorite" : cap(mediaType || "video")} video`,
+      onStatus: (message) => card._toast(message),
     });
 
   const popupToolbarController = resolvedFactories.createToolbarController({
@@ -232,10 +265,7 @@ export const createPopupControllers = (
     onTogglePictureInPicture: (video) =>
       card._togglePictureInPicture(video, { popup: true }),
     onPromptAirPlay: (displayedVideo) =>
-      card._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
-        scope: "popup",
-        displayedVideo,
-      }),
+      popupPlaybackTargetController.promptAirPlay(displayedVideo),
     onToggleMute: () => card._toggleMute(),
     onFullscreen: (target) => card._fullscreen(target),
     onCarouselNavigate: (direction) =>
@@ -254,7 +284,7 @@ export const createPopupControllers = (
     onSyncPictureInPicture: () => card._syncPictureInPictureButtons(),
     onScheduleOverlay: () => card._scheduleRotateOverlayUpdate(),
     onReleasePlaybackTarget: (scope) =>
-      card._playbackTargetController?.release(scope),
+      popupPlaybackTargetController.release(scope),
     onClearPictureInPicture: (scope) =>
       card._clearPictureInPictureButtonController(scope),
     onClearVideoZoom: () => card._clearPopupVideoZoom?.(),
@@ -282,6 +312,7 @@ export const createPopupControllers = (
     _popupInfoController: popupInfoController,
     _popupCarouselController: popupCarouselController,
     _popupMediaControlsController: popupMediaControlsController,
+    _popupPlaybackTargetController: popupPlaybackTargetController,
     _popupToolbarController: popupToolbarController,
     _popupLifecycleController: popupLifecycleController,
     _popupMediaLoaderController: popupMediaLoaderController,

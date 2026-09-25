@@ -108,7 +108,7 @@ test("global card bindings retain viewport, lifecycle, and preview behavior", ()
     _wideViewPageController: {
       resumeCompanionMedia: () => calls.push(["resume-companions"]),
     },
-    _playbackTargetController: {
+    _popupPlaybackTargetController: {
       release: (target) => calls.push(["release", target]),
     },
     _liveFullscreenLifecycleController: {

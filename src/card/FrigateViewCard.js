@@ -29,7 +29,6 @@ import { applyLocalizedText, setLocalizedText } from "../features/localization/l
 import "../components/circle-pad/circle-pad.js";
 import {
   DEVICE_PROFILE,
-  cap,
   parseWs,
   normalizeCameraConnectionType,
   mkCamState,
@@ -123,9 +122,6 @@ import { LinkedLightController } from "../features/linked-entities/light.ctrl.js
 import {
   PictureInPictureController,
 } from "../shared/media/picture-in-picture.js";
-import { BrowserPlaybackTargetController } from "../shared/media/playback-target.js";
-import { buildFrigateReceiverMediaPath } from "../integrations/frigate/receiver-media.js";
-import { resolveAbsoluteReceiverSourceUrl } from "../integrations/home-assistant/receiver-source.js";
 import {
   getLiveFallbackController,
   LiveFallbackController,
@@ -464,14 +460,6 @@ export class FrigateViewCard extends HTMLElement {
         this._config?.event_pre_post_roll_enabled === true,
     });
     Object.assign(this, createPopupControllers(this));
-    this._playbackTargetController = new BrowserPlaybackTargetController({
-      getContext: (scope) => this._playbackTargetContext(scope),
-      resolveSource: (context) =>
-        this._resolvePlaybackTargetSource(context),
-      getMount: () => this.shadowRoot,
-      onStatus: (message) => this._toast(message),
-      onSupportChange: () => this._syncPlaybackTargetButtons(),
-    });
     this._viewportContextController = new ViewportContextController(this);
     this._twoWayTalkSoundwaveController =
       new TwoWayTalkSoundwaveController({
@@ -1009,7 +997,7 @@ export class FrigateViewCard extends HTMLElement {
     this._cardStyleController.releaseBubblePopupPadding();
     this._deepLinkController.disconnect();
     void this._stopPtzMotion("disconnected");
-    this._playbackTargetController?.release("popup");
+    this._popupPlaybackTargetController?.release("popup");
     this._wideViewPageController?.disconnectResizeHandle?.();
     this._editorLiveHandoffController?.returnIfPossible?.();
     const sameDashboard =
@@ -1104,11 +1092,7 @@ export class FrigateViewCard extends HTMLElement {
     this._cameraGroupLiveController?.teardown?.();
     this._liveFullscreenLifecycleController?.dispose();
     this._pictureInPictureController?.dispose?.();
-    if (this._playbackTargetController) {
-      try {
-        this._playbackTargetController.dispose();
-      } catch (_) {}
-    }
+    this._popupPlaybackTargetController?.dispose?.();
     if (this._listScrollController) {
       try {
         this._listScrollController.dispose();
@@ -2313,27 +2297,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _syncPlaybackTargetButtons() {
-    const support = this._playbackTargetController?.getSupport?.("popup") || {
-      airplay: false,
-    };
-    const sync = (selector, supported, fallbackTitle) => {
-      this.shadowRoot.querySelectorAll(selector).forEach((button) => {
-        const translationKey = button.getAttribute("data-fvc-i18n-title");
-        const baseTitle = translationKey
-          ? this._localization.t(translationKey)
-          : button.dataset.playbackBaseTitle || button.title || fallbackTitle;
-        button.dataset.playbackBaseTitle = baseTitle;
-        button.hidden = !supported;
-        button.disabled = !supported;
-        button.setAttribute("aria-hidden", supported ? "false" : "true");
-        button.title = baseTitle;
-      });
-    };
-    sync(
-      "#popup-airplay-btn, #popup-media-airplay, #popup-mobile-airplay-btn",
-      support.airplay,
-      "AirPlay video",
-    );
+    return this._popupPlaybackTargetController?.syncButtons?.();
   }
 
   _stopSlideshowRotation(reason = "manual-stop", sync = true) {
@@ -4455,88 +4419,8 @@ export class FrigateViewCard extends HTMLElement {
       return path;
     }
   }
-  _receiverPlaybackBaseUrl() {
-    return (
-      this._hass?.config?.internal_url ||
-      this._hass?.config?.external_url ||
-      this._hass?.hassUrl?.("/") ||
-      (typeof window !== "undefined" ? window.location.href : "")
-    );
-  }
-
-  _playbackTargetContext(scope = "popup") {
-    if (scope !== "popup") return null;
-
-    const { clientId, cam } = this._cc();
-    const mediaType = this._popupLifecycleController.mediaType();
-    const playing = this._popupLifecycleController.playing();
-    const eventId = playing?.id || "";
-    const event = eventId ? this._findEventById(eventId) : null;
-    const recordingRange = this._popupRecordingScrubController.range();
-    const recordingStart =
-      recordingRange?.start ?? playing?.rec ?? null;
-    const recordingEnd = recordingRange?.end ?? null;
-    return {
-      scope,
-      sourceKey:
-        mediaType === "recording"
-          ? `recording:${clientId}:${cam}:${recordingStart}:${recordingEnd}`
-          : `${mediaType}:${clientId}:${eventId}`,
-      mediaType,
-      clientId,
-      camera: event?.camera || cam,
-      eventId,
-      recordingStart,
-      recordingEnd,
-      eventRecordingStart: Number.isFinite(Number(event?.start_time))
-        ? (playing?.eventRecordingStart ?? Math.floor(Number(event.start_time)))
-        : null,
-      eventRecordingEnd: Number.isFinite(Number(event?.end_time))
-        ? (playing?.eventRecordingEnd ?? Math.ceil(Number(event.end_time)))
-        : null,
-      title: `${
-        mediaType === "kept" ? "Favorite" : cap(mediaType || "video")
-      } video`,
-    };
-  }
-
-  async _resolvePlaybackTargetSource(context = {}) {
-    const media = buildFrigateReceiverMediaPath(context);
-    if (!media.ok) return media;
-    const signedPath = await this._signed(media.path);
-    const url = resolveAbsoluteReceiverSourceUrl(
-      signedPath || media.path,
-      this._receiverPlaybackBaseUrl(),
-    );
-    if (!url) {
-      return {
-        ok: false,
-        message: "The receiver video URL could not be prepared.",
-      };
-    }
-    return {
-      ok: true,
-      url,
-      contentType: media.contentType,
-      title: context.title,
-      ttlMs: 30 * 60 * 1000,
-    };
-  }
-
   _preparePopupPlaybackTarget() {
-    if (
-      !this._isPopupVideoMediaType(
-        this._popupLifecycleController.mediaType(),
-      )
-    ) {
-      return;
-    }
-    const displayedVideo =
-      this._popupMediaControlsController.video() ||
-      this._findVideoDeep(this._$("#viewer"));
-    this._playbackTargetController.observe("popup", displayedVideo);
-    void this._playbackTargetController.prepare("popup");
-    this._syncPlaybackTargetButtons();
+    return this._popupPlaybackTargetController?.prepare?.();
   }
 
   _findFullscreenVideo(el) {
