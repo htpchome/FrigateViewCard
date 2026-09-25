@@ -281,7 +281,7 @@ export function createLiveMountController({
   cleanupEngine,
   getStreamMuted,
   setEngineMountedMuted,
-  mseGraceController,
+  liveGraceController,
   getPendingMountDestroyers,
   setPendingMountDestroyers,
   haDirectMounter,
@@ -416,13 +416,13 @@ export function createLiveMountController({
 
     if (!useGo2Rtc && !hasTwoWayTalkOptions) {
       const graceHaDirectEntry =
-        mseGraceController.takeGraceHaDirectEntry?.(
+        liveGraceController.takeGraceHaDirectEntry?.(
           targetEntity,
           forcedType || "",
         ) || null;
       if (
         graceHaDirectEntry?.engine &&
-        mseGraceController.adoptGraceHaDirectEngine?.(
+        liveGraceController.adoptGraceHaDirectEngine?.(
           slot,
           graceHaDirectEntry.engine,
         )
@@ -439,7 +439,7 @@ export function createLiveMountController({
           }) || null;
         if (editorHandoff?.engine) {
           if (
-            mseGraceController.adoptGraceHaDirectEngine?.(
+            liveGraceController.adoptGraceHaDirectEngine?.(
               slot,
               editorHandoff.engine,
             )
@@ -458,10 +458,10 @@ export function createLiveMountController({
       (!forcedType || forcedType === "webrtc")
     ) {
       const graceWebRtcEntry =
-        mseGraceController.takeGraceWebRtcEntry?.(targetEntity) || null;
+        liveGraceController.takeGraceWebRtcEntry?.(targetEntity) || null;
       if (
         graceWebRtcEntry?.engine &&
-        mseGraceController.adoptGraceWebRtcEngine?.(
+        liveGraceController.adoptGraceWebRtcEngine?.(
           slot,
           graceWebRtcEntry.engine,
         )
@@ -476,7 +476,7 @@ export function createLiveMountController({
         }) || null;
       if (editorHandoff?.engine) {
         if (
-          mseGraceController.adoptGraceWebRtcEngine?.(
+          liveGraceController.adoptGraceWebRtcEngine?.(
             slot,
             editorHandoff.engine,
           )
@@ -496,11 +496,11 @@ export function createLiveMountController({
       const graceMseAction = resolveGraceMseReuseAction({
         useGo2Rtc,
         forcedType,
-        graceMseEntry: mseGraceController.takeGraceMseEntry(targetEntity),
+        graceMseEntry: liveGraceController.takeGraceMseEntry(targetEntity),
       });
       if (graceMseAction.type === "adopt-engine") {
         if (
-          mseGraceController.adoptGraceMseEngine(
+          liveGraceController.adoptGraceMseEngine(
             slot,
             graceMseAction.graceMseEntry.engine,
           )
@@ -537,7 +537,7 @@ export function createLiveMountController({
             if (pendingOutcome.type === "adopt-engine") {
               setPendingMountDestroyers?.([]);
               if (
-                mseGraceController.adoptGraceMseEngine(
+                liveGraceController.adoptGraceMseEngine(
                   slot,
                   pendingOutcome.engine,
                 )
@@ -567,7 +567,7 @@ export function createLiveMountController({
         }) || null;
       if (editorHandoff?.engine) {
         if (
-          mseGraceController.adoptGraceMseEngine?.(
+          liveGraceController.adoptGraceMseEngine?.(
             slot,
             editorHandoff.engine,
           )

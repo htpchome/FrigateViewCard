@@ -18,8 +18,8 @@ const go2rtcRaceMounterSource = fs.readFileSync(
   new URL("../src/features/live/go2rtc-race-mounter.js", import.meta.url),
   "utf8",
 );
-const mseGraceControllerSource = fs.readFileSync(
-  new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
+const liveGraceControllerSource = fs.readFileSync(
+  new URL("../src/features/live/live-grace-controller.js", import.meta.url),
   "utf8",
 );
 const liveLifecycleCompositionSource = fs.readFileSync(
@@ -63,19 +63,19 @@ const mountStateControllerSource = fs.readFileSync(
 test("camera switching preserves recent live engines for short switch-back reuse", () => {
   assert.equal(
     liveLifecycleCompositionSource.includes(
-      'import { createMseGraceController } from "./mse-grace-controller.js";',
+      'import { createLiveGraceController } from "./live-grace-controller.js";',
     ),
     true,
   );
   assert.equal(
-    /this\._mseGraceController\s*=\s*createMseGraceController\(\{/.test(
+    /this\._liveGraceController\s*=\s*createLiveGraceController\(\{/.test(
       liveLifecycleCompositionSource,
     ),
     false,
   );
   assert.equal(
     liveLifecycleCompositionSource.includes(
-      "const mseGraceController = resolvedFactories.createMseGraceController({",
+      "const liveGraceController = resolvedFactories.createLiveGraceController({",
     ),
     true,
   );
@@ -86,32 +86,32 @@ test("camera switching preserves recent live engines for short switch-back reuse
   assert.equal(cardSource.includes("_adoptGraceMseEngine"), false);
   assert.equal(cardSource.includes("_ensureMseGraceHost"), false);
   assert.equal(
-    mseGraceControllerSource.includes("const mseGracePool = new Map()"),
+    liveGraceControllerSource.includes("const mseGracePool = new Map()"),
     true,
   );
-  assert.equal(mseGraceControllerSource.includes("takeGraceMseEntry"), true);
-  assert.equal(mseGraceControllerSource.includes("adoptGraceMseEngine"), true);
+  assert.equal(liveGraceControllerSource.includes("takeGraceMseEntry"), true);
+  assert.equal(liveGraceControllerSource.includes("adoptGraceMseEngine"), true);
   assert.equal(
-    mseGraceControllerSource.includes("const webRtcGracePool = new Map()"),
-    true,
-  );
-  assert.equal(
-    mseGraceControllerSource.includes("const haDirectGracePool = new Map()"),
+    liveGraceControllerSource.includes("const webRtcGracePool = new Map()"),
     true,
   );
   assert.equal(
-    mseGraceControllerSource.includes("takeGraceWebRtcEntry"),
+    liveGraceControllerSource.includes("const haDirectGracePool = new Map()"),
     true,
   );
   assert.equal(
-    mseGraceControllerSource.includes("adoptGraceWebRtcEngine"),
+    liveGraceControllerSource.includes("takeGraceWebRtcEntry"),
     true,
   );
   assert.equal(
-    mseGraceControllerSource.includes("adoptGraceHaDirectEngine"),
+    liveGraceControllerSource.includes("adoptGraceWebRtcEngine"),
     true,
   );
-  assert.equal(mseGraceControllerSource.includes("clearGracePool"), true);
+  assert.equal(
+    liveGraceControllerSource.includes("adoptGraceHaDirectEngine"),
+    true,
+  );
+  assert.equal(liveGraceControllerSource.includes("clearGracePool"), true);
   assert.equal(
     pendingDestroyersSource.includes("splitPendingDestroyersByGraceMse"),
     true,
@@ -142,26 +142,26 @@ test("switch-camera cleanup keeps shell grace coordination and live race takeove
     /cleanupEngine\(options = \{\}\)[\s\S]*?cancelPendingWebRtcAttempts\?\.\(\)[\s\S]*?cleanupEngine\(options\)/,
   );
   assert.match(
-    mseGraceControllerSource,
+    liveGraceControllerSource,
     /const activeStreamType[\s\S]*?activeStreamType === "webrtc"[\s\S]*?activeStreamType === "mse"/,
   );
   assert.equal(
-    mseGraceControllerSource.includes('pendingAttempt?.type === "mse"'),
+    liveGraceControllerSource.includes('pendingAttempt?.type === "mse"'),
     false,
   );
   assert.equal(
-    mseGraceControllerSource.includes("splitPendingDestroyersByGraceMse"),
+    liveGraceControllerSource.includes("splitPendingDestroyersByGraceMse"),
     true,
   );
   assert.equal(
-    mseGraceControllerSource.includes("appendChild(engine.video)"),
+    liveGraceControllerSource.includes("appendChild(engine.video)"),
     true,
   );
   assert.equal(
-    mseGraceControllerSource.includes("appendChild(result.engine.video)"),
+    liveGraceControllerSource.includes("appendChild(result.engine.video)"),
     true,
   );
-  assert.equal(mseGraceControllerSource.includes("preserveLiveEntity"), true);
+  assert.equal(liveGraceControllerSource.includes("preserveLiveEntity"), true);
   assert.equal(cardSource.includes("_scheduleDeferredWebRtcTakeover"), false);
   assert.equal(
     go2rtcRaceMounterSource.includes("function scheduleDeferredWebRtcTakeover"),
@@ -203,7 +203,7 @@ test("dashboard swipe return remounts retained go2rtc WebRTC through the grace p
 test("same-dashboard departure uses the complete camera-switch grace policy", () => {
   assert.match(
     constantsSource,
-    /MSE_SWITCH_GRACE_MS\s*=\s*20000/,
+    /LIVE_SWITCH_GRACE_MS\s*=\s*20000/,
   );
   assert.match(
     liveDashboardRetentionSource,
@@ -211,7 +211,7 @@ test("same-dashboard departure uses the complete camera-switch grace policy", ()
   );
   assert.match(
     cardSource,
-    /disconnectedCallback\(\)[\s\S]*?isCurrentDashboardScope\?\.\(\)[\s\S]*?_preserveLiveForDashboardNavigation\(\)[\s\S]*?preserveDashboardLive \? MSE_SWITCH_GRACE_MS : 2500/,
+    /disconnectedCallback\(\)[\s\S]*?isCurrentDashboardScope\?\.\(\)[\s\S]*?_preserveLiveForDashboardNavigation\(\)[\s\S]*?preserveDashboardLive \? LIVE_SWITCH_GRACE_MS : 2500/,
   );
   assert.match(
     haDashboardCompositionSource,

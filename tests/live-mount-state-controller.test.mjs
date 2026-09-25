@@ -20,7 +20,7 @@ const createHost = () => {
     _go2rtcRaceMounter: {
       cancelPendingWebRtcAttempts: () => calls.push(["cancelWebRtc"]),
     },
-    _mseGraceController: {
+    _liveGraceController: {
       cleanupEngine: (options) => {
         calls.push(["cleanupEngine", options]);
         return "cleaned";

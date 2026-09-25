@@ -1,4 +1,4 @@
-export const VERSION = "1.1.7-dev.62";
+export const VERSION = "1.1.7-dev.63";
 
 export const RECOMMENDED_HOME_ASSISTANT_VERSION = "2026.9.0";
 
@@ -68,8 +68,8 @@ export const PREVIEW_ALERT_LIVE_DURATION_OPTIONS_SECONDS = Object.freeze([
   5, 10, 20, 30, 60, 120,
 ]);
 export const PREVIEW_ALERT_END_GRACE_MS = 3500;
-export const MSE_SWITCH_GRACE_MS = 20000;
-export const MSE_SWITCH_GRACE_MAX = 3;
+export const LIVE_SWITCH_GRACE_MS = 20000;
+export const LIVE_SWITCH_GRACE_MAX = 3;
 export const MAX_CAMERAS = 12;
 export const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 export const ALLOWED_HIDDEN_TABS = [

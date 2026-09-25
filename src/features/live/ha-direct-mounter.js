@@ -26,7 +26,6 @@ const HA_DIRECT_VISIBLE_STYLE =
   "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
 const HA_DIRECT_TIME_RECOVERY_MIN_ADVANCES = 2;
 const HA_DIRECT_TIME_RECOVERY_MIN_PROGRESS_SECONDS = 0.05;
-const HA_DIRECT_RETAINED_HLS_PROBE_MS = 2200;
 
 export function createHaDirectMounter({
   getHass,
@@ -291,7 +290,7 @@ export function createHaDirectMounter({
 
   const waitForRetainedHlsProgress = async (
     engine,
-    timeoutMs = HA_DIRECT_RETAINED_HLS_PROBE_MS,
+    timeoutMs = 0,
   ) => {
     const binding = mediaBindings.get(engine);
     if (!binding || binding.disposed || !isCurrentEngine(engine)) return false;
@@ -415,10 +414,13 @@ export function createHaDirectMounter({
       });
       bindCurrentVideo();
       pollT = setInterval(bindCurrentVideo, 100);
-      timeoutT = setTimeout(
-        () => done(false),
-        Math.max(250, Number(timeoutMs) || HA_DIRECT_RETAINED_HLS_PROBE_MS),
-      );
+      const requestedTimeoutMs = Number(timeoutMs);
+      if (Number.isFinite(requestedTimeoutMs) && requestedTimeoutMs > 0) {
+        timeoutT = setTimeout(
+          () => done(false),
+          Math.max(250, requestedTimeoutMs),
+        );
+      }
     });
   };
 

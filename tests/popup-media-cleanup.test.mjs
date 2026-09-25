@@ -66,7 +66,7 @@ test("_teardownDisconnected delegates popup cleanup to its lifecycle owner", () 
       _liveControlsHideTimer: 33,
       _rotateOverlayRaf: 0,
       _rotateOverlayExitT: null,
-      _mseGraceController: {
+      _liveGraceController: {
         clearGracePool() {
           calls.push(["clearGracePool"]);
         },

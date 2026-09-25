@@ -1,6 +1,6 @@
 import {
-  MSE_SWITCH_GRACE_MAX,
-  MSE_SWITCH_GRACE_MS,
+  LIVE_SWITCH_GRACE_MAX,
+  LIVE_SWITCH_GRACE_MS,
 } from "../../constants.js";
 import { buildEditorLiveHandoffKey } from "../editor-preview/context.ctrl.js";
 import { attachContainedVideoFit } from "../../shared/media/video-fit.js";
@@ -8,10 +8,10 @@ import {
   createEditorLiveHandoffController,
   createLiveMountController,
 } from "./mount-controller.js";
-import { createMseGraceController } from "./mse-grace-controller.js";
+import { createLiveGraceController } from "./live-grace-controller.js";
 
 const DEFAULT_FACTORIES = Object.freeze({
-  createMseGraceController,
+  createLiveGraceController,
   createEditorLiveHandoffController,
   createLiveMountController,
 });
@@ -24,9 +24,9 @@ export const createLiveLifecycleControllers = (
   } = {},
 ) => {
   const resolvedFactories = { ...DEFAULT_FACTORIES, ...factories };
-  const mseGraceController = resolvedFactories.createMseGraceController({
-    graceMs: MSE_SWITCH_GRACE_MS,
-    graceMax: MSE_SWITCH_GRACE_MAX,
+  const liveGraceController = resolvedFactories.createLiveGraceController({
+    graceMs: LIVE_SWITCH_GRACE_MS,
+    graceMax: LIVE_SWITCH_GRACE_MAX,
     getShadowRoot: () => card.shadowRoot,
     getScopeKey: () => card,
     getPendingMountDestroyers: () => card._pendingMountDestroyers || [],
@@ -60,6 +60,8 @@ export const createLiveLifecycleControllers = (
       card._haDirectMounter?.adoptRetainedWebRtcEngine?.(engine),
     resumeHaDirectEngine: (engine) =>
       card._haDirectMounter?.resumeRetainedEngine?.(engine),
+    refreshLivePresentation: () =>
+      card._liveVideoZoomController?.refreshPresentation?.(),
     scheduleResumeLive: (reason) => card._scheduleResumeLive(reason),
     resetMseDiagnostics: (connectedAt) => {
       card._mseConnectAt = connectedAt;
@@ -105,10 +107,10 @@ export const createLiveLifecycleControllers = (
         card._editorPreviewController.requestLiveHandoff(request),
       isEngineReusable: (engine, streamType, connectionType) =>
         connectionType === "ha_direct"
-          ? mseGraceController.isHaDirectEngineReusable(engine)
+          ? liveGraceController.isHaDirectEngineReusable(engine)
           : streamType === "mse"
-            ? mseGraceController.isMseEngineReusable(engine)
-            : mseGraceController.isWebRtcEngineReusable(engine),
+            ? liveGraceController.isMseEngineReusable(engine)
+            : liveGraceController.isWebRtcEngineReusable(engine),
       detachEngine: (engine, _streamType, connectionType) => {
         if (
           connectionType === "ha_direct" &&
@@ -128,10 +130,10 @@ export const createLiveLifecycleControllers = (
         if (!slot) return false;
         const adopted =
           connectionType === "ha_direct"
-            ? mseGraceController.adoptGraceHaDirectEngine(slot, engine)
+            ? liveGraceController.adoptGraceHaDirectEngine(slot, engine)
             : streamType === "mse"
-              ? mseGraceController.adoptGraceMseEngine(slot, engine)
-              : mseGraceController.adoptGraceWebRtcEngine(slot, engine);
+              ? liveGraceController.adoptGraceMseEngine(slot, engine)
+              : liveGraceController.adoptGraceWebRtcEngine(slot, engine);
         if (adopted) card._dashboardLiveGraceActive = false;
         return adopted;
       },
@@ -159,7 +161,7 @@ export const createLiveLifecycleControllers = (
     setEngineMountedMuted: (muted) => {
       card._engineMountedMuted = muted;
     },
-    mseGraceController,
+    liveGraceController,
     getMountSeq: () => card._mountSeq,
     getPendingMountDestroyers: () => card._pendingMountDestroyers,
     setPendingMountDestroyers: (pendingDestroyers) => {
@@ -180,7 +182,7 @@ export const createLiveLifecycleControllers = (
   });
 
   return {
-    _mseGraceController: mseGraceController,
+    _liveGraceController: liveGraceController,
     _editorLiveHandoffController: editorLiveHandoffController,
     _liveMountController: liveMountController,
   };

@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  MSE_SWITCH_GRACE_MAX,
-  MSE_SWITCH_GRACE_MS,
+  LIVE_SWITCH_GRACE_MAX,
+  LIVE_SWITCH_GRACE_MS,
 } from "../src/constants.js";
 import { buildEditorLiveHandoffKey } from "../src/features/editor-preview/context.ctrl.js";
 import { createLiveLifecycleControllers } from "../src/features/live/lifecycle-composition.js";
@@ -14,7 +14,7 @@ test("live lifecycle composition preserves grace, handoff, and mount wiring", ()
   const calls = [];
   const engineSlot = { id: "engine" };
   const gridSlot = { id: "grid-engine" };
-  const mseGraceController = {
+  const liveGraceController = {
     isHaDirectEngineReusable: (engine) => engine === "ha-engine",
     isMseEngineReusable: (engine) => engine === "mse-engine",
     isWebRtcEngineReusable: (engine) => engine === "webrtc-engine",
@@ -39,9 +39,9 @@ test("live lifecycle composition preserves grace, handoff, and mount wiring", ()
   };
   const liveMountController = { name: "live-mount" };
   const factories = {
-    createMseGraceController: (options) => {
-      optionsByFactory.mseGrace = options;
-      return mseGraceController;
+    createLiveGraceController: (options) => {
+      optionsByFactory.liveGrace = options;
+      return liveGraceController;
     },
     createEditorLiveHandoffController: (options) => {
       optionsByFactory.editorHandoff = options;
@@ -82,6 +82,9 @@ test("live lifecycle composition preserves grace, handoff, and mount wiring", ()
     _twoWayTalkSession: null,
     _dashboardLiveGraceActive: true,
     _mseChunkCount: 0,
+    _liveVideoZoomController: {
+      refreshPresentation: () => calls.push(["refresh-presentation"]),
+    },
     _haDirectMounter: haDirectMounter,
     _haDirectTwoWayTalkMounter: { name: "ha-talk-mounter" },
     _go2rtcRaceMounter: { name: "go2rtc-race" },
@@ -132,17 +135,17 @@ test("live lifecycle composition preserves grace, handoff, and mount wiring", ()
   });
 
   assert.deepEqual(controllers, {
-    _mseGraceController: mseGraceController,
+    _liveGraceController: liveGraceController,
     _editorLiveHandoffController: editorLiveHandoffController,
     _liveMountController: liveMountController,
   });
-  assert.equal(optionsByFactory.mseGrace.graceMs, MSE_SWITCH_GRACE_MS);
-  assert.equal(optionsByFactory.mseGrace.graceMax, MSE_SWITCH_GRACE_MAX);
+  assert.equal(optionsByFactory.liveGrace.graceMs, LIVE_SWITCH_GRACE_MS);
+  assert.equal(optionsByFactory.liveGrace.graceMax, LIVE_SWITCH_GRACE_MAX);
   assert.strictEqual(
-    optionsByFactory.mseGrace.attachVideoFit,
+    optionsByFactory.liveGrace.attachVideoFit,
     attachContainedVideoFit,
   );
-  assert.strictEqual(optionsByFactory.liveMount.mseGraceController, mseGraceController);
+  assert.strictEqual(optionsByFactory.liveMount.liveGraceController, liveGraceController);
   assert.strictEqual(optionsByFactory.liveMount.haDirectMounter, haDirectMounter);
   assert.strictEqual(
     optionsByFactory.liveMount.haDirectTwoWayTalkMounter,
@@ -246,15 +249,17 @@ test("live lifecycle composition preserves grace, handoff, and mount wiring", ()
     "frigate_go2rtc",
   ]);
 
-  optionsByFactory.mseGrace.resetMseDiagnostics(200);
-  optionsByFactory.mseGrace.markMseChunk(225);
+  optionsByFactory.liveGrace.resetMseDiagnostics(200);
+  optionsByFactory.liveGrace.markMseChunk(225);
   assert.equal(card._mseConnectAt, 200);
   assert.equal(card._mseLastChunkAt, 225);
   assert.equal(card._mseChunkCount, 1);
-  optionsByFactory.mseGrace.setStreamFallbackVisible(true, true);
+  optionsByFactory.liveGrace.setStreamFallbackVisible(true, true);
   assert.deepEqual(calls.at(-1), ["fallback", true, true]);
-  optionsByFactory.mseGrace.releaseHaDirectEngine("ha-engine");
-  optionsByFactory.mseGrace.adoptHaDirectWebRtcEngine("ha-engine");
+  optionsByFactory.liveGrace.refreshLivePresentation();
+  assert.deepEqual(calls.at(-1), ["refresh-presentation"]);
+  optionsByFactory.liveGrace.releaseHaDirectEngine("ha-engine");
+  optionsByFactory.liveGrace.adoptHaDirectWebRtcEngine("ha-engine");
   assert.deepEqual(calls.slice(-2), [
     ["release-ha", "ha-engine"],
     ["adopt-retained-ha", "ha-engine"],

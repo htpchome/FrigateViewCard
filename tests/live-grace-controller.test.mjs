@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { createMseGraceController } from "../src/features/live/mse-grace-controller.js";
+import { createLiveGraceController } from "../src/features/live/live-grace-controller.js";
 
 const originalDocument = globalThis.document;
 
@@ -43,7 +43,7 @@ test("mse grace controller preserves pending mse promise across cleanup", async 
   await withFakeDocument(async ({ shadowRoot }) => {
     let pendingDestroyers = [];
     let engine = null;
-    const controller = createMseGraceController({
+    const controller = createLiveGraceController({
       graceMs: 20,
       graceMax: 2,
       getShadowRoot: () => shadowRoot,
@@ -109,7 +109,7 @@ test("mse grace controller preserves current mse engine across cleanup", async (
       ws: { readyState: 1 },
       destroy() {},
     };
-    const controller = createMseGraceController({
+    const controller = createLiveGraceController({
       graceMs: 20,
       graceMax: 2,
       getShadowRoot: () => shadowRoot,
@@ -173,7 +173,7 @@ test("MSE adoption rebinds diagnostics and recovery to the receiving owner", asy
     let diagnosticsResetAt = 0;
     const activityTimes = [];
     const recoveryReasons = [];
-    const controller = createMseGraceController({
+    const controller = createLiveGraceController({
       graceMs: 100,
       graceMax: 2,
       getShadowRoot: () => shadowRoot,
@@ -263,7 +263,7 @@ test("live grace controller preserves and re-adopts a WebRTC engine", async () =
     let engine = cachedEngine;
     let activeStreamType = "webrtc";
     const recoveryReasons = [];
-    const controller = createMseGraceController({
+    const controller = createLiveGraceController({
       graceMs: 100,
       graceMax: 2,
       getShadowRoot: () => shadowRoot,
@@ -326,7 +326,7 @@ test("live grace controller shares its cache limit across MSE and WebRTC", async
       style: { cssText: "" },
       play: () => Promise.resolve(),
     });
-    const controller = createMseGraceController({
+    const controller = createLiveGraceController({
       graceMs: 100,
       graceMax: 2,
       getShadowRoot: () => shadowRoot,
@@ -409,7 +409,7 @@ test("live grace controller retains HA-direct WebRTC without entering the Frigat
     let activeStreamType = "webrtc";
     let retainedOptions = null;
     let ownershipAdoptions = 0;
-    const controller = createMseGraceController({
+    const controller = createLiveGraceController({
       graceMs: 100,
       graceMax: 2,
       getShadowRoot: () => shadowRoot,
@@ -472,8 +472,8 @@ test("live grace controller retains HA-direct WebRTC without entering the Frigat
   });
 });
 
-test("live grace controller retains and releases HA-direct HLS separately", async () => {
-  await withFakeDocument(async ({ shadowRoot }) => {
+test("live grace controller retains HA-direct HLS without shrinking its video surface", async () => {
+  await withFakeDocument(async ({ shadowRoot, hostChildren }) => {
     const video = {
       style: { cssText: "" },
       dataset: {},
@@ -500,7 +500,7 @@ test("live grace controller retains and releases HA-direct HLS separately", asyn
     };
     let engine = hlsEngine;
     let releasedEngine = null;
-    const controller = createMseGraceController({
+    const controller = createLiveGraceController({
       graceMs: 100,
       graceMax: 2,
       getShadowRoot: () => shadowRoot,
@@ -535,6 +535,9 @@ test("live grace controller retains and releases HA-direct HLS separately", asyn
     controller.cleanupEngine({ preserveLiveEntity: "camera.front" });
     assert.equal(engine, null);
     assert.equal(cancelTakeoverCalls, 1);
+    assert.equal(video.style.cssText.includes("left:-9999px"), false);
+    assert.match(hlsEngine.style.cssText, /inset:0/);
+    assert.match(hostChildren[0]?.style?.cssText || "", /width:100%/);
     assert.equal(controller.takeGraceWebRtcEntry("camera.front"), null);
 
     controller.clearGracePool();
@@ -544,7 +547,7 @@ test("live grace controller retains and releases HA-direct HLS separately", asyn
   });
 });
 
-test("stalled retained HA-direct HLS is released and remounted", async () => {
+test("delayed retained HA-direct HLS stays connected behind its snapshot", async () => {
   await withFakeDocument(async ({ shadowRoot }) => {
     const video = {
       style: { cssText: "" },
@@ -572,7 +575,7 @@ test("stalled retained HA-direct HLS is released and remounted", async () => {
     const activeTypes = [];
     const fallbackStates = [];
     const recoveryReasons = [];
-    const controller = createMseGraceController({
+    const controller = createLiveGraceController({
       graceMs: 100,
       graceMax: 2,
       getShadowRoot: () => shadowRoot,
@@ -616,16 +619,16 @@ test("stalled retained HA-direct HLS is released and remounted", async () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    assert.equal(engine, null);
-    assert.equal(releasedEngine, hlsEngine);
-    assert.equal(hlsEngine.removeCalls, 1);
-    assert.equal(loading, true);
-    assert.deepEqual(activeTypes, ["snapshot", "snapshot"]);
+    assert.equal(engine, hlsEngine);
+    assert.equal(releasedEngine, null);
+    assert.equal(hlsEngine.removeCalls, 0);
+    assert.equal(loading, false);
+    assert.deepEqual(activeTypes, ["hls"]);
     assert.deepEqual(fallbackStates, [
       { visible: true, refreshImage: true },
       { visible: true, refreshImage: undefined },
     ]);
-    assert.deepEqual(recoveryReasons, ["ha-direct-retained-hls-stalled"]);
+    assert.deepEqual(recoveryReasons, []);
   });
 });
 
@@ -655,7 +658,8 @@ test("retained HA-direct HLS keeps a snapshot until video resumes", async () => 
     const activeTypes = [];
     const loadingStates = [];
     const fallbackStates = [];
-    const controller = createMseGraceController({
+    let presentationRefreshes = 0;
+    const controller = createLiveGraceController({
       graceMs: 100,
       graceMax: 2,
       getShadowRoot: () => shadowRoot,
@@ -684,6 +688,9 @@ test("retained HA-direct HLS keeps a snapshot until video resumes", async () => 
         throw new Error("healthy retained HLS must not be released");
       },
       resumeHaDirectEngine: () => resume,
+      refreshLivePresentation: () => {
+        presentationRefreshes += 1;
+      },
       scheduleResumeLive: () => {
         throw new Error("healthy retained HLS must not remount");
       },
@@ -696,8 +703,9 @@ test("retained HA-direct HLS keeps a snapshot until video resumes", async () => 
     };
 
     assert.equal(controller.adoptGraceHaDirectEngine(slot, hlsEngine), true);
-    assert.deepEqual(activeTypes, ["snapshot"]);
+    assert.deepEqual(activeTypes, ["hls"]);
     assert.deepEqual(loadingStates, [true]);
+    assert.equal(presentationRefreshes, 1);
     assert.deepEqual(fallbackStates, [
       { visible: true, refreshImage: true },
     ]);
@@ -707,7 +715,7 @@ test("retained HA-direct HLS keeps a snapshot until video resumes", async () => 
     await Promise.resolve();
 
     assert.equal(engine, hlsEngine);
-    assert.deepEqual(activeTypes, ["snapshot", "hls"]);
+    assert.deepEqual(activeTypes, ["hls"]);
     assert.deepEqual(loadingStates, [true, false]);
     assert.deepEqual(fallbackStates, [
       { visible: true, refreshImage: true },

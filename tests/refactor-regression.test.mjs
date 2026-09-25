@@ -217,8 +217,8 @@ const twoWayTalkControlsControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
-const mseGraceControllerSource = fs.readFileSync(
-  new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
+const liveGraceControllerSource = fs.readFileSync(
+  new URL("../src/features/live/live-grace-controller.js", import.meta.url),
   "utf8",
 );
 const liveMountControllerSource = fs.readFileSync(
@@ -564,7 +564,7 @@ test("live transport ownership is pulled out of the card shell", () => {
   );
   assert.equal(
     cardSource.includes(
-      'import { createMseGraceController } from "../features/live/mse-grace-controller.js";',
+      'import { createLiveGraceController } from "../features/live/live-grace-controller.js";',
     ),
     false,
   );
@@ -575,7 +575,7 @@ test("live transport ownership is pulled out of the card shell", () => {
     false,
   );
   assert.equal(
-    /this\._mseGraceController\s*=\s*createMseGraceController\(\{/.test(
+    /this\._liveGraceController\s*=\s*createLiveGraceController\(\{/.test(
       cardSource,
     ),
     false,
@@ -600,7 +600,7 @@ test("live transport ownership is pulled out of the card shell", () => {
   );
   assert.equal(
     liveLifecycleCompositionSource.includes(
-      "resolvedFactories.createMseGraceController",
+      "resolvedFactories.createLiveGraceController",
     ),
     true,
   );
@@ -739,11 +739,11 @@ test("live transport ownership is pulled out of the card shell", () => {
     true,
   );
   assert.equal(
-    mseGraceControllerSource.includes("splitPendingDestroyersByGraceMse"),
+    liveGraceControllerSource.includes("splitPendingDestroyersByGraceMse"),
     true,
   );
   assert.equal(
-    mseGraceControllerSource.includes("const mseGracePool = new Map()"),
+    liveGraceControllerSource.includes("const mseGracePool = new Map()"),
     true,
   );
   assert.equal(

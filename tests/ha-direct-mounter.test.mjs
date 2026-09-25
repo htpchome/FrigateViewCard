@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { createHaDirectMounter } from "../src/features/live/ha-direct-mounter.js";
-import { createMseGraceController } from "../src/features/live/mse-grace-controller.js";
+import { createLiveGraceController } from "../src/features/live/live-grace-controller.js";
 
 function createFakeVideo(id = "first-video") {
   const listeners = new Map();
@@ -1113,7 +1113,7 @@ test("HLS timeupdate recovery ignores isolated jumps and backward movement", asy
   });
 });
 
-test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate connection", async () => {
+test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate connection", { timeout: 3000 }, async () => {
   await withFakeDocument(async ({ hlsPlayers }) => {
     const hass = {
       states: {
@@ -1126,6 +1126,7 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
     let engine = null;
     let activeStreamType = "snapshot";
     let fallbackVisible = true;
+    let presentationRefreshes = 0;
     let mounter = null;
     const assignEngine = (nextEngine, options = {}) => {
       if (engine === nextEngine) return;
@@ -1159,7 +1160,7 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
         return node;
       },
     };
-    const graceController = createMseGraceController({
+    const graceController = createLiveGraceController({
       graceMs: 20_000,
       graceMax: 3,
       getShadowRoot: () => shadowRoot,
@@ -1185,6 +1186,11 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
       setLiveNativeControls: () => {},
       releaseHaDirectEngine: (releasedEngine) =>
         mounter.release(releasedEngine),
+      resumeHaDirectEngine: (retainedEngine) =>
+        mounter.resumeRetainedEngine(retainedEngine),
+      refreshLivePresentation: () => {
+        presentationRefreshes += 1;
+      },
       adoptHaDirectWebRtcEngine: () => {
         throw new Error("HLS must not enter WebRTC ownership adoption");
       },
@@ -1239,6 +1245,17 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
     assert.equal(returnSlot.child, mountedEngine);
     assert.equal(hlsPlayers.length, 1);
     assert.equal(activeStreamType, "hls");
+    assert.equal(fallbackVisible, true);
+    assert.equal(presentationRefreshes, 1);
+    assert.equal(
+      mountedEngine.video.style.cssText.includes("left:-9999px"),
+      false,
+    );
+
+    await flushAsyncWork();
+    mountedEngine.video.presentFrame();
+    await flushAsyncWork();
+    assert.equal(fallbackVisible, false);
 
     mountedEngine.dispatch("streams", { hasVideo: false });
     await flushAsyncWork();

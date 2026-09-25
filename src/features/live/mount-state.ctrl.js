@@ -9,7 +9,7 @@ export class LiveMountStateController {
   cleanupEngine(options = {}) {
     const host = this._host;
     host._go2rtcRaceMounter?.cancelPendingWebRtcAttempts?.();
-    return host._mseGraceController.cleanupEngine(options);
+    return host._liveGraceController.cleanupEngine(options);
   }
 
   clearEngineSlot() {

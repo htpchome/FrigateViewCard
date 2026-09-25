@@ -15,7 +15,7 @@ import {
   SLIDESHOW_ALERT_HOLD_MS,
   GRID_ALERT_HOLD_MS,
   PREVIEW_ALERT_HOLD_MS,
-  MSE_SWITCH_GRACE_MS,
+  LIVE_SWITCH_GRACE_MS,
   DEFAULT_CAMERA_CONNECTION_TYPE,
   DEFAULT_EVENT_DAYS,
   DEFAULT_ALERTS_REVIEWS_DAYS,
@@ -1017,7 +1017,7 @@ export class FrigateViewCard extends HTMLElement {
       this._disconnectTeardownT = null;
       if (this.isConnected) return;
       this._teardownDisconnected();
-    }, preserveDashboardLive ? MSE_SWITCH_GRACE_MS : 2500);
+    }, preserveDashboardLive ? LIVE_SWITCH_GRACE_MS : 2500);
   }
 
   _teardownDisconnected() {
@@ -1149,7 +1149,7 @@ export class FrigateViewCard extends HTMLElement {
       );
     }
     getLiveRotateOverlayController(this).dispose();
-    this._mseGraceController.clearGracePool();
+    this._liveGraceController.clearGracePool();
     disposeRecordingsDayCache(this);
     if (this._parentOrigStyle && this.parentElement) {
       this.parentElement.style.height = this._parentOrigStyle.height;

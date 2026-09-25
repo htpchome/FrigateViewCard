@@ -341,7 +341,7 @@ test("live mount controller delegates ha-direct mounts outside the card shell", 
     setEngineMountedMuted: (muted) => {
       calls.push(["setEngineMountedMuted", muted]);
     },
-    mseGraceController: {
+    liveGraceController: {
       takeGraceMseEntry: () => null,
       adoptGraceMseEngine: () => false,
     },
@@ -432,7 +432,7 @@ test("live mount controller delegates go2rtc race mounts outside the card shell"
     setEngineMountedMuted: (muted) => {
       calls.push(["setEngineMountedMuted", muted]);
     },
-    mseGraceController: {
+    liveGraceController: {
       takeGraceMseEntry: () => null,
       adoptGraceMseEngine: () => false,
     },
@@ -514,7 +514,7 @@ test("live mount controller reuses a cached WebRTC engine before starting a race
     cleanupEngine: () => calls.push("cleanup"),
     getStreamMuted: () => true,
     setEngineMountedMuted: () => {},
-    mseGraceController: {
+    liveGraceController: {
       takeGraceWebRtcEntry: (entity) => {
         calls.push(["take-webrtc", entity]);
         return { engine: cachedEngine };
@@ -578,7 +578,7 @@ test("live mount controller adopts an editor WebRTC handoff before starting a ra
     cleanupEngine: () => calls.push("cleanup"),
     getStreamMuted: () => true,
     setEngineMountedMuted: () => {},
-    mseGraceController: {
+    liveGraceController: {
       takeGraceWebRtcEntry: () => null,
       adoptGraceWebRtcEngine: (targetSlot, engine) => {
         calls.push(["adopt-handoff", targetSlot, engine]);
@@ -638,7 +638,7 @@ test("live mount controller adopts an editor MSE handoff before starting a race"
     cleanupEngine: () => calls.push("cleanup"),
     getStreamMuted: () => true,
     setEngineMountedMuted: () => {},
-    mseGraceController: {
+    liveGraceController: {
       takeGraceWebRtcEntry: () => null,
       adoptGraceWebRtcEngine: () => false,
       takeGraceMseEntry: () => null,
@@ -703,7 +703,7 @@ test("live mount controller reuses only the HA-direct retained engine for HA-dir
     cleanupEngine: () => calls.push("cleanup"),
     getStreamMuted: () => true,
     setEngineMountedMuted: () => {},
-    mseGraceController: {
+    liveGraceController: {
       takeGraceHaDirectEntry: (entity, streamType) => {
         calls.push(["take-ha-direct", entity, streamType]);
         return { engine: cachedEngine };
@@ -776,7 +776,7 @@ test("live mount controller adopts an editor HA-direct WebRTC handoff before res
     cleanupEngine: () => calls.push("cleanup"),
     getStreamMuted: () => true,
     setEngineMountedMuted: () => {},
-    mseGraceController: {
+    liveGraceController: {
       takeGraceHaDirectEntry: (entity, streamType) => {
         calls.push(["take-ha-direct", entity, streamType]);
         return null;
@@ -841,7 +841,7 @@ test("failed pending MSE reuse falls through to a fresh transport race", async (
     cleanupEngine: () => calls.push("cleanup"),
     getStreamMuted: () => true,
     setEngineMountedMuted: () => {},
-    mseGraceController: {
+    liveGraceController: {
       takeGraceWebRtcEntry: () => null,
       adoptGraceWebRtcEngine: () => false,
       takeGraceMseEntry: () => {
@@ -912,7 +912,7 @@ test("a cancelled camera mount cannot replace the next camera with Snapshot stat
     cleanupEngine: () => {},
     getStreamMuted: () => true,
     setEngineMountedMuted: () => {},
-    mseGraceController: {
+    liveGraceController: {
       takeGraceWebRtcEntry: () => null,
       takeGraceMseEntry: () => null,
     },
@@ -1002,7 +1002,7 @@ test("go2rtc talk mounts bypass receive-only grace reuse and pass microphone opt
     cleanupEngine: () => {},
     getStreamMuted: () => true,
     setEngineMountedMuted: () => {},
-    mseGraceController: {
+    liveGraceController: {
       takeGraceWebRtcEntry: () => {
         throw new Error("talk must not reuse a receive-only WebRTC peer");
       },
@@ -1066,7 +1066,7 @@ test("ha-direct talk mounts use only the Home Assistant talk pipeline", async ()
     cleanupEngine: () => {},
     getStreamMuted: () => false,
     setEngineMountedMuted: () => {},
-    mseGraceController: {
+    liveGraceController: {
       takeGraceWebRtcEntry: () => null,
       takeGraceMseEntry: () => null,
     },
