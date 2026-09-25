@@ -85,7 +85,6 @@ function createZoomFixture({
   onInteractionStart = null,
   onZoomStateChange = null,
   resizeObserverCtor = null,
-  gestureEvents = false,
   enablePresentationRefresh = true,
 } = {}) {
   const host = {
@@ -119,7 +118,6 @@ function createZoomFixture({
   const interactionTarget = separateInteractionTarget
     ? new FakeTarget()
     : video;
-  if (gestureEvents) interactionTarget.ongesturestart = null;
   interactionTarget.capturedPointers = [];
   interactionTarget.releasedPointers = [];
   interactionTarget.setPointerCapture = (pointerId) => {
@@ -320,8 +318,10 @@ test("plain wheel scroll is released while modified wheel zoom is pointer-focuse
   assert.deepEqual(controller.state, { scale: 1, x: 0, y: 0 });
 });
 
-test("fractional modified-wheel and Safari gesture zoom preserve deliberate trackpad intent", () => {
-  const { controller, video } = createZoomFixture({ gestureEvents: true });
+test("modified-wheel and unadvertised Catalyst gestures preserve deliberate trackpad intent", () => {
+  const { controller, video } = createZoomFixture();
+
+  assert.equal("ongesturestart" in video, false);
 
   video.dispatch("wheel", {
     deltaY: -2.5,

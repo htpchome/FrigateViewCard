@@ -222,18 +222,15 @@ export class VideoZoomController {
       "dblclick",
       this._onDoubleClick,
     );
-    const supportsTrackpadGestureEvents =
-      typeof globalThis.GestureEvent === "function" ||
-      "ongesturestart" in this._interactionTarget;
-    if (supportsTrackpadGestureEvents) {
-      for (const eventName of ["gesturestart", "gesturechange", "gestureend"]) {
-        this._cleanup.addEventListener(
-          this._interactionTarget,
-          eventName,
-          this._onTrackpadGesture,
-          { passive: false },
-        );
-      }
+    // Catalyst WKWebView can dispatch WebKit gesture events without exposing
+    // GestureEvent or an ongesturestart property for feature detection.
+    for (const eventName of ["gesturestart", "gesturechange", "gestureend"]) {
+      this._cleanup.addEventListener(
+        this._interactionTarget,
+        eventName,
+        this._onTrackpadGesture,
+        { passive: false },
+      );
     }
     this._cleanup.addEventListener(
       this._interactionTarget,
