@@ -502,7 +502,7 @@ export class DeepLinkController {
     const event = this._host._findEventById(this._host._deepLinkEventId);
     if (!event) {
       this._host._deepLinkEventLookupTried = true;
-      this.consumeDeepLinkReviewOpen();
+      this.consumeDeepLinkReviewOpen({ skipCameraBrowseLoad });
       return;
     }
     this._host._deepLinkEventLookupTried = true;
@@ -565,6 +565,14 @@ export class DeepLinkController {
         : review?.data?.detections?.[0] || "",
     );
     if (reviewEventId) {
+      // A review can point to the event that just failed lookup. Leave it
+      // pending for the next browse refresh instead of recursing back into it.
+      if (
+        reviewEventId === this._host._deepLinkEventId &&
+        this._host._deepLinkEventLookupTried
+      ) {
+        return;
+      }
       this._host._deepLinkEventId = reviewEventId;
       this._host._deepLinkEventLookupTried = false;
       this.consumeDeepLinkEventOpen({ skipCameraBrowseLoad });

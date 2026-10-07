@@ -597,6 +597,166 @@ test("consumeDeepLinkReviewOpen resolves review to event", async () => {
   );
 });
 
+for (const initialEventId of ["", "missing-event", "original-event"]) {
+  for (const useResolver of [false, true]) {
+    test(`unavailable review event stays pending without recursion (${initialEventId || "review-only"}, resolver=${useResolver})`, () => {
+      const { host, calls, controller } = createHarness();
+      host._deepLinkEventId = initialEventId;
+      host._deepLinkReviewId = "review-1";
+      host._reviews = [
+        { id: "review-1", data: { detections: ["missing-event"] } },
+      ];
+      if (useResolver) {
+        host._browseCollectionController = {
+          reviewSourceEventId: () => "missing-event",
+        };
+      }
+      let lookups = 0;
+      host._findEventById = () => {
+        lookups += 1;
+        return null;
+      };
+      controller.clearDeepLinkParamsFromUrl = () => calls.push(["clear"]);
+
+      controller.consumeDeepLinkReviewOpen();
+      controller.consumeDeepLinkEventOpen();
+
+      assert.ok(lookups <= 2, `expected bounded lookup, got ${lookups}`);
+      assert.equal(host._deepLinkEventId, "missing-event");
+      assert.equal(host._deepLinkApplied, false);
+      assert.deepEqual(calls, []);
+
+      // A later browse refresh must still be able to fulfill the same target.
+      host._findEventById = (id) => ({
+        id,
+        camera: "front_door",
+        has_clip: true,
+      });
+      controller.consumeDeepLinkReviewOpen();
+      controller.consumeDeepLinkEventOpen();
+      controller.consumeDeepLinkEventOpen();
+      assert.equal(host._deepLinkApplied, true);
+      assert.deepEqual(calls, [
+        ["showClip", "missing-event", { mediaType: "clip" }],
+        ["clear"],
+      ]);
+    });
+  }
+}
+
+test("asynchronously loaded review with a missing event stays pending", async () => {
+  const { host, calls, controller } = createHarness();
+  host._deepLinkReviewId = "review-1";
+  let loads = 0;
+  host._loadReviews = async () => {
+    loads += 1;
+    host._reviews = [
+      { id: "review-1", data: { detections: ["missing-event"] } },
+    ];
+  };
+  controller.clearDeepLinkParamsFromUrl = () => calls.push(["clear"]);
+
+  controller.consumeDeepLinkReviewOpen();
+  await settleNavigation();
+  controller.consumeDeepLinkReviewOpen();
+  controller.consumeDeepLinkEventOpen();
+
+  assert.equal(loads, 1);
+  assert.equal(host._deepLinkEventId, "missing-event");
+  assert.equal(host._deepLinkApplied, false);
+  assert.deepEqual(calls, []);
+});
+
+test("review can resolve a different event after an unsuccessful lookup", () => {
+  const { host, calls, controller } = createHarness();
+  host._deepLinkEventId = "missing-event";
+  host._deepLinkReviewId = "review-1";
+  host._reviews = [{ id: "review-1", data: { detections: ["missing-event"] } }];
+  controller.clearDeepLinkParamsFromUrl = () => calls.push(["clear"]);
+
+  controller.consumeDeepLinkEventOpen();
+  host._reviews[0].data.detections = ["event-1"];
+  controller.consumeDeepLinkReviewOpen();
+
+  assert.equal(host._deepLinkApplied, true);
+  assert.deepEqual(calls, [
+    ["showClip", "event-1", { mediaType: "clip" }],
+    ["clear"],
+  ]);
+});
+
+test("missing event falls back to a different cached review event", () => {
+  const { host, calls, controller } = createHarness();
+  host._deepLinkEventId = "missing-event";
+  host._deepLinkReviewId = "review-1";
+  host._reviews = [{ id: "review-1", data: { detections: ["event-1"] } }];
+  controller.clearDeepLinkParamsFromUrl = () => calls.push(["clear"]);
+
+  controller.consumeDeepLinkEventOpen();
+
+  assert.equal(host._deepLinkApplied, true);
+  assert.deepEqual(calls, [
+    ["showClip", "event-1", { mediaType: "clip" }],
+    ["clear"],
+  ]);
+});
+
+test("cached explicit event takes precedence over the review fallback", () => {
+  const { host, calls, controller } = createHarness();
+  host._deepLinkEventId = "event-1";
+  host._deepLinkReviewId = "review-1";
+  host._reviews = [{ id: "review-1", data: { detections: ["event-2"] } }];
+  controller.clearDeepLinkParamsFromUrl = () => calls.push(["clear"]);
+
+  controller.consumeDeepLinkReviewOpen();
+  controller.consumeDeepLinkEventOpen();
+
+  assert.deepEqual(calls, [
+    ["showClip", "event-1", { mediaType: "clip" }],
+    ["clear"],
+  ]);
+});
+
+test("review fallback preserves the navigation camera-load option", () => {
+  const { host, calls, controller } = createHarness();
+  host._deepLinkEventId = "missing-event";
+  host._deepLinkReviewId = "review-1";
+  host._reviews = [{ id: "review-1", data: { detections: ["event-2"] } }];
+  host._switchCamera = (idx, options) => calls.push(["switchCamera", idx, options]);
+
+  controller.consumeDeepLinkEventOpen({ skipCameraBrowseLoad: true });
+
+  assert.deepEqual(calls, [["switchCamera", 1, { skipBrowseLoad: true }]]);
+});
+
+test("navigation refreshes and opens a missing event referenced by its review", async () => {
+  const { host, calls, controller } = navigationHarness();
+  const win = navigationWindow();
+  host._reviews = [{ id: "review-1", data: { detections: ["new-event"] } }];
+  let loaded = false;
+  host._findEventById = (id) =>
+    loaded ? { id, camera: "front_door", has_clip: true } : null;
+  host._browseWindowLoaderController.loadWindow = async (...args) => {
+    calls.push(["loadWindow", ...args]);
+    loaded = true;
+  };
+
+  await withWindow(win, async () => {
+    controller.connect();
+    win.navigate("#?camera=front_door&event=new-event&review=review-1&media=clip");
+    await settleNavigation();
+
+    assert.equal(host._deepLinkApplied, true);
+    assert.equal(win.location.hash, "");
+    assert.deepEqual(calls, [
+      ["invalidateActiveWindowCaches"],
+      ["loadWindow", true, { supersede: true }],
+      ["showClip", "new-event", { mediaType: "clip" }],
+    ]);
+    controller.disconnect();
+  });
+});
+
 test("deep links for a secondary member select its logical camera group", () => {
   const { host, calls, controller } = createHarness();
   host._config.cameras[0].group = {
