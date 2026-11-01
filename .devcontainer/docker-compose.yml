@@ -22,7 +22,6 @@ services:
   homeassistant:
     image: ghcr.io/home-assistant/home-assistant:2026.9.0
     container_name: homeassistant
-    restart: unless-stopped
     privileged: true
     volumes:
       - ha-config:/config
@@ -36,7 +35,6 @@ services:
   frigate:
     image: ghcr.io/blakeblackshear/frigate:stable
     container_name: frigate
-    restart: unless-stopped
     privileged: true
     shm_size: "256mb"
     volumes:
@@ -54,7 +52,6 @@ services:
   rtsp-test:
     image: bluenviron/mediamtx:latest
     container_name: rtsp-test
-    restart: unless-stopped
     ports:
       - "127.0.0.1:8554:8554"
     profiles:
