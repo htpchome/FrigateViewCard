@@ -167,19 +167,33 @@ export class SingleViewPageController {
   _revealActiveCameraButton(element) {
     if (this._host._viewMode !== "single") return false;
     const activeButton = element.querySelector?.(".cam-tab.active");
+    const nextButton = activeButton?.nextElementSibling;
     const containerRect = element.getBoundingClientRect?.();
     const buttonRect = activeButton?.getBoundingClientRect?.();
+    const nextButtonRect =
+      nextButton?.matches?.(".cam-tab") === true
+        ? nextButton.getBoundingClientRect?.()
+        : null;
     if (!containerRect || !buttonRect) return false;
 
     const edgePadding = 4;
+    const nextButtonPeek = 32;
     const leftEdge = containerRect.left + edgePadding;
     const rightEdge = containerRect.right - edgePadding;
-    const scrollDelta =
-      buttonRect.left < leftEdge
-        ? buttonRect.left - leftEdge
-        : buttonRect.right > rightEdge
-          ? buttonRect.right - rightEdge
-          : 0;
+    let scrollDelta = buttonRect.left < leftEdge
+      ? buttonRect.left - leftEdge
+      : Math.max(0, buttonRect.right - rightEdge);
+    if (scrollDelta >= 0 && nextButtonRect) {
+      const peekDelta = Math.max(
+        0,
+        nextButtonRect.left - (rightEdge - nextButtonPeek),
+      );
+      const activeLeftRoom = Math.max(0, buttonRect.left - leftEdge);
+      scrollDelta = Math.min(
+        Math.max(scrollDelta, peekDelta),
+        activeLeftRoom,
+      );
+    }
     if (!scrollDelta) return false;
 
     if (typeof element.scrollBy === "function") {

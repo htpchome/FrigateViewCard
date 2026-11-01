@@ -1008,6 +1008,34 @@ test("single-view camera switcher leaves a fully visible active camera in place"
   assert.deepEqual(scrollCalls, []);
 });
 
+test("single-view camera switcher leaves a small preview of the next camera", () => {
+  const scrollCalls = [];
+  const nextButton = {
+    matches: (selector) => selector === ".cam-tab",
+    getBoundingClientRect: () => ({ left: 330, right: 430 }),
+  };
+  const activeButton = {
+    nextElementSibling: nextButton,
+    getBoundingClientRect: () => ({ left: 210, right: 326 }),
+  };
+  const cameraSwitcher = {
+    ...createNode(),
+    querySelector: () => activeButton,
+    getBoundingClientRect: () => ({ left: 20, right: 320 }),
+    scrollBy: (options) => scrollCalls.push(options),
+  };
+  const { host } = createHost({
+    domNodes: { "#cam-switcher": cameraSwitcher },
+  });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderCamSwitcher();
+
+  assert.deepEqual(scrollCalls, [
+    { left: 46, top: 0, behavior: "auto" },
+  ]);
+});
+
 test("single-view camera switcher uses page navigation instead of a preview back button", () => {
   const { host } = createHost({ previewPageEnabled: true });
   const controller = new SingleViewPageController(host, { PAGE_IDS });
