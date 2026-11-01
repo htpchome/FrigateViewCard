@@ -6,12 +6,12 @@ import {
   shouldPreferRecordingHls,
 } from "../../src/features/recordings/utils/playback.js";
 
-test("recording HLS preference includes desktop Safari", () => {
+test("recording playback prefers seekable HLS across supported browsers", () => {
   assert.equal(shouldPreferRecordingHls({ isSafari: true }), true);
   assert.equal(shouldPreferRecordingHls({ isIOS: true }), true);
   assert.equal(shouldPreferRecordingHls({ isFirefox: true }), true);
   assert.equal(shouldPreferRecordingHls({ isEdge: true }), true);
-  assert.equal(shouldPreferRecordingHls({}), false);
+  assert.equal(shouldPreferRecordingHls({}), true);
 });
 
 test("buildRecordingPlaybackPlan caps recording chunk length and formats camera name", () => {

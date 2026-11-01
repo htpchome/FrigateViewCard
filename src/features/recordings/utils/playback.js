@@ -1,10 +1,5 @@
-export function shouldPreferRecordingHls({
-  isIOS = false,
-  isFirefox = false,
-  isEdge = false,
-  isSafari = false,
-} = {}) {
-  return isIOS || isFirefox || isEdge || isSafari;
+export function shouldPreferRecordingHls() {
+  return true;
 }
 
 export function buildRecordingPlaybackPlan({

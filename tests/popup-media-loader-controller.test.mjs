@@ -468,9 +468,14 @@ test("showRecording signs candidates and initializes popup recording playback on
     calls.find(([kind]) => kind === "createVideo")?.[1]?.preload,
     "metadata",
   );
-  assert.match(
-    calls.find(([kind]) => kind === "trySource")?.[1] || "",
-    /signed:\/api\/frigate\/frigate\/recording\/front_door/,
+  assert.deepEqual(
+    calls
+      .filter(([kind]) => kind === "trySource")
+      .map(([, source]) => source),
+    [
+      "signed:/api/frigate/frigate/vod/front_door/start/100/end/160/index.m3u8",
+      "signed:/api/frigate/frigate/vod/front_door/start/100/end/160/master.m3u8",
+    ],
   );
   assert.ok(
     calls.findIndex(([kind]) => kind === "initControls") <
@@ -1045,6 +1050,16 @@ test("desktop Safari recording playback prefers HLS", () => {
     _isFirefox: () => false,
     _isEdge: () => false,
     _isSafari: () => true,
+  });
+
+  assert.equal(controller._deps.preferRecordingHls(), true);
+});
+
+test("Chrome recording playback prefers HLS for timeline seeking", () => {
+  const controller = new PopupMediaLoaderController({
+    _isFirefox: () => false,
+    _isEdge: () => false,
+    _isSafari: () => false,
   });
 
   assert.equal(controller._deps.preferRecordingHls(), true);
