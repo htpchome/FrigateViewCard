@@ -37,6 +37,14 @@ test("Single View camera switcher wraps on desktop and scrolls on phone and tabl
   assert.doesNotMatch(cameraSwitcherStyles, /@media/);
 });
 
+test("camera button hover styling is limited to mouse-like pointers", () => {
+  assert.match(
+    STYLES,
+    /@media \(hover:hover\) and \(pointer:fine\)\{\s*\.cam-tab:not\(\.active\):hover\{color:var\(--c-primary-d\);\}\s*\}/,
+  );
+  assert.doesNotMatch(STYLES, /\n\s*\.cam-tab:hover\{/);
+});
+
 test("single view title resolver defaults to FrigateView", () => {
   const activeCamera = { name: "Driveway" };
   const getCameraName = (camera) => camera.name;

@@ -2,7 +2,7 @@ import { CARD_NAME } from "./product-identity.mjs";
 
 export * from "./product-identity.mjs";
 
-export const VERSION = "1.1.11-dev.1";
+export const VERSION = "1.1.11-dev.2";
 
 export const RECOMMENDED_HOME_ASSISTANT_VERSION = "2026.9.0";
 export const HOME_ASSISTANT_STUN_SERVER =

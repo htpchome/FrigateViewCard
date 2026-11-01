@@ -962,6 +962,52 @@ test("single-view camera switcher render hides for a single camera when preview 
   assert.equal(nodes["#cam-switcher"].style.display, "none");
 });
 
+test("single-view camera switcher fully reveals a partially hidden active camera", () => {
+  const scrollCalls = [];
+  const activeButton = {
+    getBoundingClientRect: () => ({ left: 286, right: 374 }),
+  };
+  const cameraSwitcher = {
+    ...createNode(),
+    querySelector: (selector) =>
+      selector === ".cam-tab.active" ? activeButton : null,
+    getBoundingClientRect: () => ({ left: 20, right: 320 }),
+    scrollBy: (options) => scrollCalls.push(options),
+  };
+  const { host } = createHost({
+    domNodes: { "#cam-switcher": cameraSwitcher },
+  });
+  host._activeCamIdx = 1;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderCamSwitcher();
+
+  assert.deepEqual(scrollCalls, [
+    { left: 58, top: 0, behavior: "auto" },
+  ]);
+});
+
+test("single-view camera switcher leaves a fully visible active camera in place", () => {
+  const scrollCalls = [];
+  const activeButton = {
+    getBoundingClientRect: () => ({ left: 120, right: 220 }),
+  };
+  const cameraSwitcher = {
+    ...createNode(),
+    querySelector: () => activeButton,
+    getBoundingClientRect: () => ({ left: 20, right: 320 }),
+    scrollBy: (options) => scrollCalls.push(options),
+  };
+  const { host } = createHost({
+    domNodes: { "#cam-switcher": cameraSwitcher },
+  });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderCamSwitcher();
+
+  assert.deepEqual(scrollCalls, []);
+});
+
 test("single-view camera switcher uses page navigation instead of a preview back button", () => {
   const { host } = createHost({ previewPageEnabled: true });
   const controller = new SingleViewPageController(host, { PAGE_IDS });

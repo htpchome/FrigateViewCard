@@ -161,6 +161,33 @@ export class SingleViewPageController {
     }
     element.style.display = "";
     element.innerHTML = this.camSwitcherMarkup({ includeStatus: true });
+    this._revealActiveCameraButton(element);
+  }
+
+  _revealActiveCameraButton(element) {
+    if (this._host._viewMode !== "single") return false;
+    const activeButton = element.querySelector?.(".cam-tab.active");
+    const containerRect = element.getBoundingClientRect?.();
+    const buttonRect = activeButton?.getBoundingClientRect?.();
+    if (!containerRect || !buttonRect) return false;
+
+    const edgePadding = 4;
+    const leftEdge = containerRect.left + edgePadding;
+    const rightEdge = containerRect.right - edgePadding;
+    const scrollDelta =
+      buttonRect.left < leftEdge
+        ? buttonRect.left - leftEdge
+        : buttonRect.right > rightEdge
+          ? buttonRect.right - rightEdge
+          : 0;
+    if (!scrollDelta) return false;
+
+    if (typeof element.scrollBy === "function") {
+      element.scrollBy({ left: scrollDelta, top: 0, behavior: "auto" });
+    } else {
+      element.scrollLeft = (Number(element.scrollLeft) || 0) + scrollDelta;
+    }
+    return true;
   }
 
   syncStatus() {
