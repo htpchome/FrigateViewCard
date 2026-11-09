@@ -469,7 +469,7 @@ test("camera hints match entity IDs, Frigate names, and display-name punctuation
   }
 });
 
-test("camera-only query params do not become startup deep links", async () => {
+test("camera-only query params become startup deep links", async () => {
   const { host, controller } = createHarness();
 
   await withWindow(
@@ -481,11 +481,11 @@ test("camera-only query params do not become startup deep links", async () => {
     },
     async () => {
       controller.initDeepLinkFromUrl();
-      assert.equal(host._deepLinkCameraHint, "");
-      assert.equal(controller.hasParsedDeepLinkTarget(), false);
-      assert.equal(controller.hasPendingDeepLinkTarget(), false);
+      assert.equal(host._deepLinkCameraHint, "driveway");
+      assert.equal(controller.hasParsedDeepLinkTarget(), true);
+      assert.equal(controller.hasPendingDeepLinkTarget(), true);
       controller.applyDeepLinkCameraHint();
-      assert.equal(host._activeCamIdx, 0);
+      assert.equal(host._activeCamIdx, 1);
     },
   );
 });

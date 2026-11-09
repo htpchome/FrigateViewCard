@@ -26,6 +26,9 @@ const DEEP_LINK_TARGET_KEYS = [
   "review_id",
   "frigate_review",
   "frigate_review_id",
+  "camera",
+  "cam",
+  "camera_entity",
 ];
 
 const HASH_ROUTE_BRIDGE = Symbol.for(
@@ -253,6 +256,16 @@ export class DeepLinkController {
       }
       if (!this._isPendingNavigation(navigationUrl)) return;
 
+      if (
+        this._host._deepLinkCameraHint &&
+        !this._host._deepLinkEventId &&
+        !this._host._deepLinkReviewId
+      ) {
+        this._host._deepLinkApplied = true;
+        this.clearDeepLinkParamsFromUrl();
+        return;
+      }
+
       cameraChanged =
         this._consumePendingNavigationTarget() || cameraChanged;
       if (this._host._deepLinkApplied) {
@@ -360,7 +373,7 @@ export class DeepLinkController {
     this._host._deepLinkMediaHint = String(mediaHint || "")
       .trim()
       .toLowerCase();
-    this._host._deepLinkCameraHint = eventId || reviewId ? cameraHint : "";
+    this._host._deepLinkCameraHint = cameraHint;
     this._host._deepLinkApplied = false;
     this._host._deepLinkEventLookupTried = false;
     this._host._deepLinkReviewLookupTried = false;
@@ -597,6 +610,10 @@ export class DeepLinkController {
 
   hasParsedDeepLinkTarget() {
     if (!this.isDeepLinkHandlingEnabled()) return false;
-    return !!(this._host._deepLinkEventId || this._host._deepLinkReviewId);
+    return !!(
+      this._host._deepLinkEventId ||
+      this._host._deepLinkReviewId ||
+      this._host._deepLinkCameraHint
+    );
   }
 }
