@@ -577,6 +577,8 @@ Behavior:
 
 Tap-action examples using common Frigate Notifications blueprint variables:
 
+- Current live camera: `/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}`
+
 - Event Clip with Review Clip fallback: `/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}&event={{id}}&review={{review_id}}`
 
 - Snapshot with Review Snapshot fallback: `/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}&event={{id}}&review={{review_id}}&media=snapshot`

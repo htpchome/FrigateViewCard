@@ -26,6 +26,9 @@ const DEEP_LINK_TARGET_KEYS = [
   "review_id",
   "frigate_review",
   "frigate_review_id",
+  "camera",
+  "cam",
+  "camera_entity",
 ];
 
 const HASH_ROUTE_BRIDGE = Symbol.for(
@@ -230,6 +233,26 @@ export class DeepLinkController {
     return cameraChanged;
   }
 
+  _isCameraOnlyTarget() {
+    return !!(
+      this._host._deepLinkCameraHint &&
+      !this._host._deepLinkEventId &&
+      !this._host._deepLinkReviewId
+    );
+  }
+
+  _navigateToCameraDeepLinkPage() {
+    const navigation = this._host._pageNavigationController;
+    if (!navigation) return false;
+    const context = {
+      source: "deep-link",
+      hasPendingDeepLinkTarget: true,
+    };
+    const targetPage = navigation.resolveConfiguredLandingPage?.(context);
+    if (targetPage && targetPage === this._host._pageId) return false;
+    return !!navigation.navigateToConfiguredLandingPage?.(context);
+  }
+
   async _handlePendingNavigation(navigationUrl) {
     const loader = this._host._browseWindowLoaderController;
     let cameraChanged = false;
@@ -252,6 +275,19 @@ export class DeepLinkController {
         cameraChanged = true;
       }
       if (!this._isPendingNavigation(navigationUrl)) return;
+
+      if (this._isCameraOnlyTarget()) {
+        this._navigateToCameraDeepLinkPage();
+        this._host._deepLinkApplied = true;
+        this.clearDeepLinkParamsFromUrl();
+        if (cameraChanged) {
+          void loader?.loadWindow?.(true, {
+            supersede: true,
+            reuseRecentCache: true,
+          });
+        }
+        return;
+      }
 
       cameraChanged =
         this._consumePendingNavigationTarget() || cameraChanged;
@@ -360,7 +396,7 @@ export class DeepLinkController {
     this._host._deepLinkMediaHint = String(mediaHint || "")
       .trim()
       .toLowerCase();
-    this._host._deepLinkCameraHint = eventId || reviewId ? cameraHint : "";
+    this._host._deepLinkCameraHint = cameraHint;
     this._host._deepLinkApplied = false;
     this._host._deepLinkEventLookupTried = false;
     this._host._deepLinkReviewLookupTried = false;
@@ -597,6 +633,10 @@ export class DeepLinkController {
 
   hasParsedDeepLinkTarget() {
     if (!this.isDeepLinkHandlingEnabled()) return false;
-    return !!(this._host._deepLinkEventId || this._host._deepLinkReviewId);
+    return !!(
+      this._host._deepLinkEventId ||
+      this._host._deepLinkReviewId ||
+      this._host._deepLinkCameraHint
+    );
   }
 }

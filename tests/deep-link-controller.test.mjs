@@ -126,6 +126,72 @@ test("mounted card consumes cached notification navigation", async () => {
   });
 });
 
+test("mounted camera-only navigation opens the deep-link page and refreshes browse data", async () => {
+  const { host, calls, controller } = navigationHarness();
+  const win = navigationWindow();
+  host._pageId = "preview";
+  host._pageNavigationController = {
+    resolveConfiguredLandingPage: () => "single-view",
+    navigateToConfiguredLandingPage: (context) => {
+      calls.push(["navigateToConfiguredLandingPage", context]);
+      host._pageId = "single-view";
+      return "single-view";
+    },
+  };
+
+  await withWindow(win, async () => {
+    controller.connect();
+    win.navigate("?camera=driveway");
+    await settleNavigation();
+
+    assert.equal(host._activeCamIdx, 1);
+    assert.equal(host._deepLinkApplied, true);
+    assert.equal(win.location.search, "");
+    assert.deepEqual(calls, [
+      ["switchCamera", 1, { skipBrowseLoad: true }],
+      [
+        "navigateToConfiguredLandingPage",
+        { source: "deep-link", hasPendingDeepLinkTarget: true },
+      ],
+      [
+        "loadWindow",
+        true,
+        { supersede: true, reuseRecentCache: true },
+      ],
+    ]);
+    controller.disconnect();
+  });
+});
+
+test("camera-only navigation does not reactivate an already active deep-link page", async () => {
+  const { host, calls, controller } = navigationHarness();
+  const win = navigationWindow();
+  host._pageId = "single-view";
+  host._pageNavigationController = {
+    resolveConfiguredLandingPage: () => "single-view",
+    navigateToConfiguredLandingPage: () => {
+      calls.push(["unexpectedNavigation"]);
+      return "single-view";
+    },
+  };
+
+  await withWindow(win, async () => {
+    controller.connect();
+    win.navigate("?camera=driveway");
+    await settleNavigation();
+
+    assert.deepEqual(calls, [
+      ["switchCamera", 1, { skipBrowseLoad: true }],
+      [
+        "loadWindow",
+        true,
+        { supersede: true, reuseRecentCache: true },
+      ],
+    ]);
+    controller.disconnect();
+  });
+});
+
 test("Bubble hash deep links activate the outer route before media opens", async () => {
   const { calls, controller } = navigationHarness();
   const win = navigationWindow();
@@ -147,6 +213,36 @@ test("Bubble hash deep links activate the outer route before media opens", async
       ["bubbleOpen"],
       ["switchCamera", 1, { skipBrowseLoad: true }],
       ["showSnapshot", "event-2"],
+      [
+        "loadWindow",
+        true,
+        { supersede: true, reuseRecentCache: true },
+      ],
+    ]);
+    controller.disconnect();
+  });
+});
+
+test("camera-only Bubble hash deep links activate the route and select the camera", async () => {
+  const { host, calls, controller } = navigationHarness();
+  const win = navigationWindow();
+  win.addEventListener("hashchange", () => {
+    if (win.location.hash === "#test2") calls.push(["bubbleOpen"]);
+  });
+
+  await withWindow(win, async () => {
+    installDeepLinkHashRouteBridge(win);
+    controller.connect();
+    win.navigate("#test2?camera=driveway");
+
+    assert.equal(win.location.hash, "#test2");
+    assert.deepEqual(calls, [["bubbleOpen"]]);
+    await settleNavigation();
+    assert.equal(host._activeCamIdx, 1);
+    assert.equal(host._deepLinkApplied, true);
+    assert.deepEqual(calls, [
+      ["bubbleOpen"],
+      ["switchCamera", 1, { skipBrowseLoad: true }],
       [
         "loadWindow",
         true,
@@ -469,7 +565,7 @@ test("camera hints match entity IDs, Frigate names, and display-name punctuation
   }
 });
 
-test("camera-only query params do not become startup deep links", async () => {
+test("camera-only query params become startup deep links", async () => {
   const { host, controller } = createHarness();
 
   await withWindow(
@@ -481,13 +577,36 @@ test("camera-only query params do not become startup deep links", async () => {
     },
     async () => {
       controller.initDeepLinkFromUrl();
-      assert.equal(host._deepLinkCameraHint, "");
-      assert.equal(controller.hasParsedDeepLinkTarget(), false);
-      assert.equal(controller.hasPendingDeepLinkTarget(), false);
+      assert.equal(host._deepLinkCameraHint, "driveway");
+      assert.equal(controller.hasParsedDeepLinkTarget(), true);
+      assert.equal(controller.hasPendingDeepLinkTarget(), true);
       controller.applyDeepLinkCameraHint();
-      assert.equal(host._activeCamIdx, 0);
+      assert.equal(host._activeCamIdx, 1);
     },
   );
+});
+
+test("camera-only startup targets a secondary camera-group member", async () => {
+  const { host, controller } = createHarness();
+  host._config.cameras[0].group = {
+    secondary_entity: "camera.package",
+    layout: "stacked",
+  };
+  host._camCache["camera.package"] = { cam: "package" };
+  host._activeCamIdx = 1;
+  host._deepLinkCameraHint = "package";
+
+  assert.equal(await controller.prepareStartupCameraTarget(), 0);
+  assert.equal(host._activeCamIdx, 0);
+  assert.equal(host._activeGroupMemberOverride, "camera.package");
+});
+
+test("camera-only targets remain unclaimed by cards without the camera", () => {
+  const { host, controller } = createHarness();
+  host._deepLinkCameraHint = "camera.not_on_this_card";
+
+  assert.equal(controller.hasParsedDeepLinkTarget(), true);
+  assert.equal(controller.hasPendingDeepLinkTarget(), false);
 });
 
 test("parsed deep-link targets are available before camera discovery", () => {
