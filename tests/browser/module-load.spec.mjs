@@ -4929,6 +4929,76 @@ test("Single, Wide, and Card View settings localize in place with their choices 
   });
 });
 
+test("nested visual editor saves update only the owning stack child", async ({
+  page,
+}) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card-editor.js");
+    const first = {
+      type: "custom:frigate-view-card",
+      cameras: [{ entity: "camera.front" }],
+      title: "First",
+    };
+    const second = {
+      type: "custom:frigate-view-card",
+      cameras: [{ entity: "camera.back" }],
+      title: "Second",
+    };
+    const dialog = document.createElement("hui-dialog-edit-card");
+    dialog._cardConfig = {
+      type: "horizontal-stack",
+      cards: [first, second],
+    };
+    const root = dialog.attachShadow({ mode: "open" });
+    const editor = document.createElement("frigate-view-card-editor");
+    root.append(editor);
+    document.body.append(dialog);
+    editor.setConfig(first);
+    editor.querySelector("#title").value = "Changed";
+    editor.querySelector("#display_title").checked = false;
+
+    let handoff = null;
+    dialog.addEventListener("frigate-view-card-config-commit", (event) => {
+      handoff = event.detail;
+    });
+    dialog.addEventListener("config-changed", (event) => {
+      dialog._cardConfig = {
+        ...dialog._cardConfig,
+        cards: [event.detail.config, dialog._cardConfig.cards[1]],
+      };
+    });
+
+    editor._commitDraftToHomeAssistantDialog();
+    return {
+      type: dialog._cardConfig.type,
+      cardCount: dialog._cardConfig.cards.length,
+      first: dialog._cardConfig.cards[0],
+      second: dialog._cardConfig.cards[1],
+      previousWasChild: handoff?.previousConfig === first,
+      committedTitle: handoff?.config?.title,
+    };
+  });
+
+  expect(state).toMatchObject({
+    type: "horizontal-stack",
+    cardCount: 2,
+    first: {
+      type: "custom:frigate-view-card",
+      cameras: [{ entity: "camera.front" }],
+      title: "Changed",
+      display_title: false,
+    },
+    second: {
+      type: "custom:frigate-view-card",
+      cameras: [{ entity: "camera.back" }],
+      title: "Second",
+    },
+    previousWasChild: true,
+    committedTitle: "Changed",
+  });
+});
+
 test("Wide View Custom width persists its slider value and presets clear it", async ({
   page,
 }) => {

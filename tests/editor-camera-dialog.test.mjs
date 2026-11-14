@@ -1277,6 +1277,48 @@ test("Home Assistant dirty context tracks drafts without config-changed", () => 
   });
 });
 
+test("nested card edits delegate dirty state to the parent card editor", () => {
+  const editor = new FrigateViewCardEditor();
+  const dispatched = [];
+  const dirtyStateUpdates = [];
+  const dialog = {
+    _cardConfig: {
+      type: "horizontal-stack",
+      cards: [
+        { type: "custom:frigate-view-card", title: "Original" },
+        { type: "custom:frigate-view-card", title: "Second" },
+      ],
+    },
+  };
+  editor._haDirtyBaselineConfig = {
+    type: "custom:frigate-view-card",
+    title: "Original",
+  };
+  editor._haDirtyBaselineSig = JSON.stringify(
+    editor._haDirtyBaselineConfig,
+  );
+  editor._haDirtyStateContext = {
+    setState: (config) => dirtyStateUpdates.push(config),
+  };
+  editor._findHomeAssistantEditCardDialog = () => dialog;
+  editor._dispatch = (config) => dispatched.push(config);
+
+  editor._seedHomeAssistantDirtyState();
+  editor._markHomeAssistantDirty({
+    type: "custom:frigate-view-card",
+    title: "Changed",
+  });
+
+  assert.deepEqual(dirtyStateUpdates, []);
+  assert.deepEqual(dispatched, [{
+    type: "custom:frigate-view-card",
+    title: "Changed",
+  }]);
+  assert.equal(editor._hasConfigDraft, true);
+  assert.equal(dialog._cardConfig.type, "horizontal-stack");
+  assert.equal(dialog._cardConfig.cards.length, 2);
+});
+
 test("settings panel dirty titles follow pending config changes, not expansion", () => {
   const editor = new FrigateViewCardEditor();
   const panel = (panelId) => ({
@@ -1420,6 +1462,47 @@ test("Save commits the final draft directly to the Home Assistant dialog", () =>
   assert.equal(handoffs[0].detail.config, finalConfig);
   assert.equal(handoffs[0].bubbles, true);
   assert.equal(handoffs[0].composed, true);
+});
+
+test("Save delegates a nested card without replacing its parent stack", () => {
+  const editor = new FrigateViewCardEditor();
+  const originalChild = {
+    type: "custom:frigate-view-card",
+    title: "Original",
+  };
+  const secondChild = {
+    type: "custom:frigate-view-card",
+    title: "Second",
+  };
+  const stackConfig = {
+    type: "horizontal-stack",
+    cards: [originalChild, secondChild],
+  };
+  const finalConfig = {
+    type: "custom:frigate-view-card",
+    title: "Changed",
+  };
+  const dialog = {
+    _cardConfig: stackConfig,
+    _updateDirtyState: () => assert.fail("nested child must not replace parent dirty state"),
+  };
+  const handoffs = [];
+  const dispatched = [];
+  editor._sourceConfig = originalChild;
+  editor._homeAssistantConfig = () => finalConfig;
+  editor._findHomeAssistantEditCardDialog = () => dialog;
+  editor._dispatch = (config) => dispatched.push(config);
+  editor.dispatchEvent = (event) => handoffs.push(event);
+
+  editor._commitDraftToHomeAssistantDialog();
+
+  assert.equal(dialog._cardConfig, stackConfig);
+  assert.deepEqual(dialog._cardConfig.cards, [originalChild, secondChild]);
+  assert.deepEqual(dispatched, [finalConfig]);
+  assert.equal(handoffs.length, 1);
+  assert.equal(handoffs[0].type, "frigate-view-card-config-commit");
+  assert.equal(handoffs[0].detail.previousConfig, originalChild);
+  assert.equal(handoffs[0].detail.config, finalConfig);
 });
 
 test("editor dispatch announces a draft through config-changed", () => {

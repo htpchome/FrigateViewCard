@@ -8,6 +8,7 @@ import {
   CARD_PREVIEW_DRAFT_EVENT,
   CARD_CONFIG_COMMIT_EVENT,
   SUPPORTED_CARD_TAGS,
+  isSupportedCardTag,
   DEFAULT_TITLE,
   DEFAULT_SUBTITLE,
   DEFAULT_HIDDEN_TABS,
@@ -610,6 +611,14 @@ export class FrigateViewCardEditor extends HTMLElement {
   _seedHomeAssistantDirtyState() {
     const context = this._haDirtyStateContext;
     if (!context || this._haDirtyBaselineConfig === undefined) return;
+    if (
+      this._isNestedHomeAssistantCardEdit(
+        this._findHomeAssistantEditCardDialog(),
+      )
+    ) {
+      this._pendingHaDirtyConfig = undefined;
+      return;
+    }
     if (!this._haDirtyStateSeeded) {
       this._haDirtyStateSeeded = true;
       context.setState(
@@ -634,7 +643,23 @@ export class FrigateViewCardEditor extends HTMLElement {
       node = root?.host || node.parentNode || node.host;
       depth += 1;
     }
-    return document.querySelector?.("hui-dialog-edit-card") || null;
+    return globalThis.document?.querySelector?.("hui-dialog-edit-card") || null;
+  }
+
+  _isDirectHomeAssistantCardEdit(dialog) {
+    const dialogConfig = dialog?._cardConfig;
+    return (
+      isSupportedCardTag(dialogConfig?.type) ||
+      (dialogConfig != null && dialogConfig === this._sourceConfig)
+    );
+  }
+
+  _isNestedHomeAssistantCardEdit(dialog) {
+    return Boolean(
+      dialog &&
+      "_cardConfig" in dialog &&
+      !this._isDirectHomeAssistantCardEdit(dialog),
+    );
   }
 
   _queryOpenShadowRoots(root, selector) {
@@ -6074,11 +6099,16 @@ export class FrigateViewCardEditor extends HTMLElement {
     const nextSignature = this._configSignature(nextConfig);
     this._hasConfigDraft = nextSignature !== this._haDirtyBaselineSig;
     this._syncConfigSaveReminder(nextConfig);
+    const dialog = this._findHomeAssistantEditCardDialog();
+    if (this._isNestedHomeAssistantCardEdit(dialog)) {
+      this._pendingHaDirtyConfig = undefined;
+      this._dispatch(nextConfig);
+      return;
+    }
     this._pendingHaDirtyConfig = nextConfig;
     this._seedHomeAssistantDirtyState();
 
     if (!this._haDirtyStateContext) {
-      const dialog = this._findHomeAssistantEditCardDialog();
       if (typeof dialog?._updateDirtyState === "function") {
         dialog._updateDirtyState(nextConfig);
       } else {
@@ -6146,13 +6176,21 @@ export class FrigateViewCardEditor extends HTMLElement {
       this._dispatch(config);
       return;
     }
+    const directEdit = this._isDirectHomeAssistantCardEdit(dialog);
+    const previousConfig = directEdit
+      ? dialog._cardConfig
+      : this._sourceConfig;
     this._lastDispatchedConfig = config;
     this._lastDispatchedConfigSig = this._configSignature(config);
     this.dispatchEvent(new CustomEvent(CARD_CONFIG_COMMIT_EVENT, {
-      detail: { previousConfig: dialog._cardConfig, config },
+      detail: { previousConfig, config },
       bubbles: true,
       composed: true,
     }));
+    if (!directEdit) {
+      this._dispatch(config);
+      return;
+    }
     // Commit only at Save; HA rebuilds every preview-mode card on config-changed.
     dialog._cardConfig = config;
     dialog._updateDirtyState?.(config);
