@@ -673,7 +673,9 @@
       "enableMediaDrawer": "Medienbereich aktivieren",
       "enableMediaDrawerHelp": "Zeigt im Modus „Nur Video“ links einen Medienbereich an.",
       "hideCameraName": "Kameranamen ausblenden",
-      "hideCameraNameHelp": "Blendet die Kameraauswahl aus, bis der Mauszeiger über dem Video ist oder das Video angetippt wird. Gilt auch im Rastermodus."
+      "hideCameraNameHelp": "Blendet die Kameraauswahl aus, bis der Mauszeiger über dem Video ist oder das Video angetippt wird. Gilt auch im Rastermodus.",
+      "displayCameraDropdown": "Kamera-Dropdown anzeigen",
+      "displayCameraDropdownHelp": "Zeigt das Kamera-Dropdown an, wenn in der Kartenansicht mehr als eine Kamera konfiguriert ist."
     },
     "pageNames": {
       "preview": "Vorschau",

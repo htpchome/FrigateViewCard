@@ -3,7 +3,9 @@ import { escapeHtml, escapeHtmlAttribute } from "../shared/html.js";
 
 export function buildCamSwitcherRegionMarkup({ markup = "" } = {}) {
   const content = String(markup || "");
-  if (!content) return "";
+  if (!content) {
+    return '<span data-fvc-region-anchor="camera-switcher" hidden></span>';
+  }
   return `<div class="cam-switcher" id="cam-switcher" data-fvc-region="camera-switcher">${content}</div>`;
 }
 

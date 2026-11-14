@@ -1411,6 +1411,41 @@ test("Video Only Grid labels the camera picker Grid", () => {
   assert.doesNotMatch(markup, /mobile-cam-picker__status/);
 });
 
+test("Card View camera dropdown honors config and requires multiple cameras", () => {
+  const host = {
+    _pageId: "card-view",
+    _viewMode: "single",
+    _activeCamIdx: 0,
+    _activeCam: { entity: "camera.doorbell", name: "Doorbell" },
+    _activeStreamType: "webrtc",
+    _config: {
+      card_view_view_mode: CARD_VIEW_VIEW_MODES.videoOnly,
+      card_view_display_camera_dropdown: false,
+      cameras: [
+        { entity: "camera.doorbell", name: "Doorbell" },
+        { entity: "camera.driveway", name: "Driveway" },
+      ],
+    },
+    _hass: {
+      states: {
+        "camera.doorbell": { state: "streaming" },
+        "camera.driveway": { state: "streaming" },
+      },
+    },
+  };
+  const controller = new CardViewPageController(host, {
+    PAGE_IDS: { cardView: "card-view" },
+  });
+
+  assert.doesNotMatch(controller.camSwitcherMarkup(), /data-mobile-cam-picker/);
+
+  host._config.card_view_display_camera_dropdown = true;
+  assert.match(controller.camSwitcherMarkup(), /data-mobile-cam-picker/);
+
+  host._config.cameras = [host._config.cameras[0]];
+  assert.doesNotMatch(controller.camSwitcherMarkup(), /data-mobile-cam-picker/);
+});
+
 test("Video Only camera picker panel stays within the live stage", () => {
   const panel = { style: {} };
   const host = {

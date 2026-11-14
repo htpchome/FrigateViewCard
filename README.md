@@ -292,6 +292,7 @@ The Card View can be configured in a few ways and is designed to insert into das
 | `card_view_start_mode` | string | `live` | Initial standalone video mode: `live`, `slideshow`, or `grid`. |
 | `card_view_media_drawer_enabled` | boolean | `true` | Adds the tabbed Alerts, Clips, and Snapshots drawer to the left side of Card View in Video Only mode. |
 | `card_view_hide_camera_name` | boolean | `true` | In Card View Video Only mode, hides the camera picker until hover or touch reveals the center controls. |
+| `card_view_display_camera_dropdown` | boolean | `true` | Shows the Card View camera dropdown when more than one camera is configured. |
 | `landing_page` | string | `single-view` | Desktop/tablet landing page. Choices are limited to enabled, supported views. |
 | `mobile_page` | string | `single-view` | Phone landing flow: `mobile-view`, `card-view`, `preview-mobile-view`, `preview-card-view`, `preview-single-view`, or `single-view`. Choices requiring Mobile, Card View, or Preview are available only when those pages are enabled. |
 

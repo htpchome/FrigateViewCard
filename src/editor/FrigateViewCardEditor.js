@@ -265,6 +265,7 @@ const SETTINGS_PANEL_CONFIG_KEYS = Object.freeze({
     "card_view_view_mode",
     "card_view_media_drawer_enabled",
     "card_view_hide_camera_name",
+    "card_view_display_camera_dropdown",
   ],
   mobileview: [
     "mobile_view_page_enabled",
@@ -3471,6 +3472,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       '[name="card_view_start_mode"]',
       "#card_view_media_drawer_enabled",
       "#card_view_hide_camera_name",
+      "#card_view_display_camera_dropdown",
       "#landing_page",
       "#mobile_page",
       "#stream_height",
@@ -4701,6 +4703,13 @@ export class FrigateViewCardEditor extends HTMLElement {
             </div>
             <div class="field-helper" data-fvc-i18n="editor.cardView.hideCameraNameHelp">Hides the camera picker until the video is hovered or touched. Also applies in Grid mode.</div>
           </div>
+          <div class="section">
+            <div class="layout-row">
+              <span class="field-label" style="margin:0" data-fvc-i18n="editor.cardView.displayCameraDropdown">Display Camera Dropdown</span>
+              <ha-switch id="card_view_display_camera_dropdown" ${this._config?.card_view_display_camera_dropdown !== false ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper" data-fvc-i18n="editor.cardView.displayCameraDropdownHelp">Shows the camera dropdown when Card View has more than one configured camera.</div>
+          </div>
         </div>
       </div>`;
     const landingPanelContent = `
@@ -5651,6 +5660,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         "card_view_alert_takeover",
         "card_view_media_drawer_enabled",
         "card_view_hide_camera_name",
+        "card_view_display_camera_dropdown",
         "mobile_view_page_enabled",
         "mobile_view_rotate_to_fullscreen",
         "mobile_view_dashboard_background",

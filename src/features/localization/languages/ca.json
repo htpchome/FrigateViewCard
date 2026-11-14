@@ -673,7 +673,9 @@
       "enableMediaDrawer": "Activa el panell multimèdia",
       "enableMediaDrawerHelp": "Mostra un panell multimèdia a l'esquerra en mode Només vídeo.",
       "hideCameraName": "Amaga el nom de la càmera",
-      "hideCameraNameHelp": "Amaga el selector de càmera fins que es passa el cursor per sobre del vídeo o es toca. També s'aplica al mode quadrícula."
+      "hideCameraNameHelp": "Amaga el selector de càmera fins que es passa el cursor per sobre del vídeo o es toca. També s'aplica al mode quadrícula.",
+      "displayCameraDropdown": "Mostra el menú desplegable de càmeres",
+      "displayCameraDropdownHelp": "Mostra el menú desplegable de càmeres quan la vista de targeta té més d'una càmera configurada."
     },
     "pageNames": {
       "preview": "Vista prèvia",

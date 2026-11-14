@@ -94,7 +94,7 @@ test("event, popup, preview, and camera markup encode external metadata", () => 
     name: injection,
   });
   const cameraSwitcher = buildSingleViewCamSwitcherMarkup({
-    cameras: [{ name: injection }],
+    cameras: [{ name: injection }, { name: "Safe Camera" }],
     getCameraName: (camera) => camera.name,
     isCameraAvailable: () => true,
   });

@@ -36,6 +36,7 @@ export const CAMERA_PICKER_STYLES = `
     display:inline-flex;
     align-items:center;
     justify-self:end;
+    grid-column:3;
     gap:6px;
     font-size:1rem;
     min-width:0;

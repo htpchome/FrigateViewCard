@@ -673,7 +673,9 @@
       "enableMediaDrawer": "Attiva pannello multimediale",
       "enableMediaDrawerHelp": "Mostra un pannello multimediale a sinistra in modalità Solo video.",
       "hideCameraName": "Nascondi nome telecamera",
-      "hideCameraNameHelp": "Nasconde il selettore della telecamera finché il video non viene sfiorato con il mouse o toccato. Vale anche in modalità griglia."
+      "hideCameraNameHelp": "Nasconde il selettore della telecamera finché il video non viene sfiorato con il mouse o toccato. Vale anche in modalità griglia.",
+      "displayCameraDropdown": "Mostra menu a discesa telecamere",
+      "displayCameraDropdownHelp": "Mostra il menu a discesa delle telecamere quando la Vista scheda ha più di una telecamera configurata."
     },
     "pageNames": {
       "preview": "Anteprima",

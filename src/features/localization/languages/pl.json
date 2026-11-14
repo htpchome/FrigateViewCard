@@ -673,7 +673,9 @@
       "enableMediaDrawer": "Włącz panel multimediów",
       "enableMediaDrawerHelp": "Pokazuje panel multimediów po lewej stronie w trybie tylko wideo.",
       "hideCameraName": "Ukryj nazwę kamery",
-      "hideCameraNameHelp": "Ukrywa wybór kamery, dopóki użytkownik nie najedzie kursorem na wideo lub go nie dotknie. Dotyczy także trybu siatki."
+      "hideCameraNameHelp": "Ukrywa wybór kamery, dopóki użytkownik nie najedzie kursorem na wideo lub go nie dotknie. Dotyczy także trybu siatki.",
+      "displayCameraDropdown": "Pokaż listę rozwijaną kamer",
+      "displayCameraDropdownHelp": "Pokazuje listę rozwijaną kamer, gdy w Widoku karty skonfigurowano więcej niż jedną kamerę."
     },
     "pageNames": {
       "preview": "Podgląd",

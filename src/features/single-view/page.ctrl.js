@@ -137,7 +137,7 @@ export class SingleViewPageController {
   camSwitcherMarkup({ includeStatus = true } = {}) {
     return buildSingleViewCamSwitcherMarkup({
       includeStatus,
-      cameras: this._host._config.cameras,
+      cameras: this._host._config?.cameras ?? [],
       activeCamIdx: this._host._activeCamIdx,
       isSingleView: this._host._viewMode === "single",
       getCameraName: cameraName,
@@ -150,17 +150,33 @@ export class SingleViewPageController {
   }
 
   renderCamSwitcher() {
-    const element = this._host._pageShellRegion("cameraSwitcher");
-    if (!element) return;
-    if (
-      this._host._config.cameras.length < 2 &&
-      this._host._isPreviewPageEnabled?.() !== true
-    ) {
-      element.style.display = "none";
+    const markup = this.camSwitcherMarkup({ includeStatus: true });
+    let element = this._host._pageShellRegion("cameraSwitcher");
+    if (!markup) {
+      if (!element) return;
+      const anchor = element.ownerDocument?.createElement?.("span");
+      if (!anchor) {
+        element.remove?.();
+        return;
+      }
+      anchor.hidden = true;
+      anchor.dataset.fvcRegionAnchor = "camera-switcher";
+      element.replaceWith?.(anchor);
       return;
     }
-    element.style.display = "";
-    element.innerHTML = this.camSwitcherMarkup({ includeStatus: true });
+    if (!element) {
+      const anchor = this._host.shadowRoot?.querySelector?.(
+        '[data-fvc-region-anchor="camera-switcher"]',
+      );
+      const replacement = anchor?.ownerDocument?.createElement?.("div");
+      if (!anchor || !replacement) return;
+      replacement.className = "cam-switcher";
+      replacement.id = "cam-switcher";
+      replacement.dataset.fvcRegion = "camera-switcher";
+      anchor.replaceWith?.(replacement);
+      element = replacement;
+    }
+    element.innerHTML = markup;
     this._revealActiveCameraButton(element);
   }
 

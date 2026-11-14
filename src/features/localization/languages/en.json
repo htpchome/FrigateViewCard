@@ -673,7 +673,9 @@
       "enableMediaDrawer": "Enable Media Drawer",
       "enableMediaDrawerHelp": "Shows a media drawer on the left in Video Only mode.",
       "hideCameraName": "Hide Camera Name",
-      "hideCameraNameHelp": "Hides the camera picker until the video is hovered or touched. Also applies in Grid mode."
+      "hideCameraNameHelp": "Hides the camera picker until the video is hovered or touched. Also applies in Grid mode.",
+      "displayCameraDropdown": "Display Camera Dropdown",
+      "displayCameraDropdownHelp": "Shows the camera dropdown when Card View has more than one configured camera."
     },
     "pageNames": {
       "preview": "Preview",

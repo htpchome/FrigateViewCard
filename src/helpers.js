@@ -986,6 +986,9 @@ export const buildEditorConfigFromDom = ({
   nextConfig.card_view_hide_camera_name = resolveSwitchChecked(
     root.querySelector("#card_view_hide_camera_name"),
   );
+  nextConfig.card_view_display_camera_dropdown = resolveSwitchChecked(
+    root.querySelector("#card_view_display_camera_dropdown"),
+  );
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector('[name="grid_rotation_seconds"]:checked')?.value ||

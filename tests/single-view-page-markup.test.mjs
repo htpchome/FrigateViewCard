@@ -217,3 +217,13 @@ test("single view camera switcher markup preserves active and availability state
   assert.equal(markup.includes("style=\"color:#4ade80\""), true);
   assert.equal(markup.includes("class=\"cam-tab__label\">Driveway</span>"), true);
 });
+
+test("single view omits camera switcher markup for one configured camera", () => {
+  const markup = buildSingleViewCamSwitcherMarkup({
+    cameras: [{ entity: "camera.front_door", name: "Front Door" }],
+    getCameraName: (camera) => camera.name,
+    isCameraAvailable: () => true,
+  });
+
+  assert.equal(markup, "");
+});

@@ -2,6 +2,7 @@ import { buildLivePlaybackControlsMarkup } from "../live/view.tmpl.js";
 import { DEFAULT_TITLE, DEFAULT_SUBTITLE } from "../../constants.js";
 import { escapeHtml } from "../../shared/html.js";
 import { resolveCameraAwareText } from "../../shared/page-text.js";
+import { hasCameraNavigationChoices } from "../navigation/camera-picker.tmpl.js";
 
 function mergeClassNames(...tokens) {
   return [
@@ -42,6 +43,7 @@ export function buildSingleViewCamSwitcherMarkup({
   getCameraName,
   isCameraAvailable,
 } = {}) {
+  if (!hasCameraNavigationChoices(cameras)) return "";
   return (Array.isArray(cameras) ? cameras : [])
     .map((camera, index) => {
       const name = getCameraName(camera);

@@ -673,7 +673,9 @@
       "enableMediaDrawer": "Activar panel de medios",
       "enableMediaDrawerHelp": "Muestra un panel de medios a la izquierda en el modo Solo video.",
       "hideCameraName": "Ocultar nombre de cámara",
-      "hideCameraNameHelp": "Oculta el selector de cámara hasta que se pasa el ratón por el video o se toca. También se aplica en modo cuadrícula."
+      "hideCameraNameHelp": "Oculta el selector de cámara hasta que se pasa el ratón por el video o se toca. También se aplica en modo cuadrícula.",
+      "displayCameraDropdown": "Mostrar menú desplegable de cámaras",
+      "displayCameraDropdownHelp": "Muestra el menú desplegable de cámaras cuando la Vista de tarjeta tiene más de una cámara configurada."
     },
     "pageNames": {
       "preview": "Vista previa",

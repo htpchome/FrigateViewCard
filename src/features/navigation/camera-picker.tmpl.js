@@ -1,5 +1,8 @@
 import { escapeHtml, escapeHtmlAttribute } from "../../shared/html.js";
 
+export const hasCameraNavigationChoices = (cameras) =>
+  Array.isArray(cameras) && cameras.length > 1;
+
 function buildCameraOptionMarkup({
   camera,
   index,
@@ -39,6 +42,7 @@ export function buildCameraPickerMarkup({
   activeCameraName: suppliedActiveCameraName = "",
   activeCameraLabelKey = "",
   showStatus = true,
+  showPicker = true,
 }) {
   const cameraList = Array.isArray(cameras) ? cameras : [];
   const safeActiveIdx =
@@ -70,7 +74,9 @@ export function buildCameraPickerMarkup({
       }),
     )
     .join("");
-  return `<div class="mobile-cam-picker${pickerOpen ? " is-open" : ""}" data-mobile-cam-picker data-media-overlay-ignore>
+  const pickerMarkup =
+    showPicker && hasCameraNavigationChoices(cameraList)
+      ? `<div class="mobile-cam-picker${pickerOpen ? " is-open" : ""}" data-mobile-cam-picker data-media-overlay-ignore>
       <button
         class="mobile-cam-picker__trigger"
         type="button"
@@ -87,7 +93,9 @@ export function buildCameraPickerMarkup({
       <div class="mobile-cam-picker__panel" role="listbox" ${pickerOpen ? "" : "hidden"} data-mobile-cam-panel>
         ${cameraOptions}
       </div>
-    </div>
+    </div>`
+      : "";
+  return `${pickerMarkup}
     ${showStatus ? `<div class="mobile-cam-picker__status" aria-label="Live status" data-fvc-i18n-aria-label="runtime.live.liveStatus">
       <div class="mobile-cam-picker__stream${iconSource ? " is-icon-source" : ""}" title="${iconSource ? "WebRTC" : escapeHtmlAttribute(streamType || "")}" aria-label="${iconSource ? "WebRTC live source" : "Live source"}">
         ${streamIcon ? `<span class="mobile-cam-picker__stream-icon" aria-hidden="true">${streamIcon}</span>` : ""}

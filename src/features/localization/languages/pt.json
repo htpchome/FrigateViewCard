@@ -673,7 +673,9 @@
       "enableMediaDrawer": "Ativar painel de multimédia",
       "enableMediaDrawerHelp": "Mostra um painel de multimédia à esquerda no modo Vídeo apenas.",
       "hideCameraName": "Ocultar nome da câmara",
-      "hideCameraNameHelp": "Oculta o seletor de câmara até passar o rato sobre o vídeo ou tocar nele. Também se aplica ao modo de grelha."
+      "hideCameraNameHelp": "Oculta o seletor de câmara até passar o rato sobre o vídeo ou tocar nele. Também se aplica ao modo de grelha.",
+      "displayCameraDropdown": "Mostrar lista pendente de câmaras",
+      "displayCameraDropdownHelp": "Mostra a lista pendente de câmaras quando a Vista de cartão tem mais de uma câmara configurada."
     },
     "pageNames": {
       "preview": "Pré-visualização",

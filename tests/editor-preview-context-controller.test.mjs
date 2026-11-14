@@ -381,6 +381,7 @@ test("standalone Card View draft controls reach its lightweight config updater",
       card_view_start_mode: "live",
       card_view_view_mode: "bottom-panel-open",
       card_view_hide_camera_name: false,
+      card_view_display_camera_dropdown: true,
     },
     nextConfig: {
       card_view_standalone: true,
@@ -388,6 +389,7 @@ test("standalone Card View draft controls reach its lightweight config updater",
       card_view_start_mode: "grid",
       card_view_view_mode: "video-only",
       card_view_hide_camera_name: true,
+      card_view_display_camera_dropdown: false,
     },
   });
 
@@ -398,6 +400,7 @@ test("standalone Card View draft controls reach its lightweight config updater",
     mediaDrawerEnabledChanged: true,
     startModeChanged: true,
     hideCameraNameChanged: true,
+    displayCameraDropdownChanged: true,
   });
 });
 

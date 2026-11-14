@@ -198,13 +198,19 @@ export class EditorPreviewDraftController {
       nextConfig,
       "card_view_hide_camera_name",
     );
+    const cardDisplayCameraDropdownChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "card_view_display_camera_dropdown",
+    );
     if (
       cardTakeoverChanged ||
       cardViewModeChanged ||
       cardStandaloneChanged ||
       cardMediaDrawerEnabledChanged ||
       cardStartModeChanged ||
-      cardHideCameraNameChanged
+      cardHideCameraNameChanged ||
+      cardDisplayCameraDropdownChanged
     ) {
       this._host._cardViewPageController?.applyConfigUpdate?.({
         takeoverDefaultChanged: cardTakeoverChanged,
@@ -213,6 +219,8 @@ export class EditorPreviewDraftController {
         mediaDrawerEnabledChanged: cardMediaDrawerEnabledChanged,
         startModeChanged: cardStartModeChanged,
         hideCameraNameChanged: cardHideCameraNameChanged,
+        displayCameraDropdownChanged:
+          cardDisplayCameraDropdownChanged,
       });
     }
 

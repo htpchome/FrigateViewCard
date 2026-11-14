@@ -1932,6 +1932,7 @@ test("buildEditorConfigFromDom reads standalone Card View presentation controls"
     "#card_view_standalone": { checked: true },
     "#card_view_media_drawer_enabled": { checked: true },
     "#card_view_hide_camera_name": { checked: true },
+    "#card_view_display_camera_dropdown": { checked: false },
     '[name="card_view_start_mode"]:checked': { value: "grid" },
     '[name="card_view_view_mode"]:checked': {
       value: CARD_VIEW_VIEW_MODES.videoOnly,
@@ -1955,6 +1956,7 @@ test("buildEditorConfigFromDom reads standalone Card View presentation controls"
   assert.equal(result.card_view_start_mode, "grid");
   assert.equal(result.card_view_view_mode, CARD_VIEW_VIEW_MODES.videoOnly);
   assert.equal(result.card_view_hide_camera_name, true);
+  assert.equal(result.card_view_display_camera_dropdown, false);
   assert.equal("card_view_media_drawer_type" in result, false);
   assert.equal("card_view_drawer_default_open" in result, false);
   assert.equal("card_view_video_panel_only" in result, false);
@@ -2056,6 +2058,7 @@ test("preview draft carries hidden tabs and page routes", () => {
     card_view_start_mode: "grid",
     card_view_view_mode: CARD_VIEW_VIEW_MODES.videoOnly,
     card_view_hide_camera_name: true,
+    card_view_display_camera_dropdown: false,
     display_title: false,
     display_subtitle: true,
     display_logo: false,
@@ -2110,6 +2113,7 @@ test("preview draft carries hidden tabs and page routes", () => {
   assert.equal(draft.card_view_start_mode, "grid");
   assert.equal(draft.card_view_view_mode, CARD_VIEW_VIEW_MODES.videoOnly);
   assert.equal(draft.card_view_hide_camera_name, true);
+  assert.equal(draft.card_view_display_camera_dropdown, false);
   assert.equal(draft.display_title, false);
   assert.equal(draft.display_subtitle, true);
   assert.equal(draft.display_logo, false);
@@ -2143,6 +2147,7 @@ test("preview draft carries hidden tabs and page routes", () => {
     CARD_VIEW_VIEW_MODES.videoOnly,
   );
   assert.equal(previewConfig.card_view_hide_camera_name, true);
+  assert.equal(previewConfig.card_view_display_camera_dropdown, false);
   assert.equal("card_view_media_drawer_type" in previewConfig, false);
   assert.equal("card_view_drawer_default_open" in previewConfig, false);
   assert.equal("card_view_video_panel_only" in previewConfig, false);
@@ -2406,6 +2411,7 @@ test("Card View settings normalize and serialize only when enabled", () => {
     card_view_start_mode: "grid",
     card_view_video_panel_only: true,
     card_view_hide_camera_name: true,
+    card_view_display_camera_dropdown: true,
     landing_page: "card-view",
   });
 
@@ -2419,6 +2425,7 @@ test("Card View settings normalize and serialize only when enabled", () => {
     CARD_VIEW_VIEW_MODES.bottomPanelOpen,
   );
   assert.equal(defaults.card_view_hide_camera_name, true);
+  assert.equal(defaults.card_view_display_camera_dropdown, true);
   assert.equal("card_view_drawer_default_open" in defaults, false);
   assert.equal("card_view_media_drawer_type" in defaults, false);
   assert.equal("card_view_video_panel_only" in defaults, false);
@@ -2435,11 +2442,13 @@ test("Card View settings normalize and serialize only when enabled", () => {
       cameras: [{ entity: "camera.front_door" }],
       card_view_media_drawer_enabled: false,
       card_view_hide_camera_name: false,
+      card_view_display_camera_dropdown: false,
     }),
     {
       cameras: [{ entity: "camera.front_door" }],
       card_view_media_drawer_enabled: false,
       card_view_hide_camera_name: false,
+      card_view_display_camera_dropdown: false,
     },
   );
   assert.equal(
@@ -2447,6 +2456,10 @@ test("Card View settings normalize and serialize only when enabled", () => {
     CARD_VIEW_VIEW_MODES.bottomPanelOpen,
   );
   assert.equal(createEditorPreviewDraft(defaults).card_view_start_mode, "live");
+  assert.equal(
+    createEditorPreviewDraft(defaults).card_view_display_camera_dropdown,
+    true,
+  );
 });
 
 test("page start modes persist independently of the inert legacy Grid startup key", () => {
@@ -2608,6 +2621,7 @@ test("Card View editor gates and orders all settings beneath the page toggle", (
   assert.match(editorSource, /id="card_view_media_drawer_enabled"/);
   assert.match(editorSource, /name="card_view_start_mode"/);
   assert.match(editorSource, /id="card_view_hide_camera_name"/);
+  assert.match(editorSource, /id="card_view_display_camera_dropdown"/);
   assert.match(
     panelSource,
     /id="card-view-video-only-options" style="\$\{cardViewViewMode === CARD_VIEW_VIEW_MODES\.videoOnly \? "" : "display:none"\}"/,

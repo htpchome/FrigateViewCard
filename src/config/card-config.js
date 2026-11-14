@@ -274,6 +274,8 @@ export const normalizeCardConfig = (config) => {
   delete src.card_view_video_panel_only;
   src.card_view_hide_camera_name =
     src.card_view_hide_camera_name !== false;
+  src.card_view_display_camera_dropdown =
+    src.card_view_display_camera_dropdown !== false;
 
   src.landing_page = normalizePageRoute(src.landing_page);
   if (src.card_view_standalone) {
@@ -388,6 +390,7 @@ const RUNTIME_CARD_CONFIG_KEYS = Object.freeze([
   "card_view_start_mode",
   "card_view_view_mode",
   "card_view_hide_camera_name",
+  "card_view_display_camera_dropdown",
   "landing_page",
   "mobile_page",
   "deep_link_enabled",

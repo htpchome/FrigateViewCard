@@ -676,6 +676,8 @@ export class CardViewPageController {
           ? "runtime.live.grid"
           : "",
       showStatus: !this.usesOverlayPresentation(),
+      showPicker:
+        this._host._config?.card_view_display_camera_dropdown !== false,
     });
   }
 
@@ -1685,6 +1687,7 @@ export class CardViewPageController {
     startModeChanged = false,
     viewModeChanged = false,
     hideCameraNameChanged = false,
+    displayCameraDropdownChanged = false,
   } = {}) {
     if (takeoverDefaultChanged) {
       this._alertTakeoverEnabled = null;
@@ -1716,7 +1719,8 @@ export class CardViewPageController {
       mediaDrawerEnabledChanged ||
       startModeChanged ||
       viewModeChanged ||
-      hideCameraNameChanged
+      hideCameraNameChanged ||
+      displayCameraDropdownChanged
     ) {
       this.syncCardViewPageMarkup();
       this.renderCamSwitcher();

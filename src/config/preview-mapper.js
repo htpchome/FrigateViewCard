@@ -164,6 +164,8 @@ export const createEditorPreviewDraft = (config) => ({
     },
   ),
   card_view_hide_camera_name: config.card_view_hide_camera_name,
+  card_view_display_camera_dropdown:
+    config.card_view_display_camera_dropdown,
   landing_page: config.landing_page,
   mobile_page: config.mobile_page,
   grid_rotation_seconds: config.grid_rotation_seconds,
@@ -389,6 +391,8 @@ export const applyEditorPreviewDraftToCardConfig = ({
     ),
     card_view_hide_camera_name:
       previewConfig.card_view_hide_camera_name !== false,
+    card_view_display_camera_dropdown:
+      previewConfig.card_view_display_camera_dropdown !== false,
     landing_page: normalizePageRoute(previewConfig.landing_page),
     mobile_page: normalizeMobilePageMode(previewConfig.mobile_page),
     wide_view_width: normalizeWideViewWidth(previewConfig.wide_view_width),

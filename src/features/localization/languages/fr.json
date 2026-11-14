@@ -673,7 +673,9 @@
       "enableMediaDrawer": "Activer le volet des médias",
       "enableMediaDrawerHelp": "Affiche un volet des médias à gauche en mode Vidéo uniquement.",
       "hideCameraName": "Masquer le nom de la caméra",
-      "hideCameraNameHelp": "Masque le sélecteur de caméra jusqu'à ce que la vidéo soit survolée ou touchée. S'applique aussi en mode grille."
+      "hideCameraNameHelp": "Masque le sélecteur de caméra jusqu'à ce que la vidéo soit survolée ou touchée. S'applique aussi en mode grille.",
+      "displayCameraDropdown": "Afficher la liste déroulante des caméras",
+      "displayCameraDropdownHelp": "Affiche la liste déroulante des caméras lorsque la vue Carte comporte plusieurs caméras configurées."
     },
     "pageNames": {
       "preview": "Aperçu",

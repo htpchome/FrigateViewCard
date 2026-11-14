@@ -659,6 +659,12 @@ export const compactEditorConfigForYaml = (
   );
   addIfNotDefault(
     compact,
+    "card_view_display_camera_dropdown",
+    source.card_view_display_camera_dropdown !== false,
+    true,
+  );
+  addIfNotDefault(
+    compact,
     "landing_page",
     normalizePageRoute(source.landing_page),
     PAGE_IDS.singleView,

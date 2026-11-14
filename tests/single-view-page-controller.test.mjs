@@ -949,9 +949,19 @@ test("single-view camera tokens resolve both fields to Grid in grid mode", () =>
   assert.equal(nodes["#tl-range"].textContent, "Grid");
 });
 
-test("single-view camera switcher render hides for a single camera when preview is disabled", () => {
+test("single-view camera switcher render replaces the wrapper for a single camera", () => {
+  let replacement = null;
+  const ownerDocument = {
+    createElement: () => ({ hidden: false, dataset: {} }),
+  };
   const nodes = {
-    "#cam-switcher": createNode(),
+    "#cam-switcher": {
+      ...createNode(),
+      ownerDocument,
+      replaceWith: (node) => {
+        replacement = node;
+      },
+    },
   };
   const { host } = createHost({ domNodes: nodes, previewPageEnabled: false });
   host._config.cameras = [{ entity: "camera.front_door", name: "Front Door" }];
@@ -959,7 +969,42 @@ test("single-view camera switcher render hides for a single camera when preview 
 
   controller.renderCamSwitcher();
 
-  assert.equal(nodes["#cam-switcher"].style.display, "none");
+  assert.equal(replacement.hidden, true);
+  assert.equal(replacement.dataset.fvcRegionAnchor, "camera-switcher");
+});
+
+test("single-view camera switcher restores the wrapper when a second camera is added", () => {
+  let replacement = null;
+  const ownerDocument = {
+    createElement: () => ({
+      dataset: {},
+      innerHTML: "",
+      querySelector: () => null,
+    }),
+  };
+  const anchor = {
+    ownerDocument,
+    replaceWith: (node) => {
+      replacement = node;
+    },
+  };
+  const { host } = createHost();
+  host._pageShellRegion = () => null;
+  host.shadowRoot = {
+    querySelector: (selector) =>
+      selector === '[data-fvc-region-anchor="camera-switcher"]'
+        ? anchor
+        : null,
+  };
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderCamSwitcher();
+
+  assert.equal(replacement.className, "cam-switcher");
+  assert.equal(replacement.id, "cam-switcher");
+  assert.equal(replacement.dataset.fvcRegion, "camera-switcher");
+  assert.match(replacement.innerHTML, /data-camidx="0"/);
+  assert.match(replacement.innerHTML, /data-camidx="1"/);
 });
 
 test("single-view camera switcher fully reveals a partially hidden active camera", () => {
@@ -1213,4 +1258,14 @@ test("standard render helpers leave omitted regions untouched", () => {
   assert.doesNotThrow(() => controller.renderLegend());
   assert.doesNotThrow(() => controller.renderListLabel());
   assert.doesNotThrow(() => controller.syncBrowseHeadFromScroll());
+});
+
+test("camera switcher rendering tolerates a cleared teardown config", () => {
+  const { host } = createHost();
+  host._config = null;
+  host._pageShellRegion = () => null;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  assert.equal(controller.camSwitcherMarkup(), "");
+  assert.doesNotThrow(() => controller.renderCamSwitcher());
 });

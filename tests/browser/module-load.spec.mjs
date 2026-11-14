@@ -6529,7 +6529,10 @@ test("Mobile overlay header and popup height remain scoped to embedded views", a
     const card = document.createElement("frigate-view-card");
     wrapper.append(card);
     card.setConfig({
-      cameras: [{ entity: "camera.front", name: "Front" }],
+      cameras: [
+        { entity: "camera.front", name: "Front" },
+        { entity: "camera.back", name: "Back" },
+      ],
       stream_height: 100,
       stream_height_unit: "%",
       mobile_view_page_enabled: true,
@@ -6689,7 +6692,10 @@ test("disabled Display Options hide controls and browse metadata without removin
     card._isLikelyMobileClient = () => true;
     card._isLikelyPhoneClient = () => true;
     card.setConfig({
-      cameras: [{ entity: "camera.front", name: "Front" }],
+      cameras: [
+        { entity: "camera.front", name: "Front" },
+        { entity: "camera.back", name: "Back" },
+      ],
       mobile_view_page_enabled: true,
       hidden_tabs: ["snapshot", "kept"],
       display_filter_control: false,

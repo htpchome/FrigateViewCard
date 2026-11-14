@@ -100,6 +100,14 @@ test("atomic shell fragments own their controller region anchors", () => {
   assert.match(STYLES, /@media \(hover:none\)/);
 });
 
+test("an empty camera switcher uses a hidden anchor instead of a blank wrapper", () => {
+  const markup = buildCamSwitcherRegionMarkup();
+
+  assert.match(markup, /data-fvc-region-anchor="camera-switcher"/);
+  assert.doesNotMatch(markup, /class="cam-switcher"/);
+  assert.doesNotMatch(markup, /data-fvc-region="camera-switcher"/);
+});
+
 test("region composition does not synthesize omitted page regions", () => {
   const shellMarkup = buildSingleViewMainLayoutShellMarkup({
     regions: {

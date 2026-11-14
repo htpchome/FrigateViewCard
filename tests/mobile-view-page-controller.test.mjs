@@ -252,7 +252,7 @@ test("mobile-view camera tokens resolve both fields to Grid in grid mode", () =>
   assert.equal(nodes["#tl-range"].textContent, "Grid");
 });
 
-test("mobile-view camera switcher render remains visible for status when preview is disabled", () => {
+test("mobile-view omits camera navigation but keeps status for one camera", () => {
   const nodes = {
     "#cam-switcher": createNode(),
     "[data-mobile-cam-switcher-content]": createNode(),
@@ -267,6 +267,12 @@ test("mobile-view camera switcher render remains visible for status when preview
   assert.equal(
     nodes["[data-mobile-cam-switcher-content]"].innerHTML.includes(
       "data-mobile-cam-trigger",
+    ),
+    false,
+  );
+  assert.equal(
+    nodes["[data-mobile-cam-switcher-content]"].innerHTML.includes(
+      'id="stream-type"',
     ),
     true,
   );
