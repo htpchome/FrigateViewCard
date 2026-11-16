@@ -129,7 +129,7 @@ export class GridPageController {
   isGridModeAvailable() {
     return (
       this._host._config?.grid_mode_enabled === true &&
-      this._host._isLikelyMobileClient?.() !== true &&
+      this._host._isLikelyPhoneClient?.() !== true &&
       this._displayCameras().length > 1
     );
   }

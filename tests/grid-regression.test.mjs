@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { GridMediaController } from "../src/features/grid/media.ctrl.js";
 import { GridPageController } from "../src/features/grid/page.ctrl.js";
+import { LazyGridFeatureController } from "../src/features/grid/runtime.loader.js";
 import { renderGridEmptyPlaceholder } from "../src/features/grid/page.tmpl.js";
 
 const source = fs.readFileSync(
@@ -254,8 +255,8 @@ test("Grid startup and its toolbar button use the same view-mode activation", ()
   );
 });
 
-test("standalone Card View never permits Grid on actual mobile devices", () => {
-  let isMobile = true;
+test("Grid eligibility excludes phones while allowing tablets and desktops", () => {
+  let isPhone = false;
   const host = {
     _config: {
       cameras: [
@@ -267,16 +268,42 @@ test("standalone Card View never permits Grid on actual mobile devices", () => {
       card_view_standalone: false,
     },
     _cardWidth: 400,
-    _isLikelyMobileClient: () => isMobile,
+    _isLikelyMobileClient: () => true,
+    _isLikelyPhoneClient: () => isPhone,
   };
-  const controller = new GridPageController(host);
+  const controllers = [
+    new GridPageController(host),
+    new LazyGridFeatureController(host),
+  ];
+  const expectAvailability = (expected) => {
+    for (const controller of controllers) {
+      assert.equal(
+        controller.isGridModeAvailable?.() ?? controller.isSupported(),
+        expected,
+      );
+    }
+  };
 
-  assert.equal(controller.isGridModeAvailable(), false);
-  host._config.card_view_standalone = true;
-  assert.equal(controller.isGridModeAvailable(), false);
+  // Android tablet classification: mobile, but not a phone.
+  expectAvailability(true);
 
-  isMobile = false;
-  assert.equal(controller.isGridModeAvailable(), true);
+  isPhone = true;
+  expectAvailability(false);
+
+  // Desktop classification.
+  host._isLikelyMobileClient = () => false;
+  isPhone = false;
+  expectAvailability(true);
+
+  host._config.grid_mode_enabled = false;
+  expectAvailability(false);
+
+  host._config.grid_mode_enabled = true;
+  host._config.cameras = [{ entity: "camera.front" }];
+  expectAvailability(false);
+
+  // The general mobile classifier remains unchanged for other features.
+  assert.equal(host._isLikelyMobileClient(), false);
 });
 
 test("Slideshow availability is not inferred from card width or device type", () => {
@@ -292,7 +319,7 @@ test("Slideshow availability is not inferred from card width or device type", ()
   );
   assert.match(availabilitySource, /flattenCameraMembers/);
   assert.doesNotMatch(availabilitySource, /DEVICE_PROFILE|Phone|Viewport/);
-  assert.match(gridPageControllerSource, /_isLikelyMobileClient\?\.\(\) !== true/);
+  assert.match(gridPageControllerSource, /_isLikelyPhoneClient\?\.\(\) !== true/);
   assert.doesNotMatch(gridPageControllerSource, /MobilePhoneViewport/);
 });
 
