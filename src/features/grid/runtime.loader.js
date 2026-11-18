@@ -36,7 +36,7 @@ export class LazyGridFeatureController {
   isSupported() {
     return (
       this._host?._config?.grid_mode_enabled === true &&
-      this._host?._isLikelyMobileClient?.() !== true &&
+      this._host?._isLikelyPhoneClient?.() !== true &&
       resolveGridCameras(
         this._host?._config?.cameras,
         this._host?._config?.grid_order,

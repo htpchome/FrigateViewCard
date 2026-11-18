@@ -20,6 +20,7 @@ const createHost = ({ mobile = false } = {}) => ({
     grid_mode_enabled: true,
   },
   _isLikelyMobileClient: () => mobile,
+  _isLikelyPhoneClient: () => mobile,
   _pageId: "single-view",
   _viewMode: "single",
 });
